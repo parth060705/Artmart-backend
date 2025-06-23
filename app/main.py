@@ -16,3 +16,11 @@ def root():
     return {"message": "Welcome to the ARTMART API!"}
 
 app.include_router(routes.router)
+
+# ---------------------------------------------------------------------
+# to check and start the app
+
+# http://127.0.0.1:8000/docs
+#  uvicorn app.main:app --reload 
+
+
