@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from app.api import routes
 from app.database import engine, Base
-from app import models  # Make sure this points to your actual models file
+from app.models import models  # Needed to register models before Base.metadata.create_all()
 
 # Create tables if they don’t exist
 Base.metadata.create_all(bind=engine)

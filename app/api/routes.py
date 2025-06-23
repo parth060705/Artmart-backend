@@ -13,7 +13,6 @@ from app.schemas.schemas import (
 )
 
 from app.crud import crud
-from app.database import SessionLocal
 from passlib.context import CryptContext
 
 router = APIRouter()

@@ -29,7 +29,6 @@ class UserRead(UserBase):
     class Config:
         orm_mode = True
 
-
 # -------------------------------
 # ARTWORK SCHEMAS
 # -------------------------------

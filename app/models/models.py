@@ -8,6 +8,7 @@ import enum
 from app.database import Base
 
 
+
 # ENUM DEFINITIONS
 class RoleEnum(str, enum.Enum):
     user = "user"
