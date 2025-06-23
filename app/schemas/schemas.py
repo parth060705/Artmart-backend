@@ -3,11 +3,9 @@ from uuid import UUID
 from datetime import datetime
 from typing import Optional, Literal
 
-
 # ENUM TYPES
 RoleType = Literal["user", "admin"]
 PaymentStatus = Literal["pending", "paid", "failed"]
-
 
 # -------------------------------
 # USER SCHEMAS
@@ -27,7 +25,7 @@ class UserRead(UserBase):
     createdAt: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # -------------------------------
 # ARTWORK SCHEMAS
@@ -50,8 +48,7 @@ class ArtworkRead(ArtworkBase):
     artistId: UUID
 
     class Config:
-        orm_mode = True
-
+        from_attributes = True
 
 # -------------------------------
 # ORDER SCHEMAS
@@ -71,8 +68,7 @@ class OrderRead(OrderBase):
     createdAt: datetime
 
     class Config:
-        orm_mode = True
-
+        from_attributes = True
 
 # -------------------------------
 # REVIEW SCHEMAS
@@ -95,8 +91,7 @@ class ReviewRead(ReviewBase):
     createdAt: datetime
 
     class Config:
-        orm_mode = True
-
+        from_attributes = True
 
 # -------------------------------
 # WISHLIST SCHEMAS
@@ -111,8 +106,7 @@ class WishlistRead(WishlistCreate):
     createdAt: datetime
 
     class Config:
-        orm_mode = True
-
+        from_attributes = True
 
 # -------------------------------
 # CART SCHEMAS
@@ -127,4 +121,4 @@ class CartRead(CartCreate):
     createdAt: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
