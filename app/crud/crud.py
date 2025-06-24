@@ -36,7 +36,10 @@ def create_user(db: Session, user: schemas.UserCreate):
 # -------------------------
 
 def create_artwork(db: Session, artwork: schemas.ArtworkCreate):
-    db_artwork = models.Artwork(**artwork.dict())
+    data = artwork.dict()
+    if data.get("image"):
+        data["image"] = str(data["image"])  # Convert HttpUrl to string
+    db_artwork = models.Artwork(**data)
     db.add(db_artwork)
     db.commit()
     db.refresh(db_artwork)
