@@ -27,6 +27,7 @@ class User(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False)
+    username = Column(String, unique=True, nullable=False)
     passwordHash = Column(String, nullable=False)
     role = Column(Enum(RoleEnum), nullable=False)
     profileImage = Column(String)

@@ -14,6 +14,7 @@ PaymentStatus = Literal["pending", "paid", "failed"]
 class UserBase(BaseModel):
     name: str
     email: EmailStr
+    username : str
     role: Optional[RoleType] = "user"
     profileImage: Optional[HttpUrl] = None
 
