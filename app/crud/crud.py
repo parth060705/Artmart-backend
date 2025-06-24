@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from uuid import UUID
-from app import models
+from app.models import models
 from app.schemas import schemas
 from passlib.context import CryptContext
 
@@ -24,7 +24,7 @@ def create_user(db: Session, user: schemas.UserCreate):
         username=user.username,
         passwordHash=hashed_password,
         role=user.role or "user",
-        profileImage=user.profileImage,
+        profileImage=str(user.profileImage) if user.profileImage else None,
     )
     db.add(db_user)
     db.commit()
