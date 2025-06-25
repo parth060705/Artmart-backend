@@ -1,9 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.database import SessionLocal
 from uuid import UUID
 from typing import List
+from fastapi.security import OAuth2PasswordRequestForm
 
+from app.database import SessionLocal
+from app.database import get_db
+from app.models.models import User
+from app.core import auth
+from app.crud import crud
 from app.schemas.schemas import (
     UserCreate, UserRead,
     ArtworkCreate, ArtworkRead,
@@ -11,13 +16,10 @@ from app.schemas.schemas import (
     ReviewCreate, ReviewRead,
     WishlistCreate, WishlistRead,
     CartCreate, CartRead,
+    UserProfileImageUpdate, Token
 )
 
-from app.crud import crud
-from passlib.context import CryptContext
-
 router = APIRouter()
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # -------------------------
 # DB DEPENDENCY
@@ -39,6 +41,34 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     return crud.create_user(db, user)
+
+@router.post("/login", response_model=Token)
+def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
+    user = crud.get_user_by_username(db, form_data.username)
+    if not user or not auth.verify_password(form_data.password, user.passwordHash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token = auth.create_access_token(data={"sub": user.username})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@router.patch("/users/{user_id}/image")
+def update_profile_image(user_id: UUID, update: UserProfileImageUpdate, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if update.profileImage is not None:
+        user.profileImage = update.profileImage
+        db.commit()
+        db.refresh(user)
+
+    return {"message": "Profile image updated", "profileImage": user.profileImage}
 
 # -------------------------
 # ARTWORK ENDPOINTS

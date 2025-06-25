@@ -11,12 +11,18 @@ PaymentStatus = Literal["pending", "paid", "failed"]
 # USER SCHEMAS
 # -------------------------------
 
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    username: str | None = None
+
 class UserBase(BaseModel):
     name: str
     email: EmailStr
     username : str
-    role: Optional[RoleType] = "user"
-    profileImage: Optional[HttpUrl] = None
+    profileImage: Optional[str] = None
 
 class UserCreate(UserBase):
     password: str
@@ -27,6 +33,9 @@ class UserRead(UserBase):
 
     class Config:
         from_attributes = True
+
+class UserProfileImageUpdate(UserBase):
+    profileImage: Optional[HttpUrl] = None        
 
 # -------------------------------
 # ARTWORK SCHEMAS

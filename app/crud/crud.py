@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from uuid import UUID
 from app.models import models
+from app.models.models import RoleEnum
 from app.schemas import schemas
 from passlib.context import CryptContext
 
@@ -23,13 +24,17 @@ def create_user(db: Session, user: schemas.UserCreate):
         email=user.email,
         username=user.username,
         passwordHash=hashed_password,
-        role=user.role or "user",
+        role=RoleEnum.user,
         profileImage=str(user.profileImage) if user.profileImage else None,
     )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     return db_user
+
+def get_user_by_username(db: Session, username: str):
+    return db.query(models.User).filter(models.User.username == username).first()
+
 
 # -------------------------
 # ARTWORK OPERATIONS

@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
 import enum
+from sqlalchemy import Enum as SqlEnum
 
 from app.database import Base
 
@@ -29,8 +30,8 @@ class User(Base):
     email = Column(String, unique=True, nullable=False)
     username = Column(String, unique=True, nullable=False)
     passwordHash = Column(String, nullable=False)
-    role = Column(Enum(RoleEnum), nullable=False)
-    profileImage = Column(String)
+    role = Column(SqlEnum(RoleEnum, native_enum=False), nullable=False, default=RoleEnum.user)
+    profileImage = Column(String, nullable=True)
     createdAt = Column(DateTime, default=datetime.utcnow)
 
     artworks = relationship("Artwork", back_populates="artist")
