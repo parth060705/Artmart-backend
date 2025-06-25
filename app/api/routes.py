@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from typing import List
 from fastapi.security import OAuth2PasswordRequestForm
+from app.core.auth import get_current_user
+
 
 from app.database import SessionLocal
 from app.database import get_db
@@ -34,6 +36,10 @@ def get_db():
 # -------------------------
 # USER ENDPOINTS
 # -------------------------
+
+@router.get("/me", response_model=UserRead)
+def read_users_me(current_user: User = Depends(get_current_user)):
+    return current_user
 
 @router.post("/register", response_model=UserRead)
 def register_user(user: UserCreate, db: Session = Depends(get_db)):

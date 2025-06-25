@@ -8,7 +8,7 @@ RoleType = Literal["user", "admin"]
 PaymentStatus = Literal["pending", "paid", "failed"]
 
 # -------------------------------
-# USER SCHEMAS
+# TOKENS
 # -------------------------------
 
 class Token(BaseModel):
@@ -18,24 +18,29 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     username: str | None = None
 
+# -------------------------------
+# USER SCHEMAS
+# -------------------------------
+
 class UserBase(BaseModel):
     name: str
     email: EmailStr
-    username : str
+    username: str
     profileImage: Optional[str] = None
 
 class UserCreate(UserBase):
     password: str
 
+# Schema for reading user info (e.g. /me or user list)
 class UserRead(UserBase):
     id: UUID
     createdAt: datetime
 
     class Config:
-        from_attributes = True
+        from_attributes = True  
 
-class UserProfileImageUpdate(UserBase):
-    profileImage: Optional[HttpUrl] = None        
+class UserProfileImageUpdate(BaseModel):
+    profileImage: Optional[HttpUrl] = None
 
 # -------------------------------
 # ARTWORK SCHEMAS
