@@ -24,6 +24,7 @@ from app.schemas.schemas import (
     ArtworkLikeRequest,
     LikeBase,
     ArtworkLike,
+    CommentCreate,
 )
 
 router = APIRouter()
@@ -129,6 +130,27 @@ def check_like_status(artwork_id: UUID, db: Session = Depends(get_db), current_u
         "user_id": current_user.id,
         "has_liked": has_liked
     }
+
+# -------------------------
+# COMMENTS ENDPOINTS
+# -------------------------
+
+@router.post("/comments/{artwork_id}", status_code=status.HTTP_201_CREATED)
+def post_comment(
+    comment_data: CommentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return crud.create_comment(db=db, user_id=current_user.id, comment_data=comment_data)
+
+
+@router.get("/artwork/{artwork_id}")
+def get_comments(
+    artwork_id: UUID,
+    db: Session = Depends(get_db),
+):
+    return crud.get_comments_for_artwork(db=db, artwork_id=artwork_id)
+
 
 # -------------------------
 # ORDER ENDPOINTS

@@ -37,12 +37,14 @@ class User(Base):
     gender = Column(String, nullable=True)
     age = Column(Integer, nullable=True)
 
+     # Relationships
     artworks = relationship("Artwork", back_populates="artist")
     orders = relationship("Order", back_populates="buyer")
     reviews = relationship("Review", back_populates="reviewer", foreign_keys="Review.reviewerId")
     wishlist_items = relationship("Wishlist", back_populates="user")
     cart_items = relationship("Cart", back_populates="user")
     liked_artworks = relationship("ArtworkLike", back_populates="user", cascade="all, delete-orphan")
+    comments = relationship("Comment", back_populates="user", cascade="all, delete-orphan")
 
 
 
@@ -55,19 +57,22 @@ class Artwork(Base):
     description = Column(Text)
     image = Column(String)
     price = Column(Float, nullable=False)
-    category = Column(String)
+    category = Column(String, nullable=False)
     artistId = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     createdAt = Column(DateTime, default=datetime.utcnow)
     isSold = Column(Boolean, default=False)
 
+    # Relationships
     artist = relationship("User", back_populates="artworks")
     orders = relationship("Order", back_populates="artwork")
     reviews = relationship("Review", back_populates="artwork")
     wishlist_items = relationship("Wishlist", back_populates="artwork")
     cart_items = relationship("Cart", back_populates="artwork")
     likes = relationship("ArtworkLike", back_populates="artwork", cascade="all, delete-orphan")
+    comments = relationship("Comment", back_populates="artwork", cascade="all, delete-orphan")
 
-# ARTWORK LIKE
+
+# ARTWORK LIKES
 class ArtworkLike(Base):
     __tablename__ = "artwork_likes"
 
@@ -78,6 +83,20 @@ class ArtworkLike(Base):
     # Relationships
     artwork = relationship("Artwork", back_populates="likes")
     user = relationship("User", back_populates="liked_artworks") 
+
+class Comment(Base):
+    __tablename__ = "comments"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    artwork_id = Column(UUID(as_uuid=True), ForeignKey("artworks.id"), nullable=False)
+    content = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    user = relationship("User", back_populates="comments")
+    artwork = relationship("Artwork", back_populates="comments")
+
 
 
 
@@ -92,6 +111,7 @@ class Order(Base):
     paymentStatus = Column(Enum(PaymentStatusEnum), nullable=False)
     createdAt = Column(DateTime, default=datetime.utcnow)
 
+    # Relationships
     buyer = relationship("User", back_populates="orders")
     artwork = relationship("Artwork", back_populates="orders")
 
@@ -108,6 +128,7 @@ class Review(Base):
     comment = Column(Text)
     createdAt = Column(DateTime, default=datetime.utcnow)
 
+    # Relationships
     reviewer = relationship("User", back_populates="reviews", foreign_keys=[reviewerId])
     artwork = relationship("Artwork", back_populates="reviews")
     artist = relationship("User", foreign_keys=[artistId])
@@ -122,6 +143,7 @@ class Wishlist(Base):
     artworkId = Column(UUID(as_uuid=True), ForeignKey("artworks.id"))
     createdAt = Column(DateTime, default=datetime.utcnow)
 
+    # Relationships
     user = relationship("User", back_populates="wishlist_items")
     artwork = relationship("Artwork", back_populates="wishlist_items")
 
@@ -135,5 +157,6 @@ class Cart(Base):
     artworkId = Column(UUID(as_uuid=True), ForeignKey("artworks.id"))
     createdAt = Column(DateTime, default=datetime.utcnow)
 
+    # Relationships
     user = relationship("User", back_populates="cart_items")
     artwork = relationship("Artwork", back_populates="cart_items")

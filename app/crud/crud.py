@@ -86,6 +86,40 @@ def has_user_liked_artwork(db, user_id, artwork_id): # check if user likes artwo
     return db.query(models.ArtworkLike).filter_by(user_id=user_id, artwork_id=artwork_id).first() is not None
 
 # -------------------------
+# COMMENTS OPERATIONS
+# -------------------------
+def create_comment(db: Session, user_id: UUID, comment_data: models.Comment):
+    # Check if the artwork exists
+    artwork = db.query(models.Artwork).filter_by(id=comment_data.artwork_id).first()
+    if not artwork:
+        return {"message": "Artwork not found."}
+
+    # Create the comment
+    new_comment = models.Comment(
+        id=UUID.uuid4(),  # ✅ use the standard uuid module
+        user_id=user_id,
+        artwork_id=comment_data.artwork_id,
+        content=comment_data.content
+    )
+    db.add(new_comment)
+    db.commit()
+    db.refresh(new_comment)
+
+    return {"message": "Comment added successfully.", "comment": new_comment}
+
+
+def get_comments_for_artwork(db: Session, artwork_id: UUID):
+    comments = (
+        db.query(models.Comment)
+        .filter(models.Comment.artwork_id == artwork_id)
+        .order_by(models.Comment.created_at.desc())
+        .all()
+    )
+    return {
+        "message": f"{len(comments)} comment(s) retrieved.",
+        "comments": comments
+    }
+
 # ORDER OPERATIONS
 # -------------------------
 

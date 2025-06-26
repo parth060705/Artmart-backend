@@ -99,6 +99,25 @@ class ArtworkLike(LikeBase): # Optional: full detailed record (like LikeBase but
     pass
 
 # -------------------------------
+# COMMENTS SCHEMAS
+# -------------------------------
+
+class CommentBase(BaseModel):
+    content: str
+
+class CommentCreate(CommentBase):
+    artwork_id: UUID
+
+class CommentRead(CommentBase):
+    id: UUID
+    user_id: UUID
+    artwork_id: UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# -------------------------------
 # ORDER SCHEMAS
 # -------------------------------
 
