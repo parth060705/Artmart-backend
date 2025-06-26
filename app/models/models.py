@@ -33,12 +33,17 @@ class User(Base):
     role = Column(SqlEnum(RoleEnum, native_enum=False), nullable=False, default=RoleEnum.user)
     profileImage = Column(String, nullable=True)
     createdAt = Column(DateTime, default=datetime.utcnow)
+    location = Column(String, nullable=True)
+    gender = Column(String, nullable=True)
+    age = Column(Integer, nullable=True)
 
     artworks = relationship("Artwork", back_populates="artist")
     orders = relationship("Order", back_populates="buyer")
     reviews = relationship("Review", back_populates="reviewer", foreign_keys="Review.reviewerId")
     wishlist_items = relationship("Wishlist", back_populates="user")
     cart_items = relationship("Cart", back_populates="user")
+    liked_artworks = relationship("ArtworkLike", back_populates="user", cascade="all, delete-orphan")
+
 
 
 # ARTWORK MODEL
@@ -60,6 +65,20 @@ class Artwork(Base):
     reviews = relationship("Review", back_populates="artwork")
     wishlist_items = relationship("Wishlist", back_populates="artwork")
     cart_items = relationship("Cart", back_populates="artwork")
+    likes = relationship("ArtworkLike", back_populates="artwork", cascade="all, delete-orphan")
+
+# ARTWORK LIKE
+class ArtworkLike(Base):
+    __tablename__ = "artwork_likes"
+
+    userId = Column(UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True)
+    artworkId = Column(UUID(as_uuid=True), ForeignKey("artworks.id"), primary_key=True)
+    createdAt = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    artwork = relationship("Artwork", back_populates="likes")
+    user = relationship("User", back_populates="liked_artworks") 
+
 
 
 # ORDER MODEL

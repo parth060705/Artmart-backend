@@ -57,6 +57,35 @@ def list_artworks(db: Session, skip: int = 0, limit: int = 20):
     return db.query(models.Artwork).offset(skip).limit(limit).all()
 
 # -------------------------
+# LIKES OPERATIONS
+# -------------------------
+
+def like_artwork(db, user_id, artwork_id):
+    existing_like = db.query(models.ArtworkLike).filter_by(user_id=user_id, artwork_id=artwork_id).first()
+    if existing_like:
+        return {"message": "Artwork already liked."}
+
+    new_like = models.ArtworkLike(user_id=user_id, artwork_id=artwork_id)
+    db.add(new_like)
+    db.commit()
+    return {"message": "Artwork liked successfully."}
+
+def unlike_artwork(db, user_id, artwork_id):
+    like = db.query(models.ArtworkLike).filter_by(user_id=user_id, artwork_id=artwork_id).first()
+    if not like:
+        return {"message": "Artwork not liked yet."}
+
+    db.delete(like)
+    db.commit()
+    return {"message": "Artwork unliked successfully."}
+
+def get_like_count(db, artwork_id):
+    return db.query(models.ArtworkLike).filter_by(artwork_id=artwork_id).count()
+
+def has_user_liked_artwork(db, user_id, artwork_id): # check if user likes artwork
+    return db.query(models.ArtworkLike).filter_by(user_id=user_id, artwork_id=artwork_id).first() is not None
+
+# -------------------------
 # ORDER OPERATIONS
 # -------------------------
 

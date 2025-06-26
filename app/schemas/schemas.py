@@ -27,6 +27,9 @@ class UserBase(BaseModel):
     email: EmailStr
     username: str
     profileImage: Optional[str] = None
+    location: str
+    gender: str
+    age: int
 
 class UserCreate(UserBase):
     password: str
@@ -64,6 +67,36 @@ class ArtworkRead(ArtworkBase):
 
     class Config:
         from_attributes = True
+
+# -------------------------------
+# LIKES SCHEMAS
+# -------------------------------
+
+class LikeBase(BaseModel):
+    user_id: UUID
+    artwork_id: UUID
+    liked_at: datetime
+
+    class Config:
+       from_attributes = True
+
+class ArtworkLikeRequest(BaseModel): # Request schema (optional if using path params in routes)
+    artwork_id: UUID
+
+# class LikeResponse(BaseModel): # Response message for like/unlike actions
+#     message: str
+
+class LikeCountResponse(BaseModel): # Response schema for like count
+    artwork_id: UUID
+    like_count: int
+
+class HasLikedResponse(BaseModel): # Boolean response: whether user liked an artwork
+    artwork_id: UUID
+    user_id: UUID
+    has_liked: bool
+
+class ArtworkLike(LikeBase): # Optional: full detailed record (like LikeBase but explicitly named for clarity)
+    pass
 
 # -------------------------------
 # ORDER SCHEMAS

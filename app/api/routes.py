@@ -18,7 +18,12 @@ from app.schemas.schemas import (
     ReviewCreate, ReviewRead,
     WishlistCreate, WishlistRead,
     CartCreate, CartRead,
-    UserProfileImageUpdate, Token
+    UserProfileImageUpdate, Token,
+    LikeCountResponse,
+    HasLikedResponse,
+    ArtworkLikeRequest,
+    LikeBase,
+    ArtworkLike,
 )
 
 router = APIRouter()
@@ -94,6 +99,36 @@ def get_artwork(artwork_id: UUID, db: Session = Depends(get_db)):
     if not artwork:
         raise HTTPException(status_code=404, detail="Artwork not found")
     return artwork
+
+# -------------------------
+# LIKES ENDPOINTS
+# -------------------------
+
+@router.post("/likes/{artwork_id}", response_model=LikeCountResponse)
+def like_artwork(artwork_id: UUID, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    crud.like_artwork(db, current_user.id, artwork_id)
+    count = crud.get_like_count(db, artwork_id)
+    return {"artwork_id": artwork_id, "like_count": count}
+
+@router.delete("/likes/{artwork_id}", response_model=LikeCountResponse)
+def unlike_artwork(artwork_id: UUID, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    crud.unlike_artwork(db, current_user.id, artwork_id)
+    count = crud.get_like_count(db, artwork_id)
+    return {"artwork_id": artwork_id, "like_count": count}
+
+@router.get("/likes/{artwork_id}/count", response_model=LikeCountResponse)
+def get_like_count(artwork_id: UUID, db: Session = Depends(get_db)):
+    count = crud.get_like_count(db, artwork_id)
+    return {"artwork_id": artwork_id, "like_count": count}
+
+@router.get("/likes/{artwork_id}/status", response_model=HasLikedResponse)
+def check_like_status(artwork_id: UUID, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    has_liked = crud.has_user_liked_artwork(db, current_user.id, artwork_id)
+    return {
+        "artwork_id": artwork_id,
+        "user_id": current_user.id,
+        "has_liked": has_liked
+    }
 
 # -------------------------
 # ORDER ENDPOINTS
