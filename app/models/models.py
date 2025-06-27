@@ -1,13 +1,10 @@
 from sqlalchemy import Column, String, Float, Text, Enum, Boolean, ForeignKey, Integer, DateTime
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
 import enum
 from sqlalchemy import Enum as SqlEnum
-
 from app.database import Base
-
 
 
 # ENUM DEFINITIONS
@@ -25,7 +22,7 @@ class PaymentStatusEnum(str, enum.Enum):
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False)
     username = Column(String, unique=True, nullable=False)
@@ -37,7 +34,7 @@ class User(Base):
     gender = Column(String, nullable=True)
     age = Column(Integer, nullable=True)
 
-     # Relationships
+    # Relationships
     artworks = relationship("Artwork", back_populates="artist")
     orders = relationship("Order", back_populates="buyer")
     reviews = relationship("Review", back_populates="reviewer", foreign_keys="Review.reviewerId")
@@ -47,18 +44,17 @@ class User(Base):
     comments = relationship("Comment", back_populates="user", cascade="all, delete-orphan")
 
 
-
 # ARTWORK MODEL
 class Artwork(Base):
     __tablename__ = "artworks"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     title = Column(String, nullable=False)
     description = Column(Text)
     image = Column(String)
     price = Column(Float, nullable=False)
     category = Column(String, nullable=False)
-    artistId = Column(UUID(as_uuid=True), ForeignKey("users.id"))
+    artistId = Column(String, ForeignKey("users.id"))
     createdAt = Column(DateTime, default=datetime.utcnow)
     isSold = Column(Boolean, default=False)
 
@@ -76,20 +72,22 @@ class Artwork(Base):
 class ArtworkLike(Base):
     __tablename__ = "artwork_likes"
 
-    userId = Column(UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True)
-    artworkId = Column(UUID(as_uuid=True), ForeignKey("artworks.id"), primary_key=True)
+    userId = Column(String, ForeignKey("users.id"), primary_key=True)
+    artworkId = Column(String, ForeignKey("artworks.id"), primary_key=True)
     createdAt = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
     artwork = relationship("Artwork", back_populates="likes")
-    user = relationship("User", back_populates="liked_artworks") 
+    user = relationship("User", back_populates="liked_artworks")
 
+
+# COMMENT MODEL
 class Comment(Base):
     __tablename__ = "comments"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    artwork_id = Column(UUID(as_uuid=True), ForeignKey("artworks.id"), nullable=False)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    artwork_id = Column(String, ForeignKey("artworks.id"), nullable=False)
     content = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -98,17 +96,15 @@ class Comment(Base):
     artwork = relationship("Artwork", back_populates="comments")
 
 
-
-
 # ORDER MODEL
 class Order(Base):
     __tablename__ = "orders"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    buyerId = Column(UUID(as_uuid=True), ForeignKey("users.id"))
-    artworkId = Column(UUID(as_uuid=True), ForeignKey("artworks.id"))
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    buyerId = Column(String, ForeignKey("users.id"))
+    artworkId = Column(String, ForeignKey("artworks.id"))
     totalAmount = Column(Float, nullable=False)
-    paymentStatus = Column(Enum(PaymentStatusEnum), nullable=False)
+    paymentStatus = Column(SqlEnum(PaymentStatusEnum, native_enum=False), nullable=False)
     createdAt = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -120,10 +116,10 @@ class Order(Base):
 class Review(Base):
     __tablename__ = "reviews"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    reviewerId = Column(UUID(as_uuid=True), ForeignKey("users.id"))
-    artistId = Column(UUID(as_uuid=True), ForeignKey("users.id"))
-    artworkId = Column(UUID(as_uuid=True), ForeignKey("artworks.id"), nullable=True)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    reviewerId = Column(String, ForeignKey("users.id"))
+    artistId = Column(String, ForeignKey("users.id"))
+    artworkId = Column(String, ForeignKey("artworks.id"), nullable=True)
     rating = Column(Integer, nullable=False)
     comment = Column(Text)
     createdAt = Column(DateTime, default=datetime.utcnow)
@@ -138,9 +134,9 @@ class Review(Base):
 class Wishlist(Base):
     __tablename__ = "wishlist"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    userId = Column(UUID(as_uuid=True), ForeignKey("users.id"))
-    artworkId = Column(UUID(as_uuid=True), ForeignKey("artworks.id"))
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    userId = Column(String, ForeignKey("users.id"))
+    artworkId = Column(String, ForeignKey("artworks.id"))
     createdAt = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -152,9 +148,9 @@ class Wishlist(Base):
 class Cart(Base):
     __tablename__ = "cart"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    userId = Column(UUID(as_uuid=True), ForeignKey("users.id"))
-    artworkId = Column(UUID(as_uuid=True), ForeignKey("artworks.id"))
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    userId = Column(String, ForeignKey("users.id"))
+    artworkId = Column(String, ForeignKey("artworks.id"))
     createdAt = Column(DateTime, default=datetime.utcnow)
 
     # Relationships

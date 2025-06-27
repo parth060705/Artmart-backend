@@ -1,9 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from uuid import UUID
 from typing import List
 from fastapi.security import OAuth2PasswordRequestForm
 from app.core.auth import get_current_user
+import os
+import shutil
+
 
 
 from app.database import SessionLocal
@@ -69,18 +72,31 @@ def login(
     access_token = auth.create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
+
+UPLOAD_DIR = "uploads"  # You can change this to another directory if needed
+
 @router.patch("/users/{user_id}/image")
-def update_profile_image(user_id: UUID, update: UserProfileImageUpdate, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
+def update_profile_image(
+    user_id: UUID,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.id == str(user_id)).first()  # Convert UUID to str!
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if update.profileImage is not None:
-        user.profileImage = update.profileImage
-        db.commit()
-        db.refresh(user)
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-    return {"message": "Profile image updated", "profileImage": user.profileImage}
+    file_path = os.path.join(UPLOAD_DIR, f"{user_id}_{file.filename}")
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    user.profileImage = file_path
+    db.commit()
+    db.refresh(user)
+
+    return {"message": "Profile image uploaded", "profileImage": user.profileImage}
 
 # -------------------------
 # ARTWORK ENDPOINTS
@@ -91,8 +107,8 @@ def create_artwork(artwork: ArtworkCreate, db: Session = Depends(get_db)):
     return crud.create_artwork(db, artwork)
 
 @router.get("/artworks", response_model=List[ArtworkRead])
-def list_artworks(skip: int = 0, limit: int = 20, db: Session = Depends(get_db)):
-    return crud.list_artworks(db, skip=skip, limit=limit)
+def list_artworks(db: Session = Depends(get_db)):
+    return crud.list_artworks(db)
 
 @router.get("/artworks/{artwork_id}", response_model=ArtworkRead)
 def get_artwork(artwork_id: UUID, db: Session = Depends(get_db)):
@@ -163,6 +179,10 @@ def create_order(order: OrderCreate, db: Session = Depends(get_db)):
 @router.get("/orders/user/{user_id}", response_model=List[OrderRead])
 def list_user_orders(user_id: UUID, db: Session = Depends(get_db)):
     return crud.list_orders_for_user(db, user_id)
+
+@router.get("/orders", response_model=List[OrderRead])
+def get_all_orders(db: Session = Depends(get_db)):
+    return crud.list_all_orders(db)
 
 # -------------------------
 # REVIEW ENDPOINTS

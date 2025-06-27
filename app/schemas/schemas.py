@@ -27,9 +27,9 @@ class UserBase(BaseModel):
     email: EmailStr
     username: str
     profileImage: Optional[str] = None
-    location: str
-    gender: str
-    age: int
+    location: Optional[str] = None
+    gender: Optional[str] = None
+    age: Optional[int] = None
 
 class UserCreate(UserBase):
     password: str
