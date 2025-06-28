@@ -58,7 +58,7 @@ class ArtworkBase(BaseModel):
     category: str
 
 class ArtworkCreate(ArtworkBase):
-    artistId: UUID
+    pass
 
 class ArtworkRead(ArtworkBase):
     id: UUID
@@ -147,7 +147,6 @@ class ReviewBase(BaseModel):
     comment: Optional[str] = None
 
 class ReviewCreate(ReviewBase):
-    reviewerId: UUID
     artistId: Optional[UUID] = None
     artworkId: Optional[UUID] = None
 

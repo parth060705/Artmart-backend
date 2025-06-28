@@ -79,8 +79,11 @@ def upload_profile_image(
 # -------------------------
 
 @router.post("/artworks", response_model=ArtworkRead)
-def create_artwork(artwork: ArtworkCreate, db: Session = Depends(get_db)):
-    return crud.create_artwork(db, artwork)
+def create_artwork(
+    artwork: ArtworkCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)):
+    return crud.create_artwork(db, artwork, user_id=current_user.id)
 
 @router.get("/artworks", response_model=List[ArtworkRead])
 def list_artworks(db: Session = Depends(get_db)):
@@ -168,8 +171,11 @@ def get_all_orders(db: Session = Depends(get_db)):
 # -------------------------
 
 @router.post("/reviews", response_model=ReviewRead)
-def create_review(review: ReviewCreate, db: Session = Depends(get_db)):
-    return crud.create_review(db, review)
+def create_review(
+    review: ReviewCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)):
+    return crud.create_review(db, review, user_id=current_user.id)
 
 @router.get("/reviews/artist/{artist_id}", response_model=List[ReviewRead])
 def get_reviews_for_artist(artist_id: UUID, db: Session = Depends(get_db)):

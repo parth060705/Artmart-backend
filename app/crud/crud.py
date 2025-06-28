@@ -78,12 +78,15 @@ def update_user_profile_image(db: Session, user_id: UUID, file: UploadFile):
 # ARTWORK OPERATIONS
 # -------------------------
 
-def create_artwork(db: Session, artwork: schemas.ArtworkCreate):
-    data = artwork.dict()
-    if data.get("image"):
-        data["image"] = str(data["image"])  # Convert HttpUrl to string
-    data["artistId"] = str(data["artistId"])  # Convert UUID to string
-    db_artwork = models.Artwork(**data)
+def create_artwork(db: Session, item: schemas.ArtworkCreate, user_id: UUID):
+    db_artwork = models.Artwork(
+        title=item.title,
+        description=item.description,
+        image=str(item.image) if item.image else None,
+        price=item.price,
+        category=item.category,
+        artistId=str(user_id)
+    )
     db.add(db_artwork)
     db.commit()
     db.refresh(db_artwork)
@@ -176,7 +179,7 @@ def get_comments_for_artwork(db: Session, artwork_id: UUID):
         "comments": comments
     }
 
-
+#--------------------------
 # ORDER OPERATIONS
 # -------------------------
 
@@ -209,22 +212,21 @@ def list_orders_for_user(db: Session, user_id: UUID):
 # REVIEW OPERATIONS
 # -------------------------
 
-def create_review(db: Session, review: schemas.ReviewCreate):
-    data = review.dict()
-    data["reviewerId"] = str(data["reviewerId"])
-    if data.get("artistId"):
-        data["artistId"] = str(data["artistId"])
-    if data.get("artworkId"):
-        data["artworkId"] = str(data["artworkId"])
-    db_review = models.Review(**data)
+def create_review(db: Session, item: schemas.ReviewCreate, user_id: UUID):
+    db_review = models.Review(
+        reviewerId=str(user_id),
+        artistId=str(item.artistId),
+        artworkId=str(item.artworkId),
+        rating=item.rating,
+        comment=item.comment
+    )
     db.add(db_review)
     db.commit()
     db.refresh(db_review)
     return db_review
 
 def list_reviews_for_artist(db: Session, artist_id: UUID):
-    artist_id = str(artist_id)  # Convert UUID to string
-    return db.query(models.Review).filter(models.Review.artistId == artist_id).all()
+    return db.query(models.Review).filter(models.Review.artistId == str(artist_id)).all()
 
 # -------------------------
 # WISHLIST OPERATIONS
