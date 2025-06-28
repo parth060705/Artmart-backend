@@ -42,8 +42,9 @@ class UserRead(UserBase):
     class Config:
         from_attributes = True  
 
-class UserProfileImageUpdate(BaseModel):
-    profileImage: Optional[HttpUrl] = None
+class ProfileImageResponse(BaseModel):
+    message: str
+    profileImage: str
 
 # -------------------------------
 # ARTWORK SCHEMAS
@@ -127,7 +128,7 @@ class OrderBase(BaseModel):
     paymentStatus: PaymentStatus
 
 class OrderCreate(OrderBase):
-    buyerId: UUID
+    pass
 
 class OrderRead(OrderBase):
     id: UUID
@@ -164,6 +165,9 @@ class ReviewRead(ReviewBase):
 # WISHLIST SCHEMAS
 # -------------------------------
 
+class WishlistCreatePublic(BaseModel):
+    artworkId: UUID
+
 class WishlistCreate(BaseModel):
     userId: UUID
     artworkId: UUID
@@ -175,9 +179,19 @@ class WishlistRead(WishlistCreate):
     class Config:
         from_attributes = True
 
+class WishlistRemove(WishlistCreate):
+    id: UUID
+
+    class Config:
+        from_attributes = True
+
+
 # -------------------------------
 # CART SCHEMAS
 # -------------------------------
+
+class CartCreatePublic(BaseModel):
+    artworkId: UUID
 
 class CartCreate(BaseModel):
     userId: UUID
@@ -186,6 +200,9 @@ class CartCreate(BaseModel):
 class CartRead(CartCreate):
     id: UUID
     createdAt: datetime
+
+class CartRemove(CartCreate):
+    id: UUID
 
     class Config:
         from_attributes = True

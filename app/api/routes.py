@@ -3,31 +3,25 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from typing import List
 from fastapi.security import OAuth2PasswordRequestForm
-from app.core.auth import get_current_user
 import os
 import shutil
 
-
-
-from app.database import SessionLocal
-from app.database import get_db
+from app.core.auth import get_current_user
+from app.database import get_db, SessionLocal
 from app.models.models import User
 from app.core import auth
 from app.crud import crud
 from app.schemas.schemas import (
-    UserCreate, UserRead,
+    UserCreate, UserRead, ProfileImageResponse, Token,
     ArtworkCreate, ArtworkRead,
     OrderCreate, OrderRead,
     ReviewCreate, ReviewRead,
     WishlistCreate, WishlistRead,
     CartCreate, CartRead,
-    UserProfileImageUpdate, Token,
-    LikeCountResponse,
-    HasLikedResponse,
-    ArtworkLikeRequest,
-    LikeBase,
-    ArtworkLike,
-    CommentCreate,
+    LikeCountResponse, HasLikedResponse,
+    ArtworkLikeRequest, LikeBase, ArtworkLike,
+    CommentCreate, WishlistCreatePublic,
+    CartCreatePublic
 )
 
 router = APIRouter()
@@ -43,7 +37,7 @@ def get_db():
         db.close()
 
 # -------------------------
-# USER ENDPOINTS
+# AUTH & USER ENDPOINTS
 # -------------------------
 
 @router.get("/me", response_model=UserRead)
@@ -72,31 +66,13 @@ def login(
     access_token = auth.create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
-
-UPLOAD_DIR = "uploads"  # You can change this to another directory if needed
-
-@router.patch("/users/{user_id}/image")
-def update_profile_image(
-    user_id: UUID,
+@router.patch("/users/image", response_model=ProfileImageResponse)
+def upload_profile_image(
     file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    user = db.query(User).filter(User.id == str(user_id)).first()  # Convert UUID to str!
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-    file_path = os.path.join(UPLOAD_DIR, f"{user_id}_{file.filename}")
-
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    user.profileImage = file_path
-    db.commit()
-    db.refresh(user)
-
-    return {"message": "Profile image uploaded", "profileImage": user.profileImage}
+    return crud.update_user_profile_image(db, current_user.id, file)
 
 # -------------------------
 # ARTWORK ENDPOINTS
@@ -159,7 +135,6 @@ def post_comment(
 ):
     return crud.create_comment(db=db, user_id=current_user.id, comment_data=comment_data)
 
-
 @router.get("/artwork/{artwork_id}")
 def get_comments(
     artwork_id: UUID,
@@ -167,18 +142,22 @@ def get_comments(
 ):
     return crud.get_comments_for_artwork(db=db, artwork_id=artwork_id)
 
-
 # -------------------------
 # ORDER ENDPOINTS
 # -------------------------
 
 @router.post("/orders", response_model=OrderRead)
-def create_order(order: OrderCreate, db: Session = Depends(get_db)):
-    return crud.create_order(db, order)
+def create_order(
+    order_data: OrderCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return crud.create_order(db, order_data, user_id=current_user.id)
 
-@router.get("/orders/user/{user_id}", response_model=List[OrderRead])
-def list_user_orders(user_id: UUID, db: Session = Depends(get_db)):
-    return crud.list_orders_for_user(db, user_id)
+
+@router.get("/orders/my", response_model=List[OrderRead])
+def get_my_orders(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return crud.list_orders_for_user(db, user_id=current_user.id)
 
 @router.get("/orders", response_model=List[OrderRead])
 def get_all_orders(db: Session = Depends(get_db)):
@@ -201,21 +180,54 @@ def get_reviews_for_artist(artist_id: UUID, db: Session = Depends(get_db)):
 # -------------------------
 
 @router.post("/wishlist", response_model=WishlistRead)
-def add_to_wishlist(item: WishlistCreate, db: Session = Depends(get_db)):
-    return crud.add_to_wishlist(db, item)
+def add_to_wishlist(
+    item: WishlistCreatePublic,  # ✅ only expects artworkId from client
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    internal_item = WishlistCreate(userId=current_user.id, artworkId=item.artworkId)
+    return crud.add_to_wishlist(db, internal_item, user_id=current_user.id)
 
-@router.get("/wishlist/user/{user_id}", response_model=List[WishlistRead])
-def get_wishlist(user_id: UUID, db: Session = Depends(get_db)):
-    return crud.get_user_wishlist(db, user_id)
+@router.get("/wishlist", response_model=List[WishlistRead])
+def get_wishlist(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return crud.get_user_wishlist(db, current_user.id)
+
+@router.delete("/wishlist/artwork/{artwork_id}")
+def remove_from_wishlist(
+    artwork_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return crud.remove_wishlist_item(db, user_id=current_user.id, artwork_id=artwork_id)
 
 # -------------------------
 # CART ENDPOINTS
 # -------------------------
 
-@router.post("/cart", response_model=CartRead)
-def add_to_cart(item: CartCreate, db: Session = Depends(get_db)):
-    return crud.add_to_cart(db, item)
+@router.post("/cart", response_model=CartCreatePublic)
+def add_to_cart(
+    item: CartCreatePublic,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    internal_item = CartCreatePublic(userId=current_user.id, artworkId=item.artworkId)
+    return crud.add_to_cart(db, internal_item, user_id=current_user.id)
 
-@router.get("/cart/user/{user_id}", response_model=List[CartRead])
-def get_cart(user_id: UUID, db: Session = Depends(get_db)):
-    return crud.get_user_cart(db, user_id)
+
+@router.get("/cart", response_model=List[CartRead])
+def get_cart(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return crud.get_user_cart(db, current_user.id)
+
+@router.delete("/cart/artwork/{artwork_id}")
+def remove_from_cart(
+    artwork_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return crud.remove_cart_item(db, user_id=current_user.id, artwork_id=artwork_id)

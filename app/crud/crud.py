@@ -1,4 +1,8 @@
 from sqlalchemy.orm import Session
+from fastapi import HTTPException
+from fastapi import UploadFile
+import os
+import shutil
 from uuid import UUID
 from uuid import uuid4
 from app.models import models
@@ -38,6 +42,36 @@ def create_user(db: Session, user: schemas.UserCreate):
 
 def get_user_by_username(db: Session, username: str):
     return db.query(models.User).filter(models.User.username == username).first()
+
+UPLOAD_DIR = "uploads"
+ALLOWED_EXTENSIONS = {"jpeg", "jpg", "png", "svg"}
+ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/svg+xml"}
+
+def update_user_profile_image(db: Session, user_id: UUID, file: UploadFile):
+    if file.content_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(status_code=400, detail="Unsupported file type")
+
+    file_extension = file.filename.split(".")[-1].lower()
+    if file_extension not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Unsupported file extension")
+
+    # ✅ FIXED query
+    user = db.query(models.User).filter(models.User.id == str(user_id)).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    file_path = os.path.join(UPLOAD_DIR, f"{user_id}_{file.filename}")
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    user.profileImage = file_path
+    db.commit()
+    db.refresh(user)
+
+    return {"message": "Profile image uploaded", "profileImage": user.profileImage}
 
 
 # -------------------------
@@ -146,22 +180,25 @@ def get_comments_for_artwork(db: Session, artwork_id: UUID):
 # ORDER OPERATIONS
 # -------------------------
 
-def create_order(db: Session, order: schemas.OrderCreate):
-    data = order.dict()
-    data["buyerId"] = str(data["buyerId"])
-    data["artworkId"] = str(data["artworkId"])
-    db_order = models.Order(**data)
+def create_order(db: Session, order_data: schemas.OrderCreate, user_id: UUID):
+    db_order = models.Order(
+        artworkId=str(order_data.artworkId),
+        totalAmount=order_data.totalAmount,
+        paymentStatus=order_data.paymentStatus,
+        buyerId=str(user_id)
+    )
     db.add(db_order)
     db.commit()
     db.refresh(db_order)
     return db_order
 
+
 def list_all_orders(db: Session):
     return db.query(models.Order).all()
 
-# def get_order(db: Session, order_id: UUID):
-#     order_id = str(order_id)
-#     return db.query(models.Order).filter(models.Order.id == order_id).first()
+def get_order(db: Session, order_id: UUID):
+    order_id = str(order_id)
+    return db.query(models.Order).filter(models.Order.id == order_id).first()
 
 
 def list_orders_for_user(db: Session, user_id: UUID):
@@ -185,7 +222,6 @@ def create_review(db: Session, review: schemas.ReviewCreate):
     db.refresh(db_review)
     return db_review
 
-
 def list_reviews_for_artist(db: Session, artist_id: UUID):
     artist_id = str(artist_id)  # Convert UUID to string
     return db.query(models.Review).filter(models.Review.artistId == artist_id).all()
@@ -194,35 +230,51 @@ def list_reviews_for_artist(db: Session, artist_id: UUID):
 # WISHLIST OPERATIONS
 # -------------------------
 
-def add_to_wishlist(db: Session, item: schemas.WishlistCreate):
-    data = item.dict()
-    data["userId"] = str(data["userId"])
-    data["artworkId"] = str(data["artworkId"])
-    db_item = models.Wishlist(**data)
-    db.add(db_item)
+def add_to_wishlist(db: Session, item: schemas.WishlistCreate, user_id: UUID):
+    db_wishlist = models.Wishlist(
+        userId=str(user_id),
+        artworkId=str(item.artworkId)
+    )
+    db.add(db_wishlist)
     db.commit()
-    db.refresh(db_item)
-    return db_item
+    db.refresh(db_wishlist)
+    return db_wishlist
 
 def get_user_wishlist(db: Session, user_id: UUID):
     user_id = str(user_id)
     return db.query(models.Wishlist).filter(models.Wishlist.userId == user_id).all()
 
+def remove_wishlist_item(db: Session, user_id: UUID, artwork_id: UUID):
+    item = db.query(models.Wishlist).filter_by(userId=str(user_id), artworkId=str(artwork_id)).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Wishlist item not found")
+    db.delete(item)
+    db.commit()
+    return {"status": "success", "message": "Item removed from wishlist"}
+
 # -------------------------
 # CART OPERATIONS
 # -------------------------
 
-def add_to_cart(db: Session, item: schemas.CartCreate):
-    data = item.dict()
-    data["userId"] = str(data["userId"])
-    data["artworkId"] = str(data["artworkId"])
-    db_item = models.Cart(**data)
-    db.add(db_item)
+def add_to_cart(db: Session, item: schemas.CartCreate, user_id: UUID):
+    db_cart = models.Cart(
+        userId=str(user_id),
+        artworkId=str(item.artworkId)
+    )
+    db.add(db_cart)
     db.commit()
-    db.refresh(db_item)
-    return db_item
+    db.refresh(db_cart)
+    return db_cart
 
 
 def get_user_cart(db: Session, user_id: UUID):
     user_id = str(user_id)
     return db.query(models.Cart).filter(models.Cart.userId == user_id).all()
+
+def remove_cart_item(db: Session, user_id: UUID, artwork_id: UUID):
+    item = db.query(models.Cart).filter_by(userId=str(user_id), artworkId=str(artwork_id)).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Cart item not found")
+    db.delete(item)
+    db.commit()
+    return {"status": "success", "message": "Item removed from cart"}
