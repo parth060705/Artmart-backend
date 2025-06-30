@@ -292,3 +292,63 @@ def remove_cart_item(db: Session, user_id: UUID, artwork_id: UUID):
     db.delete(item)
     db.commit()
     return {"status": "success", "message": "Item removed from cart"}
+
+# -------------------------
+# FOLLOW OPERATIONS
+# -------------------------
+
+def serialize_user(user: models.User) -> dict:
+    return {
+        "id": str(user.id),
+        "username": user.username,
+        "email": user.email,
+        "name": user.name,
+        "profileImageUrl": user.profileImage,
+    }
+
+
+def follow_user(db: Session, follower_id: str, followed_id: str):
+    if follower_id == followed_id:
+        raise ValueError("User cannot follow themselves.")
+
+    follower = db.get(models.User, follower_id)
+    followed = db.get(models.User, followed_id)
+
+    if not follower or not followed:
+        raise ValueError("User not found.")
+
+    if follower.is_following(followed):
+        return {"status": "already_following"}
+
+    follower.follow(followed)
+    db.commit()
+    return {"status": "followed"}
+
+
+def unfollow_user(db: Session, follower_id: str, followed_id: str):
+    follower = db.get(models.User, follower_id)
+    followed = db.get(models.User, followed_id)
+
+    if not follower or not followed:
+        raise ValueError("User not found.")
+
+    if not follower.is_following(followed):
+        return {"status": "not_following"}
+
+    follower.unfollow(followed)
+    db.commit()
+    return {"status": "unfollowed"}
+
+
+def get_followers(db: Session, user_id: str):
+    user = db.get(models.User, user_id)
+    if not user:
+        raise ValueError("User not found.")
+    return user.followers
+
+
+def get_following(db: Session, user_id: str):
+    user = db.get(models.User, user_id)
+    if not user:
+        raise ValueError("User not found.")
+    return user.following

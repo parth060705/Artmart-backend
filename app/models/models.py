@@ -1,4 +1,7 @@
-from sqlalchemy import Column, String, Float, Text, Enum, Boolean, ForeignKey, Integer, DateTime, CHAR
+from sqlalchemy import (
+    Column, String, Float, Text, Enum, Boolean, ForeignKey,
+    Integer, DateTime, CHAR, Table
+)
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
@@ -6,7 +9,10 @@ import enum
 from sqlalchemy import Enum as SqlEnum
 from app.database import Base
 
+# -------------------------
 # ENUM DEFINITIONS
+# -------------------------
+
 class RoleEnum(str, enum.Enum):
     user = "user"
     admin = "admin"
@@ -16,7 +22,22 @@ class PaymentStatusEnum(str, enum.Enum):
     paid = "paid"
     failed = "failed"
 
+# -------------------------
+# FOLLOWERS ASSOCIATION TABLE
+# -------------------------
+
+followers_association = Table(
+    "user_followers",
+    Base.metadata,
+    Column("follower_id", String(36), ForeignKey("users.id"), primary_key=True),
+    Column("followed_id", String(36), ForeignKey("users.id"), primary_key=True),
+    Column("created_at", DateTime, default=datetime.utcnow)
+)
+
+# -------------------------
 # USER MODEL
+# -------------------------
+
 class User(Base):
     __tablename__ = "users"
 
@@ -33,7 +54,7 @@ class User(Base):
     gender = Column(String(20), nullable=True)
     age = Column(Integer, nullable=True)
     phone = Column(String(15), nullable=True)
-    
+
     # Relationships
     artworks = relationship("Artwork", back_populates="artist")
     orders = relationship("Order", back_populates="buyer")
@@ -43,7 +64,33 @@ class User(Base):
     liked_artworks = relationship("ArtworkLike", back_populates="user", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="user", cascade="all, delete-orphan")
 
+    followers = relationship(
+        "User",
+        secondary=followers_association,
+        primaryjoin=id == followers_association.c.followed_id,
+        secondaryjoin=id == followers_association.c.follower_id,
+        backref="following"
+    )
+
+    # Follow utility methods
+    def follow(self, user: "User"):
+        if user not in self.following:
+            self.following.append(user)
+
+    def unfollow(self, user: "User"):
+        if user in self.following:
+            self.following.remove(user)
+
+    def is_following(self, user: "User") -> bool:
+        return user in self.following
+
+    def is_followed_by(self, user: "User") -> bool:
+        return user in self.followers
+
+# -------------------------
 # ARTWORK MODEL
+# -------------------------
+
 class Artwork(Base):
     __tablename__ = "artworks"
 
@@ -66,7 +113,10 @@ class Artwork(Base):
     likes = relationship("ArtworkLike", back_populates="artwork", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="artwork", cascade="all, delete-orphan")
 
+# -------------------------
 # ARTWORK LIKES
+# -------------------------
+
 class ArtworkLike(Base):
     __tablename__ = "artwork_likes"
 
@@ -78,7 +128,10 @@ class ArtworkLike(Base):
     artwork = relationship("Artwork", back_populates="likes")
     user = relationship("User", back_populates="liked_artworks")
 
+# -------------------------
 # COMMENT MODEL
+# -------------------------
+
 class Comment(Base):
     __tablename__ = "comments"
 
@@ -92,7 +145,10 @@ class Comment(Base):
     user = relationship("User", back_populates="comments")
     artwork = relationship("Artwork", back_populates="comments")
 
+# -------------------------
 # ORDER MODEL
+# -------------------------
+
 class Order(Base):
     __tablename__ = "orders"
 
@@ -107,7 +163,10 @@ class Order(Base):
     buyer = relationship("User", back_populates="orders")
     artwork = relationship("Artwork", back_populates="orders")
 
+# -------------------------
 # REVIEW MODEL
+# -------------------------
+
 class Review(Base):
     __tablename__ = "reviews"
 
@@ -124,7 +183,10 @@ class Review(Base):
     artwork = relationship("Artwork", back_populates="reviews")
     artist = relationship("User", foreign_keys=[artistId])
 
+# -------------------------
 # WISHLIST MODEL
+# -------------------------
+
 class Wishlist(Base):
     __tablename__ = "wishlist"
 
@@ -137,7 +199,10 @@ class Wishlist(Base):
     user = relationship("User", back_populates="wishlist_items")
     artwork = relationship("Artwork", back_populates="wishlist_items")
 
+# -------------------------
 # CART MODEL
+# -------------------------
+
 class Cart(Base):
     __tablename__ = "cart"
 

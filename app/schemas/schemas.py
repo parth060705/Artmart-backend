@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, HttpUrl, Field
 from uuid import UUID
 from datetime import datetime
-from typing import Optional, Literal
+from typing import Optional, Literal, List
 
 # ENUM TYPES
 RoleType = Literal["user", "admin"]
@@ -13,6 +13,7 @@ PaymentStatus = Literal["pending", "paid", "failed"]
 
 class Token(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str
 
 class TokenData(BaseModel):
@@ -207,3 +208,17 @@ class CartRemove(CartCreate):
 
     class Config:
         from_attributes = True
+
+# -------------------------------
+# FOLLOW SCHEMAS
+# -------------------------------
+
+class UserShort(BaseModel):
+    id: str
+    username: str
+    name: str
+    profileImage: Optional[str] = Field(alias="profileImageUrl")
+
+class FollowList(BaseModel):
+    users: List[UserShort]
+    count: int
