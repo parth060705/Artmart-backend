@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Float, Text, Enum, Boolean, ForeignKey, Integer, DateTime
+from sqlalchemy import Column, String, Float, Text, Enum, Boolean, ForeignKey, Integer, DateTime, CHAR
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
@@ -29,9 +29,11 @@ class User(Base):
     profileImage = Column(String(255), nullable=True)
     createdAt = Column(DateTime, default=datetime.utcnow)
     location = Column(String(100), nullable=True)
+    pincode = Column(CHAR(6), nullable=True)
     gender = Column(String(20), nullable=True)
     age = Column(Integer, nullable=True)
-
+    phone = Column(String(15), nullable=True)
+    
     # Relationships
     artworks = relationship("Artwork", back_populates="artist")
     orders = relationship("Order", back_populates="buyer")

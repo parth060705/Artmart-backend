@@ -34,6 +34,8 @@ def create_user(db: Session, user: schemas.UserCreate):
         location=user.location,
         gender=user.gender,
         age=user.age,
+        phone=str(user.phone) if user.phone else None,
+        pincode=str(user.pincode) if user.pincode else None 
     )
     db.add(db_user)
     db.commit()
