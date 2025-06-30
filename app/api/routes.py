@@ -251,12 +251,24 @@ def unfollow_user(user_id: str, db: Session = Depends(get_db), current_user: Use
     
     return {"msg": "Unfollowed successfully"}
 
-@router.get("/users/{user_id}/followers", response_model=FollowList)
-def get_followers(user_id: str, db: Session = Depends(get_db)):
-    followers = crud.get_followers(db, user_id)
-    return {"users": [serialize_user(user) for user in followers], "count": len(followers)}
+@router.get("/users/me/followers", response_model=FollowList)
+def get_my_followers(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    followers = crud.get_followers(db, current_user.id)
+    return {
+        "users": [serialize_user(user) for user in followers],
+        "count": len(followers)
+    }
 
-@router.get("/users/{user_id}/following", response_model=FollowList)
-def get_following(user_id: str, db: Session = Depends(get_db)):
-    following = crud.get_following(db, user_id)
-    return {"users": [serialize_user(user) for user in following], "count": len(following)}
+@router.get("/users/me/following", response_model=FollowList)
+def get_my_following(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    following = crud.get_following(db, current_user.id)
+    return {
+        "users": [serialize_user(user) for user in following],
+        "count": len(following)
+    }
