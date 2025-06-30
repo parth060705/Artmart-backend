@@ -3,9 +3,6 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from typing import List
 from fastapi.security import OAuth2PasswordRequestForm
-import os
-import shutil
-
 from app.core.auth import get_current_user
 from app.database import get_db, SessionLocal
 from app.models.models import User
@@ -23,6 +20,9 @@ from app.schemas.schemas import (
     CommentCreate, WishlistCreatePublic,
     CartCreatePublic
 )
+
+import cloudinary.uploader
+from app.core import cloudinary_config 
 
 router = APIRouter()
 

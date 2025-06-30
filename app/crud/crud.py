@@ -9,6 +9,9 @@ from app.models import models
 from app.models.models import RoleEnum
 from app.schemas import schemas
 from passlib.context import CryptContext
+import cloudinary.uploader
+import cloudinary
+
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -50,31 +53,38 @@ ALLOWED_EXTENSIONS = {"jpeg", "jpg", "png", "svg"}
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/svg+xml"}
 
 def update_user_profile_image(db: Session, user_id: UUID, file: UploadFile):
+    print("[DEBUG] User ID:", user_id)
+    print("[DEBUG] File type:", file.content_type)
+    print("[DEBUG] Cloudinary API key:", cloudinary.config().api_key)  # See if it's None
+    print("[DEBUG] Cloudinary Cloud name:", cloudinary.config().cloud_name)
+
     if file.content_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(status_code=400, detail="Unsupported file type")
 
-    file_extension = file.filename.split(".")[-1].lower()
-    if file_extension not in ALLOWED_EXTENSIONS:
-        raise HTTPException(status_code=400, detail="Unsupported file extension")
+    contents = file.file.read()
+    if len(contents) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 5MB)")
+    file.file.seek(0)
 
-    # ✅ FIXED query
     user = db.query(models.User).filter(models.User.id == str(user_id)).first()
-
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-    file_path = os.path.join(UPLOAD_DIR, f"{user_id}_{file.filename}")
+    try:
+        result = cloudinary.uploader.upload(file.file, folder="user_profiles")
+        print("[DEBUG] Upload result:", result)
+    except Exception as e:
+        print("[ERROR] Cloudinary upload failed:", str(e))
+        raise HTTPException(status_code=500, detail=f"Cloudinary error: {str(e)}")
 
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    user.profileImage = file_path
+    user.profileImage = result["secure_url"]
     db.commit()
     db.refresh(user)
 
-    return {"message": "Profile image uploaded", "profileImage": user.profileImage}
-
+    return {
+        "message": "Profile image uploaded successfully",
+        "profileImage": user.profileImage
+    }
 
 # -------------------------
 # ARTWORK OPERATIONS

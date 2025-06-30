@@ -26,11 +26,10 @@ class UserBase(BaseModel):
     name: str
     email: EmailStr
     username: str
-    profileImage: Optional[str] = None
+    profileImage: Optional[HttpUrl] = None
     location: Optional[str] = None
     gender: Optional[str] = None
     age: Optional[int] = None
-
     pincode: Optional[str] = Field(default=None, pattern=r'^\d{6}$')
     phone: Optional[str] = Field(default=None, pattern=r'^(\+91)?\d{10}$')
 
