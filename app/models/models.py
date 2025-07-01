@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Column, String, Float, Text, Enum, Boolean, ForeignKey,
-    Integer, DateTime, CHAR, Table
+    Integer, DateTime, CHAR, Table, JSON
 )
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -97,7 +97,7 @@ class Artwork(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     title = Column(String(200), nullable=False)
     description = Column(Text)
-    image = Column(String(255))
+    images = Column(JSON, nullable=True, default=list)
     price = Column(Float, nullable=False)
     category = Column(String(100), nullable=False)
     artistId = Column(String(36), ForeignKey("users.id"))

@@ -70,7 +70,17 @@ class ArtworkBase(BaseModel):
     category: str
 
 class ArtworkCreate(ArtworkBase):
-    pass
+    title: str
+    description: Optional[str] = None
+    price: float
+    category: str
+
+class ArtworkImageResponse(BaseModel):
+    message: str
+    artworkImage: HttpUrl
+
+# class ArtworkDelete(ArtworkBase):
+#     pass
 
 class ArtworkRead(ArtworkBase):
     id: UUID
@@ -100,7 +110,7 @@ class LikeCountResponse(BaseModel): # Response schema for like count
     artwork_id: UUID
     like_count: int
 
-class HasLikedResponse(BaseModel): # Boolean response: whether user liked an artwork
+class HasLikedResponse(BaseModel):
     artwork_id: UUID
     user_id: UUID
     has_liked: bool

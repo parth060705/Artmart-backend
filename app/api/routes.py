@@ -11,8 +11,8 @@ from app.core import auth
 from app.crud import crud
 from app.crud.crud import serialize_user
 from app.schemas.schemas import (
-    UserCreate, UserRead, ProfileImageResponse, Token,
-    ArtworkCreate, ArtworkRead,
+    UserCreate, UserRead, ProfileImageResponse, UserUpdate, 
+    Token, ArtworkCreate, ArtworkRead, ArtworkImageResponse,
     OrderCreate, OrderRead,
     ReviewCreate, ReviewRead,
     WishlistCreate, WishlistRead, WishlistCreatePublic,
@@ -20,7 +20,7 @@ from app.schemas.schemas import (
     LikeCountResponse, HasLikedResponse,
     CommentCreate, ArtworkLikeRequest,
     UserShort, 
-    FollowList, UserUpdate
+    FollowList
 )
 
 import cloudinary.uploader
@@ -123,6 +123,16 @@ def create_artwork(
     current_user: User = Depends(get_current_user)
 ):
     return crud.create_artwork(db, artwork, user_id=current_user.id)
+
+@router.post("/artworks/{artwork_id}/upload-image", response_model=ArtworkImageResponse)
+def upload_artwork_image_route(
+    artwork_id: UUID,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return crud.upload_artwork_image(db=db, user_id=current_user.id, file=file, artwork_id=artwork_id)
+
 
 @router.get("/artworks", response_model=List[ArtworkRead])
 def list_artworks(db: Session = Depends(get_db)):
