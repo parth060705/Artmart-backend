@@ -87,9 +87,6 @@ class LikeBase(BaseModel):
 class ArtworkLikeRequest(BaseModel): # Request schema (optional if using path params in routes)
     artwork_id: UUID
 
-# class LikeResponse(BaseModel): # Response message for like/unlike actions
-#     message: str
-
 class LikeCountResponse(BaseModel): # Response schema for like count
     artwork_id: UUID
     like_count: int
