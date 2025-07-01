@@ -12,7 +12,7 @@ from app.crud import crud
 from app.crud.crud import serialize_user
 from app.schemas.schemas import (
     UserCreate, UserRead, ProfileImageResponse, UserUpdate, 
-    Token, ArtworkCreate, ArtworkRead, ArtworkImageResponse,
+    Token, ArtworkCreate, ArtworkRead, ArtworkImageResponse,ArtworkDelete,
     OrderCreate, OrderRead,
     ReviewCreate, ReviewRead,
     WishlistCreate, WishlistRead, WishlistCreatePublic,
@@ -133,6 +133,12 @@ def upload_artwork_image_route(
 ):
     return crud.upload_artwork_image(db=db, user_id=current_user.id, file=file, artwork_id=artwork_id)
 
+@router.delete("/artworks/{artwork_id}", response_model=ArtworkDelete)
+def delete_artwork(
+    artwork_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)):
+    return crud.delete_artwork(db, artwork_id=artwork_id, user_id=current_user.id)
 
 @router.get("/artworks", response_model=List[ArtworkRead])
 def list_artworks(db: Session = Depends(get_db)):

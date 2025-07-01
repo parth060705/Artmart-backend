@@ -69,7 +69,7 @@ class ArtworkBase(BaseModel):
     price: float
     category: str
 
-class ArtworkCreate(ArtworkBase):
+class ArtworkCreate(BaseModel):
     title: str
     description: Optional[str] = None
     price: float
@@ -79,8 +79,9 @@ class ArtworkImageResponse(BaseModel):
     message: str
     artworkImage: HttpUrl
 
-# class ArtworkDelete(ArtworkBase):
-#     pass
+class ArtworkDelete(BaseModel):
+    message: str
+    artwork_id: UUID
 
 class ArtworkRead(ArtworkBase):
     id: UUID

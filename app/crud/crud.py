@@ -115,9 +115,7 @@ def update_user_profile_image(db: Session, user_id: UUID, file: UploadFile):
 # -------------------------
 
 def create_artwork(db: Session, artwork: schemas.ArtworkCreate, user_id: UUID):
-    data = artwork.dict()
-    data["images"] = [str(url) for url in data.get("images", [])]
-    db_artwork = models.Artwork(**data, artistId=str(user_id))
+    db_artwork = models.Artwork(**artwork.dict(), artistId=str(user_id), images=[])
     db.add(db_artwork)
     db.commit()
     db.refresh(db_artwork)
@@ -126,7 +124,6 @@ def create_artwork(db: Session, artwork: schemas.ArtworkCreate, user_id: UUID):
 UPLOAD_DIR = "uploads"
 ALLOWED_EXTENSIONS = {"jpeg", "jpg", "png", "svg"}
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/svg+xml"}
-
 def upload_artwork_image(db: Session, user_id: UUID, file: UploadFile, artwork_id: UUID):
     print("[DEBUG] User ID:", user_id)
     print("[DEBUG] Artwork ID:", artwork_id)
@@ -141,37 +138,40 @@ def upload_artwork_image(db: Session, user_id: UUID, file: UploadFile, artwork_i
     if len(contents) > 10 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="File too large (max 10MB)")
     file.file.seek(0)
-
+    
     user = db.query(models.User).filter(models.User.id == str(user_id)).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-
     artwork = db.query(models.Artwork).filter(
         models.Artwork.id == str(artwork_id),
-        models.Artwork.artistId == str(user_id)
-    ).first()
-
+        models.Artwork.artistId == str(user_id)).first()
     if not artwork:
         raise HTTPException(status_code=404, detail="Artwork not found")
-
     try:
         result = cloudinary.uploader.upload(file.file, folder="artworks")
         print("[DEBUG] Upload result:", result)
     except Exception as e:
         print("[ERROR] Cloudinary upload failed:", str(e))
         raise HTTPException(status_code=500, detail=f"Cloudinary error: {str(e)}")
-
     if not artwork.images:
         artwork.images = []
     artwork.images.append(result["secure_url"])
-
     db.commit()
     db.refresh(artwork)
-
     return {
         "message": "Artwork image uploaded successfully",
         "artworkImage": result["secure_url"]
     }
+
+def delete_artwork(db: Session, artwork_id: UUID, user_id: UUID):
+    artwork = db.query(models.Artwork).filter(
+        models.Artwork.id == str(artwork_id),
+        models.Artwork.artistId == str(user_id)).first()
+    if not artwork:
+        raise HTTPException(status_code=404, detail="Artwork not found or unauthorized")
+    db.delete(artwork)
+    db.commit()
+    return {"message": "Artwork deleted successfully", "artwork_id": artwork_id}
 
 def list_artworks(db: Session):
     return db.query(models.Artwork).all()
