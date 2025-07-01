@@ -37,7 +37,16 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
 
-# Schema for reading user info (e.g. /me or user list)
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[str] = None
+    location: Optional[str] = None
+    gender: Optional[str] = None
+    age: Optional[int] = None
+    pincode: Optional[str] = Field(default=None, pattern=r'^\d{6}$')
+    phone: Optional[str] = Field(default=None, pattern=r'^(\+91)?\d{10}$')
+
 class UserRead(UserBase):
     id: UUID
     createdAt: datetime
@@ -56,7 +65,7 @@ class ProfileImageResponse(BaseModel):
 class ArtworkBase(BaseModel):
     title: str
     description: Optional[str] = None
-    image: Optional[HttpUrl] = None
+    images: Optional[List[HttpUrl]] = None 
     price: float
     category: str
 

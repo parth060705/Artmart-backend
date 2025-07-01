@@ -20,7 +20,7 @@ from app.schemas.schemas import (
     LikeCountResponse, HasLikedResponse,
     CommentCreate, ArtworkLikeRequest,
     UserShort, 
-    FollowList
+    FollowList, UserUpdate
 )
 
 import cloudinary.uploader
@@ -42,6 +42,19 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     return crud.create_user(db, user)
+
+@router.patch("/users/me", response_model=UserRead)
+def update_current_user(
+    user_update: UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    updated_user = crud.update_user_details(
+        db=db,
+        user_id=current_user.id,
+        user_update=user_update
+    )
+    return updated_user
 
 @router.post("/login", response_model=Token)
 def login(

@@ -45,6 +45,34 @@ def create_user(db: Session, user: schemas.UserCreate):
     db.refresh(db_user)
     return db_user
 
+def update_user_details(db: Session, user_id: int, user_update: schemas.UserUpdate):
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not db_user:
+        raise ValueError("User not found")
+
+    # Update only the fields that are provided
+    if user_update.name is not None:
+        db_user.name = user_update.name
+    if user_update.username is not None:
+        db_user.username = user_update.username
+    if user_update.password is not None:
+        db_user.passwordHash = pwd_context.hash(user_update.password)
+    if user_update.location is not None:
+        db_user.location = user_update.location
+    if user_update.gender is not None:
+        db_user.gender = user_update.gender
+    if user_update.age is not None:
+        db_user.age = user_update.age
+    if user_update.pincode is not None:
+        db_user.pincode = str(user_update.pincode)
+    if user_update.phone is not None:
+        db_user.phone = str(user_update.phone)
+
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+
 def get_user_by_username(db: Session, username: str):
     return db.query(models.User).filter(models.User.username == username).first()
 
@@ -90,11 +118,35 @@ def update_user_profile_image(db: Session, user_id: UUID, file: UploadFile):
 # ARTWORK OPERATIONS
 # -------------------------
 
+UPLOAD_LIMIT = 6
+MAX_IMAGE_SIZE_MB = 5
+ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/svg+xml"}
+
 def create_artwork(db: Session, item: schemas.ArtworkCreate, user_id: UUID):
+    if item.images and len(item.images) > UPLOAD_LIMIT:
+        raise HTTPException(status_code=400, detail="You can upload a maximum of 6 images.")
+
+    image_urls = []
+    
+    for image in item.images or []:
+        if image.content_type not in ALLOWED_MIME_TYPES:
+            raise HTTPException(status_code=400, detail=f"Unsupported file type: {image.content_type}")
+
+        contents = image.file.read()
+        if len(contents) > MAX_IMAGE_SIZE_MB * 1024 * 1024:
+            raise HTTPException(status_code=400, detail=f"File '{image.filename}' is too large (max 5MB)")
+        image.file.seek(0)
+
+        try:
+            result = cloudinary.uploader.upload(image.file, folder="artworks")
+            image_urls.append(result["secure_url"])
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Cloudinary upload failed for {image.filename}: {str(e)}")
+
     db_artwork = models.Artwork(
         title=item.title,
         description=item.description,
-        image=str(item.image) if item.image else None,
+        image=",".join(image_urls) if image_urls else None,
         price=item.price,
         category=item.category,
         artistId=str(user_id)
@@ -102,7 +154,9 @@ def create_artwork(db: Session, item: schemas.ArtworkCreate, user_id: UUID):
     db.add(db_artwork)
     db.commit()
     db.refresh(db_artwork)
+
     return db_artwork
+
 
 def list_artworks(db: Session):
     return db.query(models.Artwork).all()
