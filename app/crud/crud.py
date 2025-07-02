@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from fastapi import HTTPException
 from fastapi import UploadFile
 import os
@@ -122,8 +123,8 @@ def create_artwork(db: Session, artwork: schemas.ArtworkCreate, user_id: UUID):
     return db_artwork
 
 UPLOAD_DIR = "uploads"
-ALLOWED_EXTENSIONS = {"jpeg", "jpg", "png", "svg"}
-ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/svg+xml"}
+ALLOWED_EXTENSIONS = {"jpeg", "jpg", "png", "svg","webp"}
+ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/svg+xml", "image/webp"}
 def upload_artwork_image(db: Session, user_id: UUID, file: UploadFile, artwork_id: UUID):
     print("[DEBUG] User ID:", user_id)
     print("[DEBUG] Artwork ID:", artwork_id)
@@ -421,3 +422,22 @@ def get_following(db: Session, user_id: str):
     if not user:
         raise ValueError("User not found.")
     return user.following
+
+# -------------------------
+# SEARCH OPERATIONS
+# -------------------------
+
+def search_artworks(db: Session, query: str):  # ilike is use for searh in MYSQL
+    return db.query(models.Artwork).filter(
+        or_(
+            models.Artwork.title.ilike(f"%{query}%"),
+            models.Artwork.category.ilike(f"%{query}%")
+            )).all()
+
+def search_users(db: Session, query: str):
+    return db.query(models.User).filter(
+        or_(
+            models.User.username.ilike(f"%{query}%"),
+            models.User.name.ilike(f"%{query}%")
+        )
+    ).all()

@@ -58,6 +58,17 @@ class ProfileImageResponse(BaseModel):
     message: str
     profileImage: str
 
+class UserSearch(BaseModel):
+    name: str
+    email: EmailStr
+    username: str
+    profileImage: Optional[HttpUrl] = None
+    location: Optional[str] = None
+    gender: Optional[str] = None
+    age: Optional[int] = None
+    pincode: Optional[str] = Field(default=None, pattern=r'^\d{6}$')
+    phone: Optional[str] = Field(default=None, pattern=r'^(\+91)?\d{10}$')
+
 # -------------------------------
 # ARTWORK SCHEMAS
 # -------------------------------
@@ -107,7 +118,7 @@ class LikeBase(BaseModel):
 class ArtworkLikeRequest(BaseModel): # Request schema (optional if using path params in routes)
     artwork_id: UUID
 
-class LikeCountResponse(BaseModel): # Response schema for like count
+class LikeCountResponse(BaseModel): 
     artwork_id: UUID
     like_count: int
 

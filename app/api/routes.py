@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
+from fastapi import Query
 from uuid import UUID
 from typing import List
 from fastapi.security import OAuth2PasswordRequestForm
@@ -11,7 +12,7 @@ from app.core import auth
 from app.crud import crud
 from app.crud.crud import serialize_user
 from app.schemas.schemas import (
-    UserCreate, UserRead, ProfileImageResponse, UserUpdate, 
+    UserCreate, UserRead, ProfileImageResponse, UserUpdate, UserSearch, 
     Token, ArtworkCreate, ArtworkRead, ArtworkImageResponse,ArtworkDelete,
     OrderCreate, OrderRead,
     ReviewCreate, ReviewRead,
@@ -111,6 +112,24 @@ def upload_profile_image(
     db: Session = Depends(get_db)
 ):
     return crud.update_user_profile_image(db, current_user.id, file)
+
+# -------------------------
+# SEARCH ENDPOINTS
+# -------------------------
+
+@router.get("/artworks/search", response_model=List[ArtworkRead])
+def search_artworks(
+    query: str = Query(..., min_length=2, description="Search artworks"),
+    db: Session = Depends(get_db)
+):
+    return crud.search_artworks(db, query)
+
+@router.get("/artworks/search/user", response_model=List[UserSearch])
+def search_users(
+    query: str = Query(..., min_length=2, description="Search artist"),
+    db: Session = Depends(get_db)
+):
+    return crud.search_users(db, query)
 
 # -------------------------
 # ARTWORK ENDPOINTS
@@ -301,3 +320,4 @@ def get_my_following(
         "users": [serialize_user(user) for user in following],
         "count": len(following)
     }
+
