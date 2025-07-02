@@ -69,6 +69,9 @@ class UserSearch(BaseModel):
     pincode: Optional[str] = Field(default=None, pattern=r'^\d{6}$')
     phone: Optional[str] = Field(default=None, pattern=r'^(\+91)?\d{10}$')
 
+    class Config:
+        from_attributes = True
+
 # -------------------------------
 # ARTWORK SCHEMAS
 # -------------------------------
