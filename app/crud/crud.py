@@ -115,54 +115,94 @@ def update_user_profile_image(db: Session, user_id: UUID, file: UploadFile):
 # ARTWORK OPERATIONS
 # -------------------------
 
-def create_artwork(db: Session, artwork: schemas.ArtworkCreate, user_id: UUID):
-    db_artwork = models.Artwork(**artwork.dict(), artistId=str(user_id), images=[])
+def create_artwork(
+    db: Session,
+    artwork_data: schemas.ArtworkCreate,
+    user_id: UUID,
+    file: UploadFile
+):
+    # Validate user
+    user = db.query(models.User).filter(models.User.id == str(user_id)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    db_artwork = models.Artwork(**artwork_data.dict(), artistId=str(user_id), images=[])
     db.add(db_artwork)
     db.commit()
     db.refresh(db_artwork)
-    return db_artwork
-
-UPLOAD_DIR = "uploads"
-ALLOWED_EXTENSIONS = {"jpeg", "jpg", "png", "svg","webp"}
-ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/svg+xml", "image/webp"}
-def upload_artwork_image(db: Session, user_id: UUID, file: UploadFile, artwork_id: UUID):
-    print("[DEBUG] User ID:", user_id)
-    print("[DEBUG] Artwork ID:", artwork_id)
-    print("[DEBUG] File type:", file.content_type)
-    print("[DEBUG] Cloudinary API key:", cloudinary.config().api_key)
-    print("[DEBUG] Cloudinary Cloud name:", cloudinary.config().cloud_name)
 
     if file.content_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(status_code=400, detail="Unsupported file type")
 
+    # Check file size
     contents = file.file.read()
-    if len(contents) > 10 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+    MAX_FILE_SIZE_MB = 10
+    if len(contents) > MAX_FILE_SIZE_MB * 1024 * 1024:
+        raise HTTPException(status_code=400, detail=f"File too large (max {MAX_FILE_SIZE_MB}MB)")
     file.file.seek(0)
-    
-    user = db.query(models.User).filter(models.User.id == str(user_id)).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    artwork = db.query(models.Artwork).filter(
-        models.Artwork.id == str(artwork_id),
-        models.Artwork.artistId == str(user_id)).first()
-    if not artwork:
-        raise HTTPException(status_code=404, detail="Artwork not found")
+
     try:
         result = cloudinary.uploader.upload(file.file, folder="artworks")
-        print("[DEBUG] Upload result:", result)
+        secure_url = result.get("secure_url")
+        if not secure_url:
+            raise ValueError("Missing secure_url in Cloudinary response")
     except Exception as e:
-        print("[ERROR] Cloudinary upload failed:", str(e))
         raise HTTPException(status_code=500, detail=f"Cloudinary error: {str(e)}")
-    if not artwork.images:
-        artwork.images = []
-    artwork.images.append(result["secure_url"])
+
+    db_artwork.images = db_artwork.images + [secure_url]
     db.commit()
-    db.refresh(artwork)
+    db.refresh(db_artwork)
+
     return {
-        "message": "Artwork image uploaded successfully",
-        "artworkImage": result["secure_url"]
+        "message": "Artwork created and image uploaded successfully",
+        "artwork": db_artwork,
+        "artworkImage": secure_url
     }
+
+def update_artwork(
+    db: Session,
+    artwork_id: str,
+    user_id: str,
+    artwork_update: schemas.ArtworkUpdate,
+    file: UploadFile = None
+):
+    db_artwork = db.query(models.Artwork).filter(models.Artwork.id == artwork_id).first()
+
+    if not db_artwork:
+        raise HTTPException(status_code=404, detail="Artwork not found")
+
+    if db_artwork.artistId != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to update this artwork")
+
+    # Only update fields that are provided
+    update_data = artwork_update.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_artwork, key, value)
+
+    # Optional image upload
+    if file:
+        ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/jpg"]
+
+        if file.content_type not in ALLOWED_MIME_TYPES:
+            raise HTTPException(status_code=400, detail="Unsupported file type")
+
+        contents = file.file.read()
+        MAX_FILE_SIZE_MB = 10
+        if len(contents) > MAX_FILE_SIZE_MB * 1024 * 1024:
+            raise HTTPException(status_code=400, detail=f"File too large (max {MAX_FILE_SIZE_MB}MB)")
+        file.file.seek(0)
+
+        try:
+            upload_result = cloudinary.uploader.upload(file.file, folder="artworks")
+            image_url = upload_result.get("secure_url")
+            if image_url:
+                db_artwork.images = (db_artwork.images or []) + [image_url]
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Cloudinary error: {str(e)}")
+
+    db.commit()
+    db.refresh(db_artwork)
+    return db_artwork
 
 def delete_artwork(db: Session, artwork_id: UUID, user_id: UUID):
     artwork = db.query(models.Artwork).filter(
@@ -173,9 +213,6 @@ def delete_artwork(db: Session, artwork_id: UUID, user_id: UUID):
     db.delete(artwork)
     db.commit()
     return {"message": "Artwork deleted successfully", "artwork_id": artwork_id}
-
-def list_artworks(db: Session):
-    return db.query(models.Artwork).all()
 
 def get_artwork(db: Session, artwork_id: UUID):
     return db.query(models.Artwork).filter(models.Artwork.id == str(artwork_id)).first()
@@ -225,7 +262,6 @@ def has_user_liked_artwork(db, user_id, artwork_id):
 # COMMENTS OPERATIONS
 # -------------------------
 def create_comment(db: Session, user_id: UUID, comment_data: models.Comment):
-    # Convert UUIDs to strings before querying
     artwork_id = str(comment_data.artwork_id)
     user_id = str(user_id)
 
@@ -276,10 +312,6 @@ def create_order(db: Session, order_data: schemas.OrderCreate, user_id: UUID):
     db.commit()
     db.refresh(db_order)
     return db_order
-
-
-def list_all_orders(db: Session):
-    return db.query(models.Order).all()
 
 def get_order(db: Session, order_id: UUID):
     order_id = str(order_id)
@@ -441,3 +473,19 @@ def search_users(db: Session, query: str):
             models.User.name.ilike(f"%{query}%")
         )
     ).all()
+
+# ------------------------------------------------------------------------------------------------------------------
+#                                        ADMIN & SUPER-ADMIN ENDPOINTS
+# -------------------------------------------------------------------------------------------------------------------
+
+def list_all_users(db: Session):
+    return db.query(models.User).all()
+
+def list_all_orders(db: Session):
+    return db.query(models.Order).all()
+
+def list_artworks(db: Session):
+    return db.query(models.Artwork).all()
+
+def list_follow_followers(db: Session):
+    return db.query(models.followers_association).all()    

@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
-from fastapi import Query
+from fastapi import Query, Form
 from uuid import UUID
-from typing import List
+from typing import List, Optional
 from fastapi.security import OAuth2PasswordRequestForm
 from app.core.auth import get_current_user
 from app.database import get_db, SessionLocal
@@ -12,8 +12,9 @@ from app.core import auth
 from app.crud import crud
 from app.crud.crud import serialize_user
 from app.schemas.schemas import (
-    UserCreate, UserRead, ProfileImageResponse, UserUpdate, UserSearch, 
-    Token, ArtworkCreate, ArtworkRead, ArtworkImageResponse,ArtworkDelete,
+    UserBase, UserCreate, UserRead, ProfileImageResponse, UserUpdate, UserSearch, 
+    Token, ArtworkCreate, ArtworkRead, ArtworkCreateResponse, ArtworkDelete,
+    ArtworkUpdate,
     OrderCreate, OrderRead,
     ReviewCreate, ReviewRead,
     WishlistCreate, WishlistRead, WishlistCreatePublic,
@@ -21,7 +22,7 @@ from app.schemas.schemas import (
     LikeCountResponse, HasLikedResponse,
     CommentCreate, ArtworkLikeRequest,
     UserShort, 
-    FollowList
+    FollowList, FollowFollowers
 )
 
 import cloudinary.uploader
@@ -135,22 +136,28 @@ def search_users(
 # ARTWORK ENDPOINTS
 # -------------------------
 
-@router.post("/artworks", response_model=ArtworkRead)
+@router.post("/artworks", response_model=ArtworkCreateResponse)
 def create_artwork(
-    artwork: ArtworkCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    return crud.create_artwork(db, artwork, user_id=current_user.id)
-
-@router.post("/artworks/{artwork_id}/upload-image", response_model=ArtworkImageResponse)
-def upload_artwork_image_route(
-    artwork_id: UUID,
+    title: str = Form(...),
+    price: float = Form(...),
+    category: str = Form(...),
+    description: str = Form(...),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return crud.upload_artwork_image(db=db, user_id=current_user.id, file=file, artwork_id=artwork_id)
+    artwork_data = ArtworkCreate(
+        title=title,
+        description=description,
+        price=price,
+        category=category,
+    )
+    return crud.create_artwork(
+        db=db,
+        artwork_data=artwork_data,
+        user_id=current_user.id,
+        file=file,
+    )
 
 @router.delete("/artworks/{artwork_id}", response_model=ArtworkDelete)
 def delete_artwork(
@@ -159,9 +166,33 @@ def delete_artwork(
     current_user: User = Depends(get_current_user)):
     return crud.delete_artwork(db, artwork_id=artwork_id, user_id=current_user.id)
 
-@router.get("/artworks", response_model=List[ArtworkRead])
-def list_artworks(db: Session = Depends(get_db)):
-    return crud.list_artworks(db)
+@router.patch("/artworks/{artwork_id}", response_model=ArtworkRead)
+def update_artwork(
+    artwork_id: UUID,
+    title: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    category: Optional[str] = Form(None),
+    price: Optional[float] = Form(None),
+    isSold: Optional[bool] = Form(None),
+    file: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    artwork_update = ArtworkUpdate(
+        title=title,
+        description=description,
+        category=category,
+        price=price,
+        isSold=isSold
+    )
+
+    return crud.update_artwork(
+        db=db,
+        artwork_id=str(artwork_id),
+        user_id=str(current_user.id),
+        artwork_update=artwork_update,
+        file=file
+    )
 
 @router.get("/artworks/{artwork_id}", response_model=ArtworkRead)
 def get_artwork(artwork_id: UUID, db: Session = Depends(get_db)):
@@ -223,10 +254,6 @@ def create_order(order_data: OrderCreate, db: Session = Depends(get_db), current
 @router.get("/orders/my", response_model=List[OrderRead])
 def get_my_orders(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return crud.list_orders_for_user(db, user_id=current_user.id)
-
-@router.get("/orders", response_model=List[OrderRead])
-def get_all_orders(db: Session = Depends(get_db)):
-    return crud.list_all_orders(db)
 
 # -------------------------
 # REVIEW ENDPOINTS
@@ -321,3 +348,22 @@ def get_my_following(
         "count": len(following)
     }
 
+# ------------------------------------------------------------------------------------------------------------------
+#                                        ADMIN & SUPER-ADMIN ENDPOINTS
+# -------------------------------------------------------------------------------------------------------------------
+
+@router.get("/orders", response_model=List[OrderRead])
+def get_all_orders(db: Session = Depends(get_db)):
+    return crud.list_all_orders(db)
+
+@router.get("/users", response_model=List[UserBase])
+def get_all_users(db: Session = Depends(get_db)):
+    return crud.list_all_users(db)
+
+@router.get("/artworks", response_model=List[ArtworkRead])
+def list_artworks(db: Session = Depends(get_db)):
+    return crud.list_artworks(db)
+
+@router.get("/follows", response_model=List[FollowFollowers])
+def list_follow_followers(db: Session = Depends(get_db)):
+    return crud.list_follow_followers(db)

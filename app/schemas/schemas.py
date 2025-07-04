@@ -79,9 +79,10 @@ class UserSearch(BaseModel):
 class ArtworkBase(BaseModel):
     title: str
     description: Optional[str] = None
-    images: Optional[List[HttpUrl]] = None 
+    images: Optional[List[HttpUrl]] = None
     price: float
     category: str
+
 
 class ArtworkCreate(BaseModel):
     title: str
@@ -89,13 +90,15 @@ class ArtworkCreate(BaseModel):
     price: float
     category: str
 
-class ArtworkImageResponse(BaseModel):
-    message: str
-    artworkImage: HttpUrl
 
-class ArtworkDelete(BaseModel):
-    message: str
-    artwork_id: UUID
+class ArtworkUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    price: Optional[float] = None
+    isSold: Optional[bool] = None
+    images: Optional[List[HttpUrl]] = None
+
 
 class ArtworkRead(ArtworkBase):
     id: UUID
@@ -105,6 +108,18 @@ class ArtworkRead(ArtworkBase):
 
     class Config:
         from_attributes = True
+
+
+class ArtworkCreateResponse(BaseModel):
+    message: str
+    artwork: ArtworkRead
+    artworkImage: Optional[HttpUrl] = None
+
+
+class ArtworkDelete(BaseModel):
+    message: str
+    artwork_id: UUID
+
 
 # -------------------------------
 # LIKES SCHEMAS
@@ -253,3 +268,11 @@ class UserShort(BaseModel):
 class FollowList(BaseModel):
     users: List[UserShort]
     count: int
+
+class FollowFollowers(BaseModel):
+    follower_id: UUID
+    followed_id: UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True 
