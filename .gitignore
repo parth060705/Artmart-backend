@@ -1,58 +1,81 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
+*$py.class
+
+# C extensions
 *.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
 # Virtual environment
 venv/
 env/
 ENV/
 .venv/
-.python-version
+.env/
+pip-wheel-metadata/
 
-# Environment variables
-.env
-*.env
+# PyInstaller
+*.manifest
+*.spec
 
-# VS Code / IDE settings
-.vscode/
-.idea/
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Logs and local settings
-*.log
-*.sqlite3
-
-# Alembic migration cache
-alembic/versions/*.pyc
-alembic/__pycache__/
-
-# Pytest / coverage
+# Unit test / coverage reports
 htmlcov/
 .tox/
 .nox/
 .coverage
+.coverage.*
 .cache
-pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
 
-# Build artifacts
-build/
-dist/
-*.egg-info/
-.eggs/
+# FastAPI/OpenAPI
+openapi.json
+openapi.yaml
+docs/
 
-# Node-related (if frontend involved)
-node_modules/
+# Pydantic cache
+__pydantic_cache__/
 
-# MyPy and Pylint
+# IDEs and editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# dotenv
+.env
+.env.*
+
+# MyPy
 .mypy_cache/
-.pyright/
-pylint-report.txt
+.dmypy.json
+dmypy.json
 
-# Docker files
-*.pid
+# Pyre
+.pyre/
+
+#
