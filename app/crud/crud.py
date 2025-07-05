@@ -52,10 +52,6 @@ def update_user_details(db: Session, user_id: int, user_update: schemas.UserUpda
         raise ValueError("User not found")
     if user_update.name is not None:
         db_user.name = user_update.name
-    if user_update.username is not None:
-        db_user.username = user_update.username
-    if user_update.password is not None:
-        db_user.passwordHash = pwd_context.hash(user_update.password)
     if user_update.location is not None:
         db_user.location = user_update.location
     if user_update.gender is not None:
