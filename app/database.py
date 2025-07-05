@@ -2,20 +2,23 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
+from dotenv import load_dotenv  
 
-# MySQL DB connection string (from .env or fallback)
+load_dotenv()  
+
+# MySQL DB connection string
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Create SQLAlchemy engine
 engine = create_engine(DATABASE_URL)
 
-# Session factory for database interactions
+# Session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Declarative base class for models
+# Declarative base
 Base = declarative_base()
 
-# Dependency injection for FastAPI
+# Dependency for FastAPI routes
 def get_db():
     db = SessionLocal()
     try:
