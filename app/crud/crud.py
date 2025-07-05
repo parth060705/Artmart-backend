@@ -477,6 +477,14 @@ def search_users(db: Session, query: str):
 def list_all_users(db: Session):
     return db.query(models.User).all()
 
+def delete_user(db: Session, user_id):  # no UUID typing
+    user = db.query(models.User).filter(models.User.id == str(user_id)).first()
+    if not user:
+        return False
+    db.delete(user)
+    db.commit()
+    return True
+
 def list_all_orders(db: Session):
     return db.query(models.Order).all()
 

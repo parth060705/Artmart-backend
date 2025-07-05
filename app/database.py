@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 import os
 
 # MySQL DB connection string (from .env or fallback)
-DATABASE_URL = os.getenv("DATABASE_URL", "mysql+pymysql://root:jayshree@127.0.0.1:3306/artmart_db")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Create SQLAlchemy engine
 engine = create_engine(DATABASE_URL)

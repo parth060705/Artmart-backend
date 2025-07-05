@@ -1,0 +1,58 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environment
+venv/
+env/
+ENV/
+.venv/
+.python-version
+
+# Environment variables
+.env
+*.env
+
+# VS Code / IDE settings
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs and local settings
+*.log
+*.sqlite3
+
+# Alembic migration cache
+alembic/versions/*.pyc
+alembic/__pycache__/
+
+# Pytest / coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.cache
+pytest_cache/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Node-related (if frontend involved)
+node_modules/
+
+# MyPy and Pylint
+.mypy_cache/
+.pyright/
+pylint-report.txt
+
+# Docker files
+*.pid

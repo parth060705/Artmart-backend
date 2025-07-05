@@ -22,7 +22,7 @@ from app.schemas.schemas import (
     LikeCountResponse, HasLikedResponse,
     CommentCreate, ArtworkLikeRequest,
     UserShort, 
-    FollowList, FollowFollowers
+    FollowList, FollowFollowers, DeleteMessageUser
 )
 
 import cloudinary.uploader
@@ -359,6 +359,13 @@ def get_all_orders(db: Session = Depends(get_db)):
 @router.get("/users", response_model=List[UserBase])
 def get_all_users(db: Session = Depends(get_db)):
     return crud.list_all_users(db)
+
+@router.delete("/users/{user_id}", response_model=DeleteMessageUser)
+def delete_user(user_id: UUID, db: Session = Depends(get_db)):
+    success = crud.delete_user(db, user_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"message": "User deleted successfully"}
 
 @router.get("/artworks", response_model=List[ArtworkRead])
 def list_artworks(db: Session = Depends(get_db)):
