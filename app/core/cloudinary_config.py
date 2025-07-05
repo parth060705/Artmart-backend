@@ -3,7 +3,7 @@ import cloudinary
 from dotenv import load_dotenv
 
 # Load environment variables from .env
-load_dotenv()
+load_dotenv(dotenv_path=r"C:\Users\ghara\OneDrive\Desktop\parth\FastAPI\app\.env")
 
 # Configure Cloudinary
 cloudinary.config(
