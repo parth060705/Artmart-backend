@@ -56,6 +56,9 @@ class ProfileImageResponse(BaseModel):
     message: str
     profileImage: str
 
+class DeleteMessageUser(BaseModel):  # ADMIN
+    message: str    
+
 class UserSearch(BaseModel):
     name: str
     email: EmailStr
@@ -274,3 +277,4 @@ class FollowFollowers(BaseModel):
 
     class Config:
         from_attributes = True 
+
