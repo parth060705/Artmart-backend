@@ -12,9 +12,9 @@ from app.core import auth
 from app.crud import crud
 from app.crud.crud import serialize_user
 from app.schemas.schemas import (
-    UserBase, UserCreate, UserRead, ProfileImageResponse, UserUpdate, UserSearch, 
+    UserBase, UserCreate, UserRead, ProfileImageResponse, UserUpdate, UserSearch, ArtworkMe,
     Token, ArtworkCreate, ArtworkRead, ArtworkCreateResponse, ArtworkDelete,
-    ArtworkUpdate,
+    ArtworkUpdate, ArtworkCategory,
     OrderCreate, OrderRead,
     ReviewCreate, ReviewRead,
     WishlistCreate, WishlistRead, WishlistCreatePublic,
@@ -114,6 +114,13 @@ def upload_profile_image(
 ):
     return crud.update_user_profile_image(db, current_user.id, file)
 
+@router.get("/artworks/me", response_model=List[ArtworkMe])
+def read_my_artworks(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return crud.get_artworks_by_user(db, user_id=current_user.id)
+
 # -------------------------
 # SEARCH ENDPOINTS
 # -------------------------
@@ -131,6 +138,10 @@ def search_users(
     db: Session = Depends(get_db)
 ):
     return crud.search_users(db, query)
+
+@router.get("/artworks/category/{category}", response_model=List[ArtworkCategory])
+def read_artworks_by_category(category: str, db: Session = Depends(get_db)):
+    return crud.get_artworks_by_category(db, category)
 
 # -------------------------
 # ARTWORK ENDPOINTS

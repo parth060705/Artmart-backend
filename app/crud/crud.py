@@ -106,6 +106,8 @@ def update_user_profile_image(db: Session, user_id: UUID, file: UploadFile):
         "message": "Profile image uploaded successfully",
         "profileImage": user.profileImage
     }
+def get_artworks_by_user(db: Session, user_id: str):
+    return db.query(models.Artwork).filter(models.Artwork.artistId == user_id).all()
 
 # -------------------------
 # ARTWORK OPERATIONS
@@ -469,6 +471,12 @@ def search_users(db: Session, query: str):
             models.User.name.ilike(f"%{query}%")
         )
     ).all()
+
+def get_artworks_by_category(db: Session, category: str):
+    return db.query(models.Artwork).filter(
+        models.Artwork.category.ilike(f"%{category.strip()}%")
+    ).all()
+
 
 # ------------------------------------------------------------------------------------------------------------------
 #                                        ADMIN & SUPER-ADMIN ENDPOINTS

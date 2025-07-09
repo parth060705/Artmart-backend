@@ -121,6 +121,25 @@ class ArtworkDelete(BaseModel):
     message: str
     artwork_id: UUID
 
+class ArtworkCategory(BaseModel):
+    category: str
+
+    class Config:
+        from_attributes = True
+
+class ArtworkMe(BaseModel):
+    id: str
+    title: str
+    description: Optional[str]
+    price: float
+    category: str
+    images: Optional[List[str]]
+    artistId: str
+    createdAt: datetime
+    isSold: bool
+
+    class Config:
+        from_attributes = True 
 
 # -------------------------------
 # LIKES SCHEMAS
