@@ -24,6 +24,7 @@ class TokenData(BaseModel):
 # -------------------------------
 
 class UserBase(BaseModel):
+    id: str
     name: str
     email: EmailStr
     username: str
@@ -78,6 +79,7 @@ class UserSearch(BaseModel):
 # -------------------------------
 
 class ArtworkBase(BaseModel):
+    id: str
     title: str
     description: Optional[str] = None
     images: Optional[List[HttpUrl]] = None
