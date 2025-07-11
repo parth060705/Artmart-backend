@@ -20,7 +20,7 @@ from app.schemas.schemas import (
     WishlistCreate, WishlistRead, WishlistCreatePublic,
     CartCreate, CartRead, CartCreatePublic,
     LikeCountResponse, HasLikedResponse,
-    CommentCreate, ArtworkLikeRequest,
+    CommentCreate, CommentRead, ArtworkLikeRequest,
     UserShort, 
     FollowList, FollowFollowers, DeleteMessageUser
 )
@@ -250,9 +250,9 @@ def check_like_status(artwork_id: UUID, db: Session = Depends(get_db), current_u
 def post_comment(comment_data: CommentCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return crud.create_comment(db=db, user_id=current_user.id, comment_data=comment_data)
 
-@router.get("/artwork/{artwork_id}")
-def get_comments(artwork_id: UUID, db: Session = Depends(get_db)):
-    return crud.get_comments_for_artwork(db=db, artwork_id=artwork_id)
+@router.get("/artworks/{artwork_id}/comments", response_model=List[CommentRead])
+def get_comments(artwork_id: str, db: Session = Depends(get_db)):
+    return crud.get_comments_by_artwork(db, artwork_id)
 
 # -------------------------
 # ORDER ENDPOINTS
@@ -271,12 +271,17 @@ def get_my_orders(current_user: User = Depends(get_current_user), db: Session = 
 # -------------------------
 
 @router.post("/reviews", response_model=ReviewRead)
-def create_review(review: ReviewCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_review(
+    review: ReviewCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     return crud.create_review(db, review, user_id=current_user.id)
 
-@router.get("/reviews/artist/{artist_id}", response_model=List[ReviewRead])
-def get_reviews_for_artist(artist_id: UUID, db: Session = Depends(get_db)):
-    return crud.list_reviews_for_artist(db, artist_id)
+@router.get("/reviews/artwork/{artwork_id}", response_model=List[ReviewRead])
+def get_reviews_for_artwork(artwork_id: UUID, db: Session = Depends(get_db)):
+    return crud.list_reviews_for_artwork(db, artwork_id)
+
 
 # -------------------------
 # WISHLIST ENDPOINTS

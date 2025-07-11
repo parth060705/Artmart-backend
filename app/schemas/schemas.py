@@ -78,6 +78,10 @@ class UserSearch(BaseModel):
 # ARTWORK SCHEMAS
 # -------------------------------
 
+class ArtworkArtist(BaseModel):
+    username: str
+    profileImage: Optional[str] = None
+
 class ArtworkBase(BaseModel):
     id: str
     title: str
@@ -85,7 +89,7 @@ class ArtworkBase(BaseModel):
     images: Optional[List[HttpUrl]] = None
     price: float
     category: str
-
+    artist: ArtworkArtist
 
 class ArtworkCreate(BaseModel):
     title: str
@@ -173,6 +177,9 @@ class ArtworkLike(LikeBase): # Optional: full detailed record (like LikeBase but
 # -------------------------------
 # COMMENTS SCHEMAS
 # -------------------------------
+class UserComment(BaseModel):
+    username: str
+    profileImage: Optional[str] = None
 
 class CommentBase(BaseModel):
     content: str
@@ -185,6 +192,7 @@ class CommentRead(CommentBase):
     user_id: UUID
     artwork_id: UUID
     created_at: datetime
+    user: UserComment
 
     class Config:
         from_attributes = True
@@ -212,6 +220,9 @@ class OrderRead(OrderBase):
 # -------------------------------
 # REVIEW SCHEMAS
 # -------------------------------
+class UserReview(BaseModel):
+    username: str
+    profileImage: Optional[str] = None
 
 class ReviewBase(BaseModel):
     rating: int
@@ -219,17 +230,18 @@ class ReviewBase(BaseModel):
 
 class ReviewCreate(ReviewBase):
     artistId: Optional[UUID] = None
-    artworkId: Optional[UUID] = None
+    artworkId: UUID  
 
 class ReviewRead(ReviewBase):
     id: UUID
     reviewerId: UUID
-    artistId: Optional[UUID]
-    artworkId: Optional[UUID]
+    artworkId: UUID
     createdAt: datetime
+    reviewer: UserReview 
 
     class Config:
         from_attributes = True
+
 
 # -------------------------------
 # WISHLIST SCHEMAS

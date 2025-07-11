@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 from fastapi import HTTPException
 from fastapi import UploadFile
@@ -279,21 +279,13 @@ def create_comment(db: Session, user_id: UUID, comment_data: models.Comment):
 
     return {"message": "Comment added successfully.", "comment": new_comment}
 
-
-def get_comments_for_artwork(db: Session, artwork_id: UUID):
-    artwork_id = str(artwork_id)
-
-    comments = (
+def get_comments_by_artwork(db: Session, artwork_id: str):
+    return (
         db.query(models.Comment)
+        .options(joinedload(models.Comment.user))
         .filter(models.Comment.artwork_id == artwork_id)
-        .order_by(models.Comment.created_at.desc())
         .all()
     )
-
-    return {
-        "message": f"{len(comments)} comment(s) retrieved.",
-        "comments": comments
-    }
 
 #--------------------------
 # ORDER OPERATIONS
@@ -327,7 +319,7 @@ def list_orders_for_user(db: Session, user_id: UUID):
 def create_review(db: Session, item: schemas.ReviewCreate, user_id: UUID):
     db_review = models.Review(
         reviewerId=str(user_id),
-        artistId=str(item.artistId),
+        artistId=str(item.artistId) if item.artistId else None,
         artworkId=str(item.artworkId),
         rating=item.rating,
         comment=item.comment
@@ -337,8 +329,14 @@ def create_review(db: Session, item: schemas.ReviewCreate, user_id: UUID):
     db.refresh(db_review)
     return db_review
 
-def list_reviews_for_artist(db: Session, artist_id: UUID):
-    return db.query(models.Review).filter(models.Review.artistId == str(artist_id)).all()
+def list_reviews_for_artwork(db: Session, artwork_id: UUID):
+    return (
+        db.query(models.Review)
+        .options(joinedload(models.Review.reviewer))
+        .filter(models.Review.artworkId == str(artwork_id))
+        .all()
+    )
+
 
 # -------------------------
 # WISHLIST OPERATIONS
