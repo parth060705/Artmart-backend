@@ -112,7 +112,15 @@ def get_artworks_by_user(db: Session, user_id: str):
 # -------------------------
 # ARTWORK OPERATIONS
 # -------------------------
-
+                   
+                                               # CREATE ARTWORK #
+ALLOWED_EXTENSIONS = {"jpeg", "jpg", "png", "svg"}
+ALLOWED_MIME_TYPES = {
+    "image/jpeg",
+    "image/pjpeg",     
+    "image/png",
+    "image/svg+xml"
+}                                             
 def create_artwork(
     db: Session,
     artwork_data: schemas.ArtworkCreate,
@@ -156,7 +164,8 @@ def create_artwork(
         "artwork": db_artwork,
         "artworkImage": secure_url
     }
-
+ 
+                                            # UPDATE ARTWORK #
 def update_artwork(
     db: Session,
     artwork_id: str,
