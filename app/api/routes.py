@@ -14,7 +14,7 @@ from app.crud.crud import serialize_user
 from app.schemas.schemas import (
     UserBase, UserCreate, UserRead, ProfileImageResponse, UserUpdate, UserSearch, ArtworkMe,
     Token, ArtworkCreate, ArtworkRead, ArtworkCreateResponse, ArtworkDelete,
-    ArtworkUpdate, ArtworkCategory,
+    ArtworkUpdate, ArtworkCategory, UserBaseAdmin,
     OrderCreate, OrderRead,
     ReviewCreate, ReviewRead,
     WishlistCreate, WishlistRead, WishlistCreatePublic,
@@ -372,7 +372,7 @@ def get_my_following(
 def get_all_orders(db: Session = Depends(get_db)):
     return crud.list_all_orders(db)
 
-@router.get("/users", response_model=List[UserBase])
+@router.get("/users", response_model=List[UserBaseAdmin])
 def get_all_users(db: Session = Depends(get_db)):
     return crud.list_all_users(db)
 
