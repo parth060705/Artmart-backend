@@ -316,7 +316,6 @@ def get_order(db: Session, order_id: UUID):
     order_id = str(order_id)
     return db.query(models.Order).filter(models.Order.id == order_id).first()
 
-
 def list_orders_for_user(db: Session, user_id: UUID):
     user_id = str(user_id)
     return db.query(models.Order).filter(models.Order.buyerId == user_id).all()
@@ -345,7 +344,6 @@ def list_reviews_for_artwork(db: Session, artwork_id: UUID):
         .filter(models.Review.artworkId == str(artwork_id))
         .all()
     )
-
 
 # -------------------------
 # WISHLIST OPERATIONS
@@ -503,8 +501,31 @@ def delete_user(db: Session, user_id):  # no UUID typing
 def list_all_orders(db: Session):
     return db.query(models.Order).all()
 
+def delete_order(db: Session, order_id: UUID):
+    order = db.query(models.Order).filter(models.Order.id == str(order_id)).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    db.delete(order)
+    db.commit()
+
+    return {
+        "message": "Order deleted successfully",
+        "order_id": order_id
+    }
+
+
 def list_artworks(db: Session):
     return db.query(models.Artwork).all()
 
+def delete_artwork_admin(db: Session, artwork_id: UUID):
+    artwork = db.query(models.Artwork).filter(models.Artwork.id == str(artwork_id)).first()
+    if not artwork:
+        raise HTTPException(status_code=404, detail="Artwork not found")
+
+    db.delete(artwork)
+    db.commit()
+    return {"message": "Artwork deleted successfully", "artwork_id": artwork_id}
+
 def list_follow_followers(db: Session):
-    return db.query(models.followers_association).all()    
+    return db.query(models.followers_association).all()

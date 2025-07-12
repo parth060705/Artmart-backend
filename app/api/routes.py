@@ -16,7 +16,7 @@ from app.schemas.schemas import (
     UserBase, UserCreate, UserRead, ProfileImageResponse, UserUpdate, UserSearch, ArtworkMe,
     Token, ArtworkCreate, ArtworkRead, ArtworkCreateResponse, ArtworkDelete,
     ArtworkUpdate, ArtworkCategory, UserBaseAdmin, ArtworkAdmin,
-    OrderCreate, OrderRead,
+    OrderCreate, OrderRead, OrderDelete,
     ReviewCreate, ReviewRead,
     WishlistCreate, WishlistRead, WishlistCreatePublic,
     CartCreate, CartRead, CartCreatePublic,
@@ -385,6 +385,10 @@ def get_my_following(
 def get_all_orders(db: Session = Depends(get_db)):
     return crud.list_all_orders(db)
 
+@admin_router.delete("/orders/{order_id}", response_model=OrderDelete)
+def delete_order(order_id: UUID, db: Session = Depends(get_db)):
+    return crud.delete_order(db, order_id)
+
 @admin_router.get("/users", response_model=List[UserBaseAdmin])
 def get_all_users(db: Session = Depends(get_db)):
     return crud.list_all_users(db)
@@ -399,6 +403,13 @@ def delete_user(user_id: UUID, db: Session = Depends(get_db)):
 @admin_router.get("/artworks", response_model=List[ArtworkAdmin])
 def list_artworks(db: Session = Depends(get_db)):
     return crud.list_artworks(db)
+
+@admin_router.delete("/artworks/{artwork_id}", response_model=ArtworkDelete)
+def delete_artwork_admin(
+    artwork_id: UUID,
+    db: Session = Depends(get_db)
+):
+    return crud.delete_artwork_admin(db=db, artwork_id=artwork_id)
 
 @admin_router.get("/follows", response_model=List[FollowFollowers])
 def list_follow_followers(db: Session = Depends(get_db)):
