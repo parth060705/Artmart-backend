@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.models import User
 from app.crud import crud
+from app.models.models import RoleEnum
 
 # JWT config (use environment vars in prod)
 SECRET_KEY = "your-secret-key"
@@ -52,3 +53,19 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+def get_current_admin(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
+    username = decode_access_token(token)
+    if username is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    user = crud.get_user_by_username(db, username)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.role != RoleEnum.admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+

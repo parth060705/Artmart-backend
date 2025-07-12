@@ -105,6 +105,16 @@ class ArtworkArtist(BaseModel):
     username: str
     profileImage: Optional[str] = None
 
+class ArtworkAdmin(BaseModel):
+    id: str
+    title: str
+    description: Optional[str] = None
+    images: Optional[List[HttpUrl]] = None
+    price: float
+    category: str
+    artist: ArtworkArtist
+    isSold: bool    
+
 class ArtworkBase(BaseModel):
     id: str
     title: str
@@ -120,7 +130,6 @@ class ArtworkCreate(BaseModel):
     price: float
     category: str
 
-
 class ArtworkUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
@@ -128,7 +137,6 @@ class ArtworkUpdate(BaseModel):
     price: Optional[float] = None
     isSold: Optional[bool] = None
     images: Optional[List[HttpUrl]] = None
-
 
 class ArtworkRead(ArtworkBase):
     id: UUID
@@ -139,12 +147,10 @@ class ArtworkRead(ArtworkBase):
     class Config:
         from_attributes = True
 
-
 class ArtworkCreateResponse(BaseModel):
     message: str
     artwork: ArtworkRead
     artworkImage: Optional[HttpUrl] = None
-
 
 class ArtworkDelete(BaseModel):
     message: str

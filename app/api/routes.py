@@ -5,6 +5,7 @@ from uuid import UUID
 from typing import List, Optional
 from fastapi.security import OAuth2PasswordRequestForm
 from app.core.auth import get_current_user
+from app.core.auth import get_current_admin
 from app.database import get_db, SessionLocal
 from app.models.models import User
 from datetime import timedelta
@@ -14,7 +15,7 @@ from app.crud.crud import serialize_user
 from app.schemas.schemas import (
     UserBase, UserCreate, UserRead, ProfileImageResponse, UserUpdate, UserSearch, ArtworkMe,
     Token, ArtworkCreate, ArtworkRead, ArtworkCreateResponse, ArtworkDelete,
-    ArtworkUpdate, ArtworkCategory, UserBaseAdmin,
+    ArtworkUpdate, ArtworkCategory, UserBaseAdmin, ArtworkAdmin,
     OrderCreate, OrderRead,
     ReviewCreate, ReviewRead,
     WishlistCreate, WishlistRead, WishlistCreatePublic,
@@ -29,6 +30,14 @@ import cloudinary.uploader
 from app.core import cloudinary_config 
 
 router = APIRouter()
+
+
+# FOR ADMIN LEVEL ROUTES
+admin_router = APIRouter(
+    prefix="/admin",
+    tags=["admin"],
+    dependencies=[Depends(get_current_admin)]  # applies to all endpoints
+)
 
 # -------------------------
 # AUTH & USER ENDPOINTS
@@ -169,6 +178,10 @@ def create_artwork(
         user_id=current_user.id,
         file=file,
     )
+
+@router.get("/artworks", response_model=List[ArtworkRead]) 
+def list_artworks(db: Session = Depends(get_db)):
+    return crud.list_artworks(db)
 
 @router.delete("/artworks/{artwork_id}", response_model=ArtworkDelete)
 def delete_artwork(
@@ -368,25 +381,30 @@ def get_my_following(
 #                                        ADMIN & SUPER-ADMIN ENDPOINTS
 # -------------------------------------------------------------------------------------------------------------------
 
-@router.get("/orders", response_model=List[OrderRead])
+@admin_router.get("/orders", response_model=List[OrderRead])
 def get_all_orders(db: Session = Depends(get_db)):
     return crud.list_all_orders(db)
 
-@router.get("/users", response_model=List[UserBaseAdmin])
+@admin_router.get("/users", response_model=List[UserBaseAdmin])
 def get_all_users(db: Session = Depends(get_db)):
     return crud.list_all_users(db)
 
-@router.delete("/users/{user_id}", response_model=DeleteMessageUser)
+@admin_router.delete("/users/{user_id}", response_model=DeleteMessageUser)
 def delete_user(user_id: UUID, db: Session = Depends(get_db)):
     success = crud.delete_user(db, user_id)
     if not success:
         raise HTTPException(status_code=404, detail="User not found")
     return {"message": "User deleted successfully"}
 
-@router.get("/artworks", response_model=List[ArtworkRead])
+@admin_router.get("/artworks", response_model=List[ArtworkAdmin])
 def list_artworks(db: Session = Depends(get_db)):
     return crud.list_artworks(db)
 
-@router.get("/follows", response_model=List[FollowFollowers])
+@admin_router.get("/follows", response_model=List[FollowFollowers])
 def list_follow_followers(db: Session = Depends(get_db)):
     return crud.list_follow_followers(db)
+
+
+
+#-------------------------------------------------------------------------------------------------------------
+__all__ = ["router", "admin_router"]
