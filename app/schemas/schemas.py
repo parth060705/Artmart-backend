@@ -32,6 +32,7 @@ class UserBase(BaseModel):
     location: Optional[str] = None
     gender: Optional[str] = None
     age: Optional[int] = None
+    role: str
     pincode: Optional[str] = Field(default=None, pattern=r'^\d{6}$')
     phone: Optional[str] = Field(default=None, pattern=r'^(\+91)?\d{10}$')
 
