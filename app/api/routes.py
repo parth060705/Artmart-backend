@@ -141,7 +141,7 @@ def search_artworks(
 ):
     return crud.search_artworks(db, query)
 
-@router.get("/artworks/search/user", response_model=List[UserSearch])
+@router.get("/search/user", response_model=List[UserSearch])
 def search_users(
     query: str = Query(..., min_length=2, description="Search artist"),
     db: Session = Depends(get_db)
@@ -218,7 +218,6 @@ def delete_artwork(
 def list_artworks_route(db: Session = Depends(get_db)):
     artworks = crud.list_artworks(db)
     result = []
-
     for art in artworks:
         like_count = len(art.likes) if art.likes else 0
         result.append(
@@ -232,11 +231,11 @@ def list_artworks_route(db: Session = Depends(get_db)):
                 images=art.images,
                 createdAt=art.createdAt,
                 artistId=art.artistId,
+                how_many_like={"like_count": like_count},
                 artist=ArtworkArtist(
                     username=art.artist.username,
                     profileImage=art.artist.profileImage
                 ),
-                how_many_like={"like_count": like_count}
             )
         )
     return result

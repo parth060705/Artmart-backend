@@ -126,7 +126,7 @@ class ArtworkArtist(BaseModel):
     username: str
     profileImage: Optional[str] = None
 
-class likeArt(BaseModel):
+class likeArt(BaseModel): 
     like_count: int    
 
 class ArtworkAdmin(BaseModel):
@@ -147,7 +147,7 @@ class ArtworkBase(BaseModel):
     price: float
     category: str
     artist: ArtworkArtist
-    how_many_like: Optional[likeArt] = None
+    how_many_like: Optional[likeArt] = None 
 
 class ArtworkWithLikes(ArtworkBase):
     how_many_like: likeArt
@@ -178,7 +178,6 @@ class ArtworkUpdate(BaseModel):
 class ArtworkCreateResponse(BaseModel): # MESSAGE AFTER CREATION
     message: str
     artwork: ArtworkRead
-    artworkImage: Optional[List[HttpUrl]] = None
 
 class ArtworkDelete(BaseModel): # MESSAGE AFTER DELETION
     message: str
