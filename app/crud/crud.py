@@ -229,8 +229,13 @@ def delete_artwork(db: Session, artwork_id: UUID, user_id: UUID):
     return {"message": "Artwork deleted successfully", "artwork_id": artwork_id}
 
                                            # GET ARTWORK
+# def get_artwork(db: Session, artwork_id: UUID):
+#     return db.query(models.Artwork).filter(models.Artwork.id == str(artwork_id)).first()
+
 def get_artwork(db: Session, artwork_id: UUID):
-    return db.query(models.Artwork).filter(models.Artwork.id == str(artwork_id)).first()
+    return db.query(models.Artwork)\
+        .options(joinedload(models.Artwork.likes), joinedload(models.Artwork.artist))\
+        .filter(models.Artwork.id == artwork_id).first()
 
                                           # GET MY ARTWORK
 def get_artworks_by_user(db: Session, user_id: str):

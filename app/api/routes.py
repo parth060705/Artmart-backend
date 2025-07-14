@@ -6,28 +6,27 @@ from typing import List, Optional
 from fastapi.security import OAuth2PasswordRequestForm
 from app.core.auth import get_current_user
 from app.core.auth import get_current_admin
-from app.database import get_db, SessionLocal
+from app.database import get_db
 from app.models.models import User
 from datetime import timedelta
 from app.core import auth
 from app.crud import crud
 from app.crud.crud import serialize_user
+from app.models import models
+
+
 from app.schemas.schemas import (
-    UserBase, UserCreate, UserRead, ProfileImageResponse, UserUpdate, UserSearch, ArtworkMe,
+    UserCreate, UserRead, ProfileImageResponse, UserUpdate, UserSearch, ArtworkMe,
     Token, ArtworkCreate, ArtworkRead, ArtworkCreateResponse, ArtworkDelete,
-    ArtworkUpdate, ArtworkCategory, UserBaseAdmin, ArtworkAdmin,
-    OrderCreate, OrderRead, OrderDelete,
-    ReviewCreate, ReviewRead,
-    WishlistCreate, WishlistRead, WishlistCreatePublic,
-    CartCreate, CartRead, CartCreatePublic,
-    LikeCountResponse, HasLikedResponse,
-    CommentCreate, CommentRead, ArtworkLikeRequest,
-    UserShort, 
-    FollowList, FollowFollowers, DeleteMessageUser
+    ArtworkUpdate, ArtworkCategory, UserBaseAdmin, ArtworkAdmin, ArtworkArtist,
+    OrderCreate, OrderRead, OrderDelete, ReviewCreate, ReviewRead,WishlistCreate,
+    WishlistRead, WishlistCreatePublic, CartCreate, CartRead, CartCreatePublic,
+    LikeCountResponse, HasLikedResponse, CommentCreate, CommentRead, FollowList,
+    FollowFollowers, DeleteMessageUser
 )
 
-import cloudinary.uploader
-from app.core import cloudinary_config 
+# import cloudinary.uploader
+# from app.core import cloudinary_config 
 
 router = APIRouter()
 
@@ -162,7 +161,7 @@ def create_artwork(
     price: float = Form(...),
     category: str = Form(...),
     description: str = Form(...),
-    files: List[UploadFile] = File(...),  # <-- MULTIPLE files now
+    files: List[UploadFile] = File(...),  # MULTIPLE files now
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -179,18 +178,6 @@ def create_artwork(
         files=files,  # <-- List of UploadFile
     )
 
-
-@router.get("/artworks", response_model=List[ArtworkRead]) 
-def list_artworks(db: Session = Depends(get_db)):
-    return crud.list_artworks(db)
-
-@router.delete("/artworks/{artwork_id}", response_model=ArtworkDelete)
-def delete_artwork(
-    artwork_id: UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)):
-    return crud.delete_artwork(db, artwork_id=artwork_id, user_id=current_user.id)
-
 @router.patch("/artworks/{artwork_id}", response_model=ArtworkRead)
 def update_artwork(
     artwork_id: UUID,
@@ -199,7 +186,7 @@ def update_artwork(
     category: Optional[str] = Form(None),
     price: Optional[float] = Form(None),
     isSold: Optional[bool] = Form(None),
-    files: Optional[List[UploadFile]] = File(None),  # <-- optional multiple files
+    files: Optional[List[UploadFile]] = File(None),  # optional multiple files
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -216,15 +203,44 @@ def update_artwork(
         artwork_id=str(artwork_id),
         user_id=str(current_user.id),
         artwork_update=artwork_update,
-        files=files  # <-- pass multiple files
+        files=files  # pass multiple files
     )
+
+@router.delete("/artworks/{artwork_id}", response_model=ArtworkDelete)
+def delete_artwork(
+    artwork_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)):
+    return crud.delete_artwork(db, artwork_id=artwork_id, user_id=current_user.id)
+
+@router.get("/artworks", response_model=List[ArtworkRead]) 
+def list_artworks(db: Session = Depends(get_db)):
+    return crud.list_artworks(db)
+
+from sqlalchemy.orm import joinedload
 
 @router.get("/artworks/{artwork_id}", response_model=ArtworkRead)
 def get_artwork(artwork_id: UUID, db: Session = Depends(get_db)):
-    artwork = crud.get_artwork(db, artwork_id)
-    if not artwork:
+    db_artwork = db.query(models.Artwork).options(joinedload(models.Artwork.artist)).filter(models.Artwork.id == str(artwork_id)).first()
+    if not db_artwork:
         raise HTTPException(status_code=404, detail="Artwork not found")
-    return artwork
+    like_count = len(db_artwork.likes) if db_artwork.likes else 0
+    return ArtworkRead(
+        id=db_artwork.id,
+        title=db_artwork.title,
+        description=db_artwork.description,
+        category=db_artwork.category,
+        price=db_artwork.price,
+        isSold=db_artwork.isSold,
+        images=db_artwork.images,
+        createdAt=db_artwork.createdAt,
+        artistId=db_artwork.artistId,
+        artist=ArtworkArtist(
+            username=db_artwork.artist.username,
+            profileImage=db_artwork.artist.profileImage
+        ),
+        how_many_like={"count": like_count}
+    )
 
 # -------------------------
 # LIKES ENDPOINTS

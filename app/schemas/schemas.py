@@ -98,6 +98,26 @@ class UserSearch(BaseModel):
         from_attributes = True
 
 # -------------------------------
+# LIKES SCHEMAS
+# -------------------------------
+
+class LikeBase(BaseModel):
+    user_id: UUID
+    artwork_id: UUID
+    liked_at: datetime
+
+    class Config:
+       from_attributes = True
+
+class LikeCountResponse(BaseModel):
+    count: int
+
+class HasLikedResponse(BaseModel):
+    artwork_id: UUID
+    user_id: UUID
+    has_liked: bool
+
+# -------------------------------
 # ARTWORK SCHEMAS
 # -------------------------------
 
@@ -113,7 +133,7 @@ class ArtworkAdmin(BaseModel):
     price: float
     category: str
     artist: ArtworkArtist
-    isSold: bool    
+    isSold: bool   
 
 class ArtworkBase(BaseModel):
     id: str
@@ -123,6 +143,19 @@ class ArtworkBase(BaseModel):
     price: float
     category: str
     artist: ArtworkArtist
+    how_many_like: Optional[LikeCountResponse] = None
+
+class ArtworkWithLikes(ArtworkBase):
+    how_many_like: LikeCountResponse
+
+class ArtworkRead(ArtworkBase):
+    id: UUID
+    isSold: bool
+    createdAt: datetime
+    artistId: UUID
+
+    class Config:
+        from_attributes = True
 
 class ArtworkCreate(BaseModel):
     title: str
@@ -138,21 +171,12 @@ class ArtworkUpdate(BaseModel):
     isSold: Optional[bool] = None
     images: Optional[List[HttpUrl]] = None
 
-class ArtworkRead(ArtworkBase):
-    id: UUID
-    isSold: bool
-    createdAt: datetime
-    artistId: UUID
-
-    class Config:
-        from_attributes = True
-
-class ArtworkCreateResponse(BaseModel):
+class ArtworkCreateResponse(BaseModel): # MESSAGE AFTER CREATION
     message: str
     artwork: ArtworkRead
-    artworkImage: Optional[HttpUrl] = None
+    artworkImage: Optional[List[HttpUrl]] = None
 
-class ArtworkDelete(BaseModel):
+class ArtworkDelete(BaseModel): # MESSAGE AFTER DELETION
     message: str
     artwork_id: UUID
 
@@ -168,40 +192,13 @@ class ArtworkMe(BaseModel):
     description: Optional[str]
     price: float
     category: str
-    images: Optional[List[str]]
+    images: Optional[List[HttpUrl]]
     artistId: str
     createdAt: datetime
     isSold: bool
 
     class Config:
         from_attributes = True 
-
-# -------------------------------
-# LIKES SCHEMAS
-# -------------------------------
-
-class LikeBase(BaseModel):
-    user_id: UUID
-    artwork_id: UUID
-    liked_at: datetime
-
-    class Config:
-       from_attributes = True
-
-class ArtworkLikeRequest(BaseModel): # Request schema (optional if using path params in routes)
-    artwork_id: UUID
-
-class LikeCountResponse(BaseModel): 
-    artwork_id: UUID
-    like_count: int
-
-class HasLikedResponse(BaseModel):
-    artwork_id: UUID
-    user_id: UUID
-    has_liked: bool
-
-class ArtworkLike(LikeBase): # Optional: full detailed record (like LikeBase but explicitly named for clarity)
-    pass
 
 # -------------------------------
 # COMMENTS SCHEMAS
