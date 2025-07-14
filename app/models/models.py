@@ -54,6 +54,7 @@ class User(Base):
     gender = Column(String(20), nullable=True)
     age = Column(Integer, nullable=True)
     phone = Column(String(15), nullable=True)
+    # bio = Column(String(500), nullable=True)
 
     # Relationships
     artworks = relationship("Artwork", back_populates="artist")
