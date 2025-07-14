@@ -162,7 +162,7 @@ def create_artwork(
     price: float = Form(...),
     category: str = Form(...),
     description: str = Form(...),
-    file: UploadFile = File(...),
+    files: List[UploadFile] = File(...),  # <-- MULTIPLE files now
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -176,8 +176,9 @@ def create_artwork(
         db=db,
         artwork_data=artwork_data,
         user_id=current_user.id,
-        file=file,
+        files=files,  # <-- List of UploadFile
     )
+
 
 @router.get("/artworks", response_model=List[ArtworkRead]) 
 def list_artworks(db: Session = Depends(get_db)):
@@ -198,7 +199,7 @@ def update_artwork(
     category: Optional[str] = Form(None),
     price: Optional[float] = Form(None),
     isSold: Optional[bool] = Form(None),
-    file: Optional[UploadFile] = File(None),
+    files: Optional[List[UploadFile]] = File(None),  # <-- optional multiple files
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -215,7 +216,7 @@ def update_artwork(
         artwork_id=str(artwork_id),
         user_id=str(current_user.id),
         artwork_update=artwork_update,
-        file=file
+        files=files  # <-- pass multiple files
     )
 
 @router.get("/artworks/{artwork_id}", response_model=ArtworkRead)

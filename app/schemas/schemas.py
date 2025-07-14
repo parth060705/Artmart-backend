@@ -330,7 +330,7 @@ class UserShort(BaseModel):
     id: str
     username: str
     name: str
-    profileImage: Optional[str] = Field(alias="profileImageUrl")
+    profileImage: Optional[str] = None
 
 class FollowList(BaseModel):
     users: List[UserShort]

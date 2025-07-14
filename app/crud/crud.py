@@ -12,6 +12,7 @@ from app.schemas import schemas
 from passlib.context import CryptContext
 import cloudinary.uploader
 import cloudinary
+from typing import List
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -106,8 +107,6 @@ def update_user_profile_image(db: Session, user_id: UUID, file: UploadFile):
         "message": "Profile image uploaded successfully",
         "profileImage": user.profileImage
     }
-def get_artworks_by_user(db: Session, user_id: str):
-    return db.query(models.Artwork).filter(models.Artwork.artistId == user_id).all()
 
 # -------------------------
 # ARTWORK OPERATIONS
@@ -120,14 +119,15 @@ ALLOWED_MIME_TYPES = {
     "image/pjpeg",     
     "image/png",
     "image/svg+xml"
-}                                             
+}
+MAX_FILE_SIZE_MB = 20
+
 def create_artwork(
     db: Session,
     artwork_data: schemas.ArtworkCreate,
     user_id: UUID,
-    file: UploadFile
+    files: List[UploadFile]
 ):
-    # Validate user
     user = db.query(models.User).filter(models.User.id == str(user_id)).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -137,33 +137,36 @@ def create_artwork(
     db.commit()
     db.refresh(db_artwork)
 
-    if file.content_type not in ALLOWED_MIME_TYPES:
-        raise HTTPException(status_code=400, detail="Unsupported file type")
+    image_urls = []
 
-    # Check file size
-    contents = file.file.read()
-    MAX_FILE_SIZE_MB = 10
-    if len(contents) > MAX_FILE_SIZE_MB * 1024 * 1024:
-        raise HTTPException(status_code=400, detail=f"File too large (max {MAX_FILE_SIZE_MB}MB)")
-    file.file.seek(0)
+    for file in files:
+        if file.content_type not in ALLOWED_MIME_TYPES:
+            raise HTTPException(status_code=400, detail=f"Unsupported file type: {file.content_type}")
 
-    try:
-        result = cloudinary.uploader.upload(file.file, folder="artworks")
-        secure_url = result.get("secure_url")
-        if not secure_url:
-            raise ValueError("Missing secure_url in Cloudinary response")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Cloudinary error: {str(e)}")
+        contents = file.file.read()
+        if len(contents) > MAX_FILE_SIZE_MB * 1024 * 1024:
+            raise HTTPException(status_code=400, detail=f"File too large (max {MAX_FILE_SIZE_MB}MB)")
+        file.file.seek(0)
 
-    db_artwork.images = db_artwork.images + [secure_url]
+        try:
+            result = cloudinary.uploader.upload(file.file, folder="artworks")
+            secure_url = result.get("secure_url")
+            if not secure_url:
+                raise ValueError("Missing secure_url in Cloudinary response")
+            image_urls.append(secure_url)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Cloudinary error: {str(e)}")
+
+    db_artwork.images = image_urls
     db.commit()
     db.refresh(db_artwork)
 
     return {
-        "message": "Artwork created and image uploaded successfully",
+        "message": "Artwork created and images uploaded successfully",
         "artwork": db_artwork,
-        "artworkImage": secure_url
+        "artworkImages": image_urls
     }
+
  
                                             # UPDATE ARTWORK #
 def update_artwork(
@@ -171,7 +174,7 @@ def update_artwork(
     artwork_id: str,
     user_id: str,
     artwork_update: schemas.ArtworkUpdate,
-    file: UploadFile = None
+    file: List[UploadFile] = None
 ):
     db_artwork = db.query(models.Artwork).filter(models.Artwork.id == artwork_id).first()
 
@@ -181,36 +184,40 @@ def update_artwork(
     if db_artwork.artistId != user_id:
         raise HTTPException(status_code=403, detail="Not authorized to update this artwork")
 
-    # Only update fields that are provided
+    # Update provided fields
     update_data = artwork_update.dict(exclude_unset=True)
     for key, value in update_data.items():
         setattr(db_artwork, key, value)
 
-    # Optional image upload
+    # Upload additional images if provided
     if file:
-        ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/jpg"]
+        new_image_urls = []
 
-        if file.content_type not in ALLOWED_MIME_TYPES:
-            raise HTTPException(status_code=400, detail="Unsupported file type")
+        for f in file:
+            if f.content_type not in ALLOWED_MIME_TYPES:
+                raise HTTPException(status_code=400, detail=f"Unsupported file type: {f.content_type}")
 
-        contents = file.file.read()
-        MAX_FILE_SIZE_MB = 10
-        if len(contents) > MAX_FILE_SIZE_MB * 1024 * 1024:
-            raise HTTPException(status_code=400, detail=f"File too large (max {MAX_FILE_SIZE_MB}MB)")
-        file.file.seek(0)
+            contents = f.file.read()
+            if len(contents) > MAX_FILE_SIZE_MB * 1024 * 1024:
+                raise HTTPException(status_code=400, detail=f"File too large (max {MAX_FILE_SIZE_MB}MB)")
+            f.file.seek(0)
 
-        try:
-            upload_result = cloudinary.uploader.upload(file.file, folder="artworks")
-            image_url = upload_result.get("secure_url")
-            if image_url:
-                db_artwork.images = (db_artwork.images or []) + [image_url]
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Cloudinary error: {str(e)}")
+            try:
+                result = cloudinary.uploader.upload(f.file, folder="artworks")
+                secure_url = result.get("secure_url")
+                if secure_url:
+                    new_image_urls.append(secure_url)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Cloudinary error: {str(e)}")
+
+        # Append new images to existing ones
+        db_artwork.images = (db_artwork.images or []) + new_image_urls
 
     db.commit()
     db.refresh(db_artwork)
     return db_artwork
 
+                                          # DELETE ARTWORK
 def delete_artwork(db: Session, artwork_id: UUID, user_id: UUID):
     artwork = db.query(models.Artwork).filter(
         models.Artwork.id == str(artwork_id),
@@ -221,9 +228,13 @@ def delete_artwork(db: Session, artwork_id: UUID, user_id: UUID):
     db.commit()
     return {"message": "Artwork deleted successfully", "artwork_id": artwork_id}
 
+                                           # GET ARTWORK
 def get_artwork(db: Session, artwork_id: UUID):
     return db.query(models.Artwork).filter(models.Artwork.id == str(artwork_id)).first()
 
+                                          # GET MY ARTWORK
+def get_artworks_by_user(db: Session, user_id: str):
+    return db.query(models.Artwork).filter(models.Artwork.artistId == user_id).all()
 # -------------------------
 # LIKES OPERATIONS
 # -------------------------
