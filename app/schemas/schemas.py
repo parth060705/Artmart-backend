@@ -110,9 +110,10 @@ class LikeBase(BaseModel):
        from_attributes = True
 
 class LikeCountResponse(BaseModel):
-    count: int
+    artwork_id: UUID
+    like_count: int
 
-class HasLikedResponse(BaseModel):
+class HasLikedResponse(BaseModel): # MESSAGE IF YOU LIKED
     artwork_id: UUID
     user_id: UUID
     has_liked: bool
@@ -124,6 +125,9 @@ class HasLikedResponse(BaseModel):
 class ArtworkArtist(BaseModel):
     username: str
     profileImage: Optional[str] = None
+
+class likeArt(BaseModel):
+    count: int    
 
 class ArtworkAdmin(BaseModel):
     id: str
@@ -143,10 +147,10 @@ class ArtworkBase(BaseModel):
     price: float
     category: str
     artist: ArtworkArtist
-    how_many_like: Optional[LikeCountResponse] = None
+    how_many_like: Optional[likeArt] = None
 
 class ArtworkWithLikes(ArtworkBase):
-    how_many_like: LikeCountResponse
+    how_many_like: likeArt
 
 class ArtworkRead(ArtworkBase):
     id: UUID

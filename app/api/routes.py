@@ -13,6 +13,7 @@ from app.core import auth
 from app.crud import crud
 from app.crud.crud import serialize_user
 from app.models import models
+from sqlalchemy.orm import joinedload
 
 
 from app.schemas.schemas import (
@@ -216,8 +217,6 @@ def delete_artwork(
 @router.get("/artworks", response_model=List[ArtworkRead]) 
 def list_artworks(db: Session = Depends(get_db)):
     return crud.list_artworks(db)
-
-from sqlalchemy.orm import joinedload
 
 @router.get("/artworks/{artwork_id}", response_model=ArtworkRead)
 def get_artwork(artwork_id: UUID, db: Session = Depends(get_db)):
