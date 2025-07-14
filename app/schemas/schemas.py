@@ -127,7 +127,7 @@ class ArtworkArtist(BaseModel):
     profileImage: Optional[str] = None
 
 class likeArt(BaseModel):
-    count: int    
+    like_count: int    
 
 class ArtworkAdmin(BaseModel):
     id: str

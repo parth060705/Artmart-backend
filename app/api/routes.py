@@ -214,9 +214,32 @@ def delete_artwork(
     current_user: User = Depends(get_current_user)):
     return crud.delete_artwork(db, artwork_id=artwork_id, user_id=current_user.id)
 
-@router.get("/artworks", response_model=List[ArtworkRead]) 
-def list_artworks(db: Session = Depends(get_db)):
-    return crud.list_artworks(db)
+@router.get("/artworks", response_model=List[ArtworkRead])
+def list_artworks_route(db: Session = Depends(get_db)):
+    artworks = crud.list_artworks(db)
+    result = []
+
+    for art in artworks:
+        like_count = len(art.likes) if art.likes else 0
+        result.append(
+            ArtworkRead(
+                id=art.id,
+                title=art.title,
+                description=art.description,
+                category=art.category,
+                price=art.price,
+                isSold=art.isSold,
+                images=art.images,
+                createdAt=art.createdAt,
+                artistId=art.artistId,
+                artist=ArtworkArtist(
+                    username=art.artist.username,
+                    profileImage=art.artist.profileImage
+                ),
+                how_many_like={"like_count": like_count}
+            )
+        )
+    return result
 
 @router.get("/artworks/{artwork_id}", response_model=ArtworkRead)
 def get_artwork(artwork_id: UUID, db: Session = Depends(get_db)):
@@ -238,7 +261,7 @@ def get_artwork(artwork_id: UUID, db: Session = Depends(get_db)):
             username=db_artwork.artist.username,
             profileImage=db_artwork.artist.profileImage
         ),
-        how_many_like={"count": like_count}
+        how_many_like={"like_count": like_count}
     )
 
 # -------------------------
