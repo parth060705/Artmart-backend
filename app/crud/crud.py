@@ -1,9 +1,6 @@
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_
-from fastapi import HTTPException
-from fastapi import UploadFile
-import os
-import shutil
+from sqlalchemy import or_ , and_
+from fastapi import HTTPException, UploadFile
 from uuid import UUID
 from uuid import uuid4
 from app.models import models
@@ -12,7 +9,7 @@ from app.schemas import schemas
 from passlib.context import CryptContext
 import cloudinary.uploader
 import cloudinary
-from typing import List
+from typing import List, Optional
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -25,7 +22,7 @@ def get_user_by_email(db: Session, email: str):
     return db.query(models.User).filter(models.User.email == email).first()
 
 def get_user(db: Session, user_id: UUID):
-    return db.query(models.User).filter(models.User.id == user_id).first()
+    return db.query(models.User).filter(models.User.id == str(user_id)).first()
 
 def create_user(db: Session, user: schemas.UserCreate):
     hashed_password = pwd_context.hash(user.password)
@@ -229,7 +226,6 @@ def delete_artwork(db: Session, artwork_id: UUID, user_id: UUID):
     return {"message": "Artwork deleted successfully", "artwork_id": artwork_id}
 
                                         # GET SPECIFIC ARTWORK
-
 def list_artworks(db: Session):
     return (
         db.query(models.Artwork).options(joinedload(models.Artwork.artist),joinedload(models.Artwork.likes)).all())
@@ -243,6 +239,33 @@ def get_artwork(db: Session, artwork_id: UUID):
                                           # GET MY ARTWORK
 def get_artworks_by_user(db: Session, user_id: str):
     return db.query(models.Artwork).filter(models.Artwork.artistId == user_id).all()
+
+                # GET ARTWORK BY SPECIFICATION OF TITLE, PRICE, CATEGORY, ARTIST NAME, LOCATION
+def get_artworks_with_artist_filters(
+    db: Session,
+    title: Optional[str] = None,
+    price: Optional[float] = None,
+    category: Optional[str] = None,
+    artist_name: Optional[str] = None,
+    location: Optional[str] = None,
+):
+    query = db.query(models.Artwork).join(models.Artwork.artist)
+    filters = []
+    if title:
+        filters.append(models.Artwork.title.ilike(f"%{title}%"))
+    if price:
+        filters.append(models.Artwork.price == price)
+    if category:
+        filters.append(models.Artwork.category.ilike(f"%{category}%"))
+    if artist_name:
+        filters.append(models.User.name.ilike(f"%{artist_name}%"))
+    if location:
+        filters.append(models.User.location.ilike(f"%{location}%"))
+    if filters:
+        query = query.filter(and_(*filters))
+    return query.options(joinedload(models.Artwork.artist)).all()
+
+
 # -------------------------
 # LIKES OPERATIONS
 # -------------------------
