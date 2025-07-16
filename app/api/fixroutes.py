@@ -31,12 +31,14 @@ router = APIRouter()
 
 # FOR USER LEVEL ROUTES
 user_router = APIRouter(
+    prefix="/user",
     tags=["user"],
-    dependencies=[Depends(get_current_user)]  # Dependency Injection
+    dependencies=[Depends(get_current_user)]
 )
 
 # FOR ADMIN LEVEL ROUTES
 admin_router = APIRouter(
+    prefix="/admin",
     tags=["admin"],
     dependencies=[Depends(get_current_admin)]
 )
@@ -104,7 +106,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
     return crud.create_user(db, user)
 
-@user_router.get("/me", response_model=UserSearch)
+@router.get("/me", response_model=UserSearch)
 def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
 
@@ -115,7 +117,7 @@ def read_user(user_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
-@user_router.patch("/update/users/me", response_model=UserRead)  
+@router.patch("/update/users/me", response_model=UserRead)  
 def update_current_user(
     user_update: UserUpdate,
     db: Session = Depends(get_db),
@@ -128,7 +130,7 @@ def update_current_user(
     )
     return updated_user
 
-@user_router.patch("/update/users/image", response_model=ProfileImageResponse)
+@router.patch("/update/users/image", response_model=ProfileImageResponse)
 def update_profile_image(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
@@ -136,7 +138,7 @@ def update_profile_image(
 ):
     return crud.update_user_profile_image(db, current_user.id, file)
 
-@user_router.get("/artworks/me", response_model=List[ArtworkMe])
+@router.get("/artworks/me", response_model=List[ArtworkMe])
 def read_my_artworks(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -169,7 +171,7 @@ def read_artworks_by_category(category: str, db: Session = Depends(get_db)):
 # ARTWORK ENDPOINTS
 # -------------------------
 
-@user_router.post("/artworks", response_model=ArtworkCreateResponse)
+@router.post("/artworks", response_model=ArtworkCreateResponse)
 def create_artwork(
     title: str = Form(...),
     price: float = Form(...),
@@ -192,7 +194,7 @@ def create_artwork(
         files=files,  # <-- List of UploadFile
     )
 
-@user_router.patch("/artworks/{artwork_id}", response_model=ArtworkRead)
+@router.patch("/artworks/{artwork_id}", response_model=ArtworkRead)
 def update_artwork(
     artwork_id: UUID,
     title: Optional[str] = Form(None),
@@ -220,7 +222,7 @@ def update_artwork(
         files=files  # pass multiple files
     )
 
-@user_router.delete("/artworks/{artwork_id}", response_model=ArtworkDelete)
+@router.delete("/artworks/{artwork_id}", response_model=ArtworkDelete)
 def delete_artwork(
     artwork_id: UUID,
     db: Session = Depends(get_db),
@@ -297,13 +299,13 @@ def get_artwork(artwork_id: UUID, db: Session = Depends(get_db)):
 # LIKES ENDPOINTS
 # -------------------------
 
-@user_router.post("/likes/{artwork_id}", response_model=LikeCountResponse)
+@router.post("/likes/{artwork_id}", response_model=LikeCountResponse)
 def like_artwork(artwork_id: UUID, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     crud.like_artwork(db, current_user.id, artwork_id)
     count = crud.get_like_count(db, artwork_id)
     return {"artwork_id": artwork_id, "like_count": count}
 
-@user_router.delete("/likes/{artwork_id}", response_model=LikeCountResponse)
+@router.delete("/likes/{artwork_id}", response_model=LikeCountResponse)
 def unlike_artwork(artwork_id: UUID, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     crud.unlike_artwork(db, current_user.id, artwork_id)
     count = crud.get_like_count(db, artwork_id)
@@ -314,7 +316,7 @@ def get_like_count(artwork_id: UUID, db: Session = Depends(get_db)):
     count = crud.get_like_count(db, artwork_id)
     return {"artwork_id": artwork_id, "like_count": count}
 
-@user_router.get("/likes/{artwork_id}/status", response_model=HasLikedResponse)
+@router.get("/likes/{artwork_id}/status", response_model=HasLikedResponse)
 def check_like_status(artwork_id: UUID, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     has_liked = crud.has_user_liked_artwork(db, current_user.id, artwork_id)
     return {
@@ -327,7 +329,7 @@ def check_like_status(artwork_id: UUID, db: Session = Depends(get_db), current_u
 # COMMENTS ENDPOINTS
 # -------------------------
 
-@user_router.post("/comments/{artwork_id}", status_code=status.HTTP_201_CREATED)
+@router.post("/comments/{artwork_id}", status_code=status.HTTP_201_CREATED)
 def post_comment(comment_data: CommentCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return crud.create_comment(db=db, user_id=current_user.id, comment_data=comment_data)
 
@@ -339,11 +341,11 @@ def get_comments(artwork_id: str, db: Session = Depends(get_db)):
 # ORDER ENDPOINTS
 # -------------------------
 
-@user_router.post("/orders", response_model=OrderRead)
+@router.post("/orders", response_model=OrderRead)
 def create_order(order_data: OrderCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return crud.create_order(db, order_data, user_id=current_user.id)
 
-@user_router.get("/orders/my", response_model=List[OrderRead])
+@router.get("/orders/my", response_model=List[OrderRead])
 def get_my_orders(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return crud.list_orders_for_user(db, user_id=current_user.id)
 
@@ -351,7 +353,7 @@ def get_my_orders(current_user: User = Depends(get_current_user), db: Session = 
 # REVIEW ENDPOINTS
 # -------------------------
 
-@user_router.post("/reviews", response_model=ReviewRead)
+@router.post("/reviews", response_model=ReviewRead)
 def create_review(
     review: ReviewCreate,
     db: Session = Depends(get_db),
@@ -368,16 +370,16 @@ def get_reviews_for_artwork(artwork_id: UUID, db: Session = Depends(get_db)):
 # WISHLIST ENDPOINTS
 # -------------------------
 
-@user_router.post("/wishlist", response_model=WishlistRead)
+@router.post("/wishlist", response_model=WishlistRead)
 def add_to_wishlist(item: WishlistCreatePublic, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     internal_item = WishlistCreate(userId=current_user.id, artworkId=item.artworkId)
     return crud.add_to_wishlist(db, internal_item, user_id=current_user.id)
 
-@user_router.get("/wishlist", response_model=List[WishlistRead])
+@router.get("/wishlist", response_model=List[WishlistRead])
 def get_wishlist(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return crud.get_user_wishlist(db, current_user.id)
 
-@user_router.delete("/wishlist/artwork/{artwork_id}")
+@router.delete("/wishlist/artwork/{artwork_id}")
 def remove_from_wishlist(artwork_id: UUID, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return crud.remove_wishlist_item(db, user_id=current_user.id, artwork_id=artwork_id)
 
@@ -385,16 +387,16 @@ def remove_from_wishlist(artwork_id: UUID, current_user: User = Depends(get_curr
 # CART ENDPOINTS
 # -------------------------
 
-@user_router.post("/cart", response_model=CartCreatePublic)
+@router.post("/cart", response_model=CartCreatePublic)
 def add_to_cart(item: CartCreatePublic, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     internal_item = CartCreate(userId=current_user.id, artworkId=item.artworkId)
     return crud.add_to_cart(db, internal_item, user_id=current_user.id)
 
-@user_router.get("/cart", response_model=List[CartRead])
+@router.get("/cart", response_model=List[CartRead])
 def get_cart(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return crud.get_user_cart(db, current_user.id)
 
-@user_router.delete("/cart/artwork/{artwork_id}")
+@router.delete("/cart/artwork/{artwork_id}")
 def remove_from_cart(artwork_id: UUID, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return crud.remove_cart_item(db, user_id=current_user.id, artwork_id=artwork_id)
 
@@ -402,7 +404,7 @@ def remove_from_cart(artwork_id: UUID, current_user: User = Depends(get_current_
 # FOLLOW & FOLLOWER ENDPOINTS
 # -------------------------
 
-@user_router.post("/{user_id}/follow")
+@router.post("/users/{user_id}/follow")
 def follow_user(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     if current_user.id == user_id:
         raise HTTPException(status_code=400, detail="Cannot follow yourself.")
@@ -414,7 +416,7 @@ def follow_user(user_id: str, db: Session = Depends(get_db), current_user: User 
     
     return {"msg": "Followed successfully"}
 
-@user_router.delete("/{user_id}/unfollow")
+@router.delete("/users/{user_id}/unfollow")
 def unfollow_user(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     result = crud.unfollow_user(db, current_user.id, user_id)
     
@@ -423,7 +425,7 @@ def unfollow_user(user_id: str, db: Session = Depends(get_db), current_user: Use
     
     return {"msg": "Unfollowed successfully"}
 
-@user_router.get("/me/followers", response_model=FollowList)
+@router.get("/users/me/followers", response_model=FollowList)
 def get_my_followers(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -434,7 +436,7 @@ def get_my_followers(
         "count": len(followers)
     }
 
-@user_router.get("/me/following", response_model=FollowList)
+@router.get("/users/me/following", response_model=FollowList)
 def get_my_following(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -486,4 +488,4 @@ def list_follow_followers(db: Session = Depends(get_db)):
 
 
 #-------------------------------------------------------------------------------------------------------------
-__all__ = ["router","user_router","admin_router"]
+__all__ = ["router","user_router" "admin_router"]

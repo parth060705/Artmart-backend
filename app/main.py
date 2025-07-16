@@ -26,9 +26,9 @@ app.add_middleware(
 def root():
     return {"message": "Welcome to the ARTMART API!"}
 
-app.include_router(routes.router, tags=["user"])
-app.include_router(admin_router, prefix="/api", tags=["admin"])
-# app.include_router(user_router, prefix="/api", tags=["auth"])
+app.include_router(routes.router, prefix="/api", tags=["public"])
+app.include_router(admin_router, prefix="/api/admin", tags=["admin"])
+app.include_router(user_router, prefix="/api/auth", tags=["authorized"])
 
 # ---------------------------------------------------------------------
 # to check and start the app
