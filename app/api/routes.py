@@ -29,9 +29,9 @@ from app.schemas.schemas import (
 
 router = APIRouter()
 
-# FOR USER LEVEL ROUTES
+# FOR PROTECTED LEVEL ROUTES
 user_router = APIRouter(
-    tags=["user"],
+    tags=["authorized"],
     dependencies=[Depends(get_current_user)]  # Dependency Injection
 )
 
@@ -104,7 +104,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
     return crud.create_user(db, user)
 
-@user_router.get("/me", response_model=UserSearch)
+@user_router.get("/me", response_model=UserRead)
 def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
 
@@ -192,7 +192,7 @@ def create_artwork(
         files=files,  # <-- List of UploadFile
     )
 
-@user_router.patch("/artworks/{artwork_id}", response_model=ArtworkRead)
+@user_router.patch("/update/artworks/{artwork_id}", response_model=ArtworkRead)
 def update_artwork(
     artwork_id: UUID,
     title: Optional[str] = Form(None),
@@ -200,10 +200,15 @@ def update_artwork(
     category: Optional[str] = Form(None),
     price: Optional[float] = Form(None),
     isSold: Optional[bool] = Form(None),
-    files: Optional[List[UploadFile]] = File(None),  # optional multiple files
+    files: Optional[List[UploadFile]] = File(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    valid_files = [
+        f for f in (files or [])
+        if isinstance(f, UploadFile) and f.filename and f.content_type != "application/octet-stream"
+    ]
+
     artwork_update = ArtworkUpdate(
         title=title,
         description=description,
@@ -217,7 +222,7 @@ def update_artwork(
         artwork_id=str(artwork_id),
         user_id=str(current_user.id),
         artwork_update=artwork_update,
-        files=files  # pass multiple files
+        files=valid_files  # pass only real files
     )
 
 @user_router.delete("/artworks/{artwork_id}", response_model=ArtworkDelete)

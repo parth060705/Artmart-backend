@@ -17,7 +17,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1080
 REFRESH_TOKEN_EXPIRE_DAYS = 30
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")  # ***
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 

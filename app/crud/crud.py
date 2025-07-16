@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_ , and_
-from fastapi import HTTPException, UploadFile
+from fastapi import HTTPException, UploadFile, File
 from uuid import UUID
 from uuid import uuid4
 from app.models import models
@@ -23,6 +23,9 @@ def get_user_by_email(db: Session, email: str):
 
 def get_user(db: Session, user_id: UUID):
     return db.query(models.User).filter(models.User.id == str(user_id)).first()
+
+def get_user_by_username(db: Session, username: str):
+    return db.query(models.User).filter(models.User.username == username).first()
 
 def create_user(db: Session, user: schemas.UserCreate):
     hashed_password = pwd_context.hash(user.password)
@@ -60,17 +63,15 @@ def update_user_details(db: Session, user_id: int, user_update: schemas.UserUpda
         db_user.pincode = str(user_update.pincode)
     if user_update.phone is not None:
         db_user.phone = str(user_update.phone)
-
     db.commit()
     db.refresh(db_user)
     return db_user
 
-def get_user_by_username(db: Session, username: str):
-    return db.query(models.User).filter(models.User.username == username).first()
-
+#----------------------------------------------------------------------------------
 UPLOAD_DIR = "uploads"
 ALLOWED_EXTENSIONS = {"jpeg", "jpg", "png", "svg"}
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/svg+xml"}
+
 def update_user_profile_image(db: Session, user_id: UUID, file: UploadFile):
     print("[DEBUG] User ID:", user_id)
     print("[DEBUG] File type:", file.content_type)
@@ -171,7 +172,7 @@ def update_artwork(
     artwork_id: str,
     user_id: str,
     artwork_update: schemas.ArtworkUpdate,
-    file: List[UploadFile] = None
+     files: Optional[List[UploadFile]] = None  
 ):
     db_artwork = db.query(models.Artwork).filter(models.Artwork.id == artwork_id).first()
 
@@ -187,10 +188,10 @@ def update_artwork(
         setattr(db_artwork, key, value)
 
     # Upload additional images if provided
-    if file:
+    if files:
         new_image_urls = []
 
-        for f in file:
+        for f in files:
             if f.content_type not in ALLOWED_MIME_TYPES:
                 raise HTTPException(status_code=400, detail=f"Unsupported file type: {f.content_type}")
 
