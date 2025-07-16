@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from app.api import routes
-from app.api.routes import admin_router 
+from app.api.routes import admin_router, user_router
 from app.database import engine, Base
 from app.models import models
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,6 +28,7 @@ def root():
 
 app.include_router(routes.router, tags=["user"])
 app.include_router(admin_router, prefix="/api", tags=["admin"])
+# app.include_router(user_router, prefix="/api", tags=["auth"])
 
 # ---------------------------------------------------------------------
 # to check and start the app
