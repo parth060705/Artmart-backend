@@ -53,7 +53,7 @@ class UserCreate(BaseModel):
     name: str
     email: EmailStr
     username: str
-    profileImage: Optional[HttpUrl] = None
+    # profileImage: Optional[HttpUrl] = None
     location: Optional[str] = None
     gender: Optional[str] = None
     age: Optional[int] = None
