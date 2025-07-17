@@ -445,13 +445,13 @@ def remove_cart_item(db: Session, user_id: UUID, artwork_id: UUID):
 # FOLLOW OPERATIONS
 # -------------------------
 
-def serialize_user(user: models.User) -> dict:
+def serialize_user(user: models.User):
     return {
         "id": str(user.id),
         "username": user.username,
         "email": user.email,
         "name": user.name,
-        "profileImageUrl": user.profileImage,
+        "profileImage": user.profileImage,
     }
 
 
