@@ -132,6 +132,8 @@ class ArtworkAdmin(BaseModel):
     description: Optional[str] = None
     images: Optional[List[HttpUrl]] = None
     price: float
+    artistId: str
+    createdAt: datetime
     category: str
     artist: ArtworkArtist
     isSold: bool   
