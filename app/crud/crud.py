@@ -241,32 +241,6 @@ def get_artwork(db: Session, artwork_id: UUID):
 def get_artworks_by_user(db: Session, user_id: str):
     return db.query(models.Artwork).filter(models.Artwork.artistId == user_id).all()
 
-                # GET ARTWORK BY SPECIFICATION OF TITLE, PRICE, CATEGORY, ARTIST NAME, LOCATION
-def get_artworks_with_artist_filters(
-    db: Session,
-    title: Optional[str] = None,
-    price: Optional[float] = None,
-    category: Optional[str] = None,
-    artist_name: Optional[str] = None,
-    location: Optional[str] = None,
-):
-    query = db.query(models.Artwork).join(models.Artwork.artist)
-    filters = []
-    if title:
-        filters.append(models.Artwork.title.ilike(f"%{title}%"))
-    if price:
-        filters.append(models.Artwork.price == price)
-    if category:
-        filters.append(models.Artwork.category.ilike(f"%{category}%"))
-    if artist_name:
-        filters.append(models.User.name.ilike(f"%{artist_name}%"))
-    if location:
-        filters.append(models.User.location.ilike(f"%{location}%"))
-    if filters:
-        query = query.filter(and_(*filters))
-    return query.options(joinedload(models.Artwork.artist)).all()
-
-
 # -------------------------
 # LIKES OPERATIONS
 # -------------------------
@@ -454,7 +428,6 @@ def serialize_user(user: models.User):
         "profileImage": user.profileImage,
     }
 
-
 def follow_user(db: Session, follower_id: str, followed_id: str):
     if follower_id == followed_id:
         raise ValueError("User cannot follow themselves.")
@@ -525,6 +498,38 @@ def get_artworks_by_category(db: Session, category: str):
         models.Artwork.category.ilike(f"%{category.strip()}%")
     ).all()
 
+                # SEARCH ARTWORK BY SPECIFICATION OF TITLE, PRICE, CATEGORY, ARTIST NAME, LOCATION
+def get_artworks_with_artist_filters(
+    db: Session,
+    artwork_id: Optional[str] = None,
+    title: Optional[str] = None,
+    price: Optional[float] = None,
+    category: Optional[str] = None,
+    artist_name: Optional[str] = None,
+    location: Optional[str] = None,
+    user_id: Optional[str] = None,
+):
+    query = db.query(models.Artwork).join(models.Artwork.artist)
+    filters = []
+    if artwork_id:
+        filters.append(models.Artwork.id == artwork_id)
+    if title:
+        filters.append(models.Artwork.title.ilike(f"%{title}%"))
+    if price:
+        filters.append(models.Artwork.price == price)
+    if category:
+        filters.append(models.Artwork.category.ilike(f"%{category}%"))
+    if artist_name:
+        filters.append(models.User.name.ilike(f"%{artist_name}%"))
+    if location:
+        filters.append(models.User.location.ilike(f"%{location}%"))
+    if user_id:
+        filters.append(models.User.id == user_id)
+
+    if filters:
+        query = query.filter(and_(*filters))
+    return query.options(joinedload(models.Artwork.artist)).all()
+
 
 # ------------------------------------------------------------------------------------------------------------------
 #                                        ADMIN & SUPER-ADMIN ENDPOINTS
@@ -541,6 +546,62 @@ def delete_user(db: Session, user_id):  # no UUID typing
     db.commit()
     return True
 
+def update_user_details_admin(db: Session, user_id: str, update_data: dict):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    for field, value in update_data.items():
+        setattr(user, field, value)
+
+    db.commit()
+    db.refresh(user)
+    return user
+
+def get_users_filters(
+    db: Session,
+    user_id: Optional[str] = None,
+    name: Optional[str] = None,
+    email: Optional[str] = None,
+    username: Optional[str] = None,
+    gender: Optional[str] = None,
+    role: Optional[str] = None,
+    location: Optional[str] = None,
+):
+    query = db.query(models.User)
+    filters = []
+    if user_id:
+        filters.append(models.User.id == user_id)
+    if name:
+        filters.append(models.User.name.ilike(f"%{name}%"))
+    if email:
+        filters.append(models.User.email == email)
+    if username:
+        filters.append(models.User.username == username)
+    if gender:
+        filters.append(models.User.gender.ilike(f"%{gender}%"))
+    if role:
+        filters.append(models.User.role.ilike(f"%{role}%"))
+    if location:
+        filters.append(models.User.location.ilike(f"%{location}%"))
+
+    if filters:
+        query = query.filter(and_(*filters))
+    return query.all()
+
+def list_artworks(db: Session):
+    return db.query(models.Artwork).all()
+
+def delete_artwork_admin(db: Session, artwork_id: UUID):
+    artwork = db.query(models.Artwork).filter(models.Artwork.id == str(artwork_id)).first()
+    if not artwork:
+        raise HTTPException(status_code=404, detail="Artwork not found")
+
+    db.delete(artwork)
+    db.commit()
+    return {"message": "Artwork deleted successfully", "artwork_id": artwork_id}
+
 def list_all_orders(db: Session):
     return db.query(models.Order).all()
 
@@ -556,19 +617,6 @@ def delete_order(db: Session, order_id: UUID):
         "message": "Order deleted successfully",
         "order_id": order_id
     }
-
-
-def list_artworks(db: Session):
-    return db.query(models.Artwork).all()
-
-def delete_artwork_admin(db: Session, artwork_id: UUID):
-    artwork = db.query(models.Artwork).filter(models.Artwork.id == str(artwork_id)).first()
-    if not artwork:
-        raise HTTPException(status_code=404, detail="Artwork not found")
-
-    db.delete(artwork)
-    db.commit()
-    return {"message": "Artwork deleted successfully", "artwork_id": artwork_id}
 
 def list_follow_followers(db: Session):
     return db.query(models.followers_association).all()

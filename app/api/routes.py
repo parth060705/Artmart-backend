@@ -11,7 +11,7 @@ from app.models.models import User
 from datetime import timedelta
 from app.core import auth
 from app.crud import crud
-from app.crud.crud import get_artworks_with_artist_filters
+from app.crud.crud import get_artworks_with_artist_filters, get_users_filters
 from app.crud.crud import serialize_user
 from app.models import models
 from sqlalchemy.orm import joinedload
@@ -24,7 +24,7 @@ from app.schemas.schemas import (
     OrderCreate, OrderRead, OrderDelete, ReviewCreate, ReviewRead,WishlistCreate,
     WishlistRead, WishlistCreatePublic, CartCreate, CartRead, CartCreatePublic,
     LikeCountResponse, HasLikedResponse, CommentCreate, CommentRead, FollowList,
-    FollowFollowers, DeleteMessageUser
+    FollowFollowers, DeleteMessageUser, UserUpdateAdmin
 )
 
 router = APIRouter()
@@ -165,6 +165,24 @@ def search_users(
 def read_artworks_by_category(category: str, db: Session = Depends(get_db)):
     return crud.get_artworks_by_category(db, category)
 
+@router.get("/artworks/filter", response_model=List[ArtworkRead])
+def get_artworks_with_filters(
+    title: Optional[str] = None,
+    price: Optional[float] = None,
+    category: Optional[str] = None,
+    artist_name: Optional[str] = None,
+    location: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    return get_artworks_with_artist_filters(
+        db,
+        title=title,
+        price=price,
+        category=category,
+        artist_name=artist_name,
+        location=location
+    )
+
 # -------------------------
 # ARTWORK ENDPOINTS
 # -------------------------
@@ -232,23 +250,6 @@ def delete_artwork(
     current_user: User = Depends(get_current_user)):
     return crud.delete_artwork(db, artwork_id=artwork_id, user_id=current_user.id)
 
-@router.get("/artworks/filter", response_model=List[ArtworkRead])
-def get_artworks_with_filters(
-    title: Optional[str] = None,
-    price: Optional[float] = None,
-    category: Optional[str] = None,
-    artist_name: Optional[str] = None,
-    location: Optional[str] = None,
-    db: Session = Depends(get_db)
-):
-    return get_artworks_with_artist_filters(
-        db,
-        title=title,
-        price=price,
-        category=category,
-        artist_name=artist_name,
-        location=location
-    )
 @router.get("/artworks", response_model=List[ArtworkRead])
 def list_artworks_route(db: Session = Depends(get_db)):
     artworks = crud.list_artworks(db)
@@ -454,14 +455,7 @@ def get_my_following(
 #                                        ADMIN & SUPER-ADMIN ENDPOINTS
 # -------------------------------------------------------------------------------------------------------------------
 
-@admin_router.get("/orders", response_model=List[OrderRead])
-def get_all_orders(db: Session = Depends(get_db)):
-    return crud.list_all_orders(db)
-
-@admin_router.delete("/orders/{order_id}", response_model=OrderDelete)
-def delete_order(order_id: UUID, db: Session = Depends(get_db)):
-    return crud.delete_order(db, order_id)
-
+                                           # USERS
 @admin_router.get("/users", response_model=List[UserBaseAdmin])
 def get_all_users(db: Session = Depends(get_db)):
     return crud.list_all_users(db)
@@ -473,6 +467,44 @@ def delete_user(user_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     return {"message": "User deleted successfully"}
 
+@admin_router.patch("/update/users/{user_id}", response_model=UserBaseAdmin)
+def admin_update_user(
+    user_id: str,
+    user_update: UserUpdateAdmin,  
+    db: Session = Depends(get_db),
+):
+    update_data = user_update.dict(exclude_unset=True, exclude={"id"})  
+    updated_user = crud.update_user_details_admin(
+        db=db,
+        user_id=user_id,
+        update_data=update_data
+    )
+    return updated_user
+
+@admin_router.get("/user/filter", response_model=List[UserBaseAdmin])
+def search_users_filters(
+    user_id: Optional[str] = None,
+    name: Optional[str] = None,
+    email: Optional[str] = None,
+    username: Optional[str] = None,
+    gender: Optional[str] = None,
+    role: Optional[str] = None,
+    location: Optional[str] = None,
+    
+    db: Session = Depends(get_db)
+):
+    return get_users_filters(
+        db,
+        user_id=user_id,
+        name=name,
+        email=email,
+        username=username,
+        gender=gender,
+        role=role,
+        location=location
+    )
+
+                              # ARTWORKS
 @admin_router.get("/artworks", response_model=List[ArtworkAdmin])
 def list_artworks(db: Session = Depends(get_db)):
     return crud.list_artworks(db)
@@ -484,6 +516,71 @@ def delete_artwork_admin(
 ):
     return crud.delete_artwork_admin(db=db, artwork_id=artwork_id)
 
+@admin_router.patch("/update/artworks/{artwork_id}", response_model=ArtworkRead)
+def update_artwork(
+    artwork_id: UUID,
+    title: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    category: Optional[str] = Form(None),
+    price: Optional[float] = Form(None),
+    isSold: Optional[bool] = Form(None),
+    files: Optional[List[UploadFile]] = File(None),
+    db: Session = Depends(get_db),
+    ):
+    valid_files = [
+        f for f in (files or [])
+        if isinstance(f, UploadFile) and f.filename and f.content_type != "application/octet-stream"
+    ]
+
+    artwork_update = ArtworkUpdate(
+        title=title,
+        description=description,
+        category=category,
+        price=price,
+        isSold=isSold
+    )
+
+    return crud.update_artwork(
+        db=db,
+        artwork_id=str(artwork_id),
+        artwork_update=artwork_update,
+        files=valid_files  
+    )
+
+@admin_router.get("/artworks/filter", response_model=List[ArtworkRead])
+def search_artworks_with_filters(
+    artwork_id: Optional[str] = None,
+    title: Optional[str] = None,
+    price: Optional[float] = None,
+    category: Optional[str] = None,
+    artist_name: Optional[str] = None,
+    location: Optional[str] = None,
+    user_id: Optional[str] = None,
+
+    db: Session = Depends(get_db)
+):
+    return get_artworks_with_artist_filters(
+        db,
+        artwork_id=artwork_id,
+        title=title,
+        price=price,
+        category=category,
+        artist_name=artist_name,
+        location=location,
+        user_id=user_id
+    )
+
+                                    # ORDERS
+@admin_router.get("/orders", response_model=List[OrderRead])
+def get_all_orders(db: Session = Depends(get_db)):
+    return crud.list_all_orders(db)
+
+@admin_router.delete("/orders/{order_id}", response_model=OrderDelete)
+def delete_order(order_id: UUID, db: Session = Depends(get_db)):
+    return crud.delete_order(db, order_id)
+
+
+                                    # FOLLOW
 @admin_router.get("/follows", response_model=List[FollowFollowers])
 def list_follow_followers(db: Session = Depends(get_db)):
     return crud.list_follow_followers(db)

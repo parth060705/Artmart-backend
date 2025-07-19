@@ -23,6 +23,18 @@ class TokenData(BaseModel):
 # USER SCHEMAS
 # -------------------------------
 
+class UserUpdateAdmin(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    username: Optional[str] = None
+    # profileImage: Optional[HttpUrl] = None
+    location: Optional[str] = None
+    gender: Optional[str] = None
+    age: Optional[int] = None
+    role: Optional[str] = None
+    pincode: Optional[str] = Field(default=None, pattern=r'^\d{6}$')
+    phone: Optional[str] = Field(default=None, pattern=r'^(\+91)?\d{10}$')
+
 class UserBaseAdmin(BaseModel):
     id: str
     name: str
