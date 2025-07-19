@@ -535,6 +535,7 @@ def get_artworks_with_artist_filters(
 #                                        ADMIN & SUPER-ADMIN ENDPOINTS
 # -------------------------------------------------------------------------------------------------------------------
 
+                                                 # USERS
 def list_all_users(db: Session):
     return db.query(models.User).all()
 
@@ -590,6 +591,7 @@ def get_users_filters(
         query = query.filter(and_(*filters))
     return query.all()
 
+                                               # ARTWORKS
 def list_artworks(db: Session):
     return db.query(models.Artwork).all()
 
@@ -602,6 +604,8 @@ def delete_artwork_admin(db: Session, artwork_id: UUID):
     db.commit()
     return {"message": "Artwork deleted successfully", "artwork_id": artwork_id}
 
+
+                                              # ORDERS
 def list_all_orders(db: Session):
     return db.query(models.Order).all()
 
@@ -618,5 +622,6 @@ def delete_order(db: Session, order_id: UUID):
         "order_id": order_id
     }
 
+                                              # FOLLOW & FOLLOWERS
 def list_follow_followers(db: Session):
     return db.query(models.followers_association).all()

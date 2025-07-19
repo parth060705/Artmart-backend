@@ -16,7 +16,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "https://art-mart-sigma.vercel.app"],    
+    allow_origins=["http://localhost:5173", "https://art-mart-sigma.vercel.app", "https://art-mart-git-admin-panel-parth-gharats-projects.vercel.app"],    
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
