@@ -242,7 +242,7 @@ class CommentRead(CommentBase):
 # -------------------------------
 
 class OrderBase(BaseModel):
-    artworkId: UUID
+    artworkId: Optional[UUID]
     totalAmount: float
     paymentStatus: PaymentStatus
 
