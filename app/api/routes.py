@@ -583,7 +583,17 @@ def delete_order(order_id: UUID, db: Session = Depends(get_db)):
                                     # FOLLOW
 @admin_router.get("/follows", response_model=List[FollowFollowers])
 def list_follow_followers(db: Session = Depends(get_db)):
-    return crud.list_follow_followers(db)
+    followers = crud.list_follow_followers(db)
+    return [
+        {
+            "username": row.username,
+            "profileImage": row.profileImage,
+            "follower_id": row.follower_id,
+            "followed_id": row.followed_id,
+            "created_at": row.created_at
+        }
+        for row in followers
+    ]
 
 
 

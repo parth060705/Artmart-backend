@@ -613,15 +613,22 @@ def delete_order(db: Session, order_id: UUID):
     order = db.query(models.Order).filter(models.Order.id == str(order_id)).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-
     db.delete(order)
     db.commit()
-
     return {
         "message": "Order deleted successfully",
-        "order_id": order_id
-    }
+        "order_id": order_id }
 
                                               # FOLLOW & FOLLOWERS
 def list_follow_followers(db: Session):
-    return db.query(models.followers_association).all()
+    return (
+        db.query(
+            models.User.username,
+            models.User.profileImage,
+            models.followers_association.c.follower_id,
+            models.followers_association.c.followed_id,
+            models.followers_association.c.created_at
+        )
+        .join(models.User, models.User.id == models.followers_association.c.follower_id)
+        .all()
+    )

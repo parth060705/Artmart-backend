@@ -336,6 +336,8 @@ class CartRemove(CartCreate):
 # -------------------------------
 # FOLLOW SCHEMAS
 # -------------------------------
+class FollowsUser(BaseModel):
+    username: str
 
 class UserShort(BaseModel):
     id: str
@@ -347,7 +349,7 @@ class FollowList(BaseModel):
     users: List[UserShort]
     count: int
 
-class FollowFollowers(BaseModel):
+class FollowFollowers(FollowsUser):
     follower_id: UUID
     followed_id: UUID
     created_at: datetime
