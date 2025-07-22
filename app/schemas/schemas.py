@@ -243,6 +243,8 @@ class CommentRead(CommentBase):
 class UserDetail(BaseModel):
     username: str
     name: str
+    location: Optional[str] = None
+
 
 class OrderBase(BaseModel):
     artworkId: Optional[UUID]
