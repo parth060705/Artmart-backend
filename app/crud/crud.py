@@ -35,7 +35,7 @@ def create_user(db: Session, user: schemas.UserCreate):
         username=user.username,
         passwordHash=hashed_password,
         role=RoleEnum.user,
-        profileImage=str(user.profileImage) if user.profileImage else None,
+        # profileImage=str(user.profileImage) if user.profileImage else None,
         location=user.location,
         gender=user.gender,
         age=user.age,
@@ -607,7 +607,7 @@ def delete_artwork_admin(db: Session, artwork_id: UUID):
 
                                               # ORDERS
 def list_all_orders(db: Session):
-    return db.query(models.Order).all()
+    return db.query(models.Order).options(joinedload(models.Order.buyer)).all()
 
 def delete_order(db: Session, order_id: UUID):
     order = db.query(models.Order).filter(models.Order.id == str(order_id)).first()

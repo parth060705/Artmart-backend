@@ -240,6 +240,9 @@ class CommentRead(CommentBase):
 # -------------------------------
 # ORDER SCHEMAS
 # -------------------------------
+class UserDetail(BaseModel):
+    username: str
+    name: str
 
 class OrderBase(BaseModel):
     artworkId: Optional[UUID]
@@ -249,17 +252,18 @@ class OrderBase(BaseModel):
 class OrderCreate(OrderBase):
     pass
 
-class OrderDelete(BaseModel):
-    message: str
-    order_id: UUID
-
 class OrderRead(OrderBase):
     id: UUID
     buyerId: UUID
     createdAt: datetime
+    buyer:UserDetail
 
     class Config:
         from_attributes = True
+
+class OrderDelete(BaseModel):
+    message: str
+    order_id: UUID        
 
 # -------------------------------
 # REVIEW SCHEMAS
