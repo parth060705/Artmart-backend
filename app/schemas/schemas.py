@@ -194,7 +194,7 @@ class ArtworkDelete(BaseModel): # MESSAGE AFTER DELETION
     message: str
     artwork_id: UUID
 
-class ArtworkCategory(BaseModel):
+class ArtworkCategory(ArtworkRead):
     category: str
 
     class Config:
