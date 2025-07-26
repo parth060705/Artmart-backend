@@ -106,6 +106,55 @@ def update_user_profile_image(db: Session, user_id: UUID, file: UploadFile):
         "profileImage": user.profileImage
     }
 
+
+##################### FOR DELETING PROFILE PHOTOS FROM CLOUDINARY AFTER UPDATING
+
+# def update_user_profile_image(db: Session, user_id: UUID, file: UploadFile):
+#     print("[DEBUG] User ID:", user_id)
+#     print("[DEBUG] File type:", file.content_type)
+#     print("[DEBUG] Cloudinary API key:", cloudinary.config().api_key)  
+#     print("[DEBUG] Cloudinary Cloud name:", cloudinary.config().cloud_name)
+
+#     if file.content_type not in ALLOWED_MIME_TYPES:
+#         raise HTTPException(status_code=400, detail="Unsupported file type")
+
+#     contents = file.file.read()
+#     if len(contents) > 5 * 1024 * 1024:
+#         raise HTTPException(status_code=400, detail="File too large (max 5MB)")
+#     file.file.seek(0)
+
+#     user = db.query(models.User).filter(models.User.id == str(user_id)).first()
+#     if not user:
+#         raise HTTPException(status_code=404, detail="User not found")
+
+#     # Delete previous image if present
+#     if user.profileImagePublicId:
+#         try:
+#             deletion_result = cloudinary.uploader.destroy(user.profileImagePublicId)
+#             print("[DEBUG] Deleted old image:", deletion_result)
+#         except Exception as e:
+#             print("[ERROR] Could not delete old image:", str(e))
+
+#     # Upload new image
+#     try:
+#         result = cloudinary.uploader.upload(file.file, folder="user_profiles")
+#         print("[DEBUG] Upload result:", result)
+#     except Exception as e:
+#         print("[ERROR] Cloudinary upload failed:", str(e))
+#         raise HTTPException(status_code=500, detail=f"Cloudinary error: {str(e)}")
+
+#     # Save new image URL and public_id
+#     user.profileImage = result["secure_url"]
+#     user.profileImagePublicId = result["public_id"]
+#     db.commit()
+#     db.refresh(user)
+
+#     return {
+#         "message": "Profile image uploaded successfully",
+#         "profileImage": user.profileImage
+#     }
+
+
 # -------------------------
 # ARTWORK OPERATIONS
 # -------------------------

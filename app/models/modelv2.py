@@ -48,6 +48,7 @@ class User(Base):
     passwordHash = Column(String(255), nullable=False)
     role = Column(SqlEnum(RoleEnum, native_enum=False), nullable=False, default=RoleEnum.user)
     profileImage = Column(String(255), nullable=True)
+    profileImagePublicId = Column(String(255), nullable=True)       ######
     createdAt = Column(DateTime, default=datetime.utcnow)
     location = Column(String(100), nullable=True)
     pincode = Column(CHAR(6), nullable=True)
