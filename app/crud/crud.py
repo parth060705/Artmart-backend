@@ -37,7 +37,7 @@ def create_user(db: Session, user: schemas.UserCreate):
         username=user.username,
         passwordHash=hashed_password,
         role=RoleEnum.user,
-        # profileImage=str(user.profileImage) if user.profileImage else None,
+        profileImage=str(user.profileImage) if user.profileImage else None,
         location=user.location,
         gender=user.gender,
         age=user.age,
