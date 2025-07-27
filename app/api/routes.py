@@ -11,7 +11,7 @@ from app.models.models import User
 from datetime import timedelta
 from app.core import auth
 from app.crud import crud
-from app.crud.crud import get_artworks_with_artist_filters, get_users_filters
+from app.crud.crud import get_artworks_with_artist_filters, get_users_filters, upload_image_to_cloudinary
 from app.crud.crud import serialize_user
 from app.models import models
 from sqlalchemy.orm import joinedload
@@ -103,6 +103,10 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     return crud.create_user(db, user)
+
+@router.post("/upload-image")
+def upload_image(file: UploadFile = File(...)):
+    return upload_image_to_cloudinary(file)
 
 @user_router.get("/me", response_model=UserRead)
 def read_users_me(current_user: User = Depends(get_current_user)):

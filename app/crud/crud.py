@@ -10,6 +10,8 @@ from passlib.context import CryptContext
 import cloudinary.uploader
 import cloudinary
 from typing import List, Optional
+from fastapi import UploadFile, HTTPException
+import cloudinary.uploader
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -46,6 +48,37 @@ def create_user(db: Session, user: schemas.UserCreate):
     db.commit()
     db.refresh(db_user)
     return db_user
+
+
+ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/svg+xml"}
+def upload_image_to_cloudinary(file: UploadFile):
+    print("[DEBUG] File type:", file.content_type)
+    print("[DEBUG] Cloudinary API key:", cloudinary.config().api_key)
+    print("[DEBUG] Cloudinary Cloud name:", cloudinary.config().cloud_name)
+
+    # Validate MIME type
+    if file.content_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(status_code=400, detail="Unsupported file type")
+
+    # Validate file size (max 5MB)
+    contents = file.file.read()
+    if len(contents) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 5MB)")
+    file.file.seek(0)
+
+    # Upload to Cloudinary
+    try:
+        result = cloudinary.uploader.upload(file.file, folder="user_profiles")
+        print("[DEBUG] Upload result:", result)
+    except Exception as e:
+        print("[ERROR] Cloudinary upload failed:", str(e))
+        raise HTTPException(status_code=500, detail=f"Cloudinary error: {str(e)}")
+
+    return {
+        "message": "Image uploaded successfully",
+        "url": result["secure_url"]
+    }
+
 
 def update_user_details(db: Session, user_id: int, user_update: schemas.UserUpdate):
     db_user = db.query(models.User).filter(models.User.id == user_id).first()
