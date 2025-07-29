@@ -677,6 +677,47 @@ def get_users_filters(
 def list_artworks(db: Session):
     return db.query(models.Artwork).all()
 
+def update_artwork(
+    db: Session,
+    artwork_id: str,
+    artwork_update: schemas.ArtworkUpdate,
+    files: Optional[List[UploadFile]] = None
+):
+    db_artwork = db.query(models.Artwork).filter(models.Artwork.id == artwork_id).first()
+
+    if not db_artwork:
+        raise HTTPException(status_code=404, detail="Artwork not found")
+
+    update_data = artwork_update.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_artwork, key, value)
+
+    if files:
+        new_image_urls = []
+
+        for f in files:
+            if f.content_type not in ALLOWED_MIME_TYPES:
+                raise HTTPException(status_code=400, detail=f"Unsupported file type: {f.content_type}")
+
+            contents = f.file.read()
+            if len(contents) > MAX_FILE_SIZE_MB * 1024 * 1024:
+                raise HTTPException(status_code=400, detail=f"File too large (max {MAX_FILE_SIZE_MB}MB)")
+            f.file.seek(0)
+
+            try:
+                result = cloudinary.uploader.upload(f.file, folder="artworks")
+                secure_url = result.get("secure_url")
+                if secure_url:
+                    new_image_urls.append(secure_url)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Cloudinary error: {str(e)}")
+
+        db_artwork.images = (db_artwork.images or []) + new_image_urls
+
+    db.commit()
+    db.refresh(db_artwork)
+    return db_artwork
+
 def delete_artwork_admin(db: Session, artwork_id: UUID):
     artwork = db.query(models.Artwork).filter(models.Artwork.id == str(artwork_id)).first()
     if not artwork:

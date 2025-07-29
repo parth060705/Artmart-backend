@@ -537,12 +537,14 @@ def update_artwork(
     isSold: Optional[bool] = Form(None),
     files: Optional[List[UploadFile]] = File(None),
     db: Session = Depends(get_db),
-    ):
+):
+    # Filter out invalid files
     valid_files = [
         f for f in (files or [])
         if isinstance(f, UploadFile) and f.filename and f.content_type != "application/octet-stream"
     ]
 
+    # Build schema object with fields that were sent
     artwork_update = ArtworkUpdate(
         title=title,
         description=description,
@@ -551,11 +553,12 @@ def update_artwork(
         isSold=isSold
     )
 
+    # Call update logic
     return crud.update_artwork(
         db=db,
         artwork_id=str(artwork_id),
         artwork_update=artwork_update,
-        files=valid_files  
+        files=valid_files  # Will be [] if no valid files sent
     )
 
 @admin_router.get("/artworks/filter", response_model=List[ArtworkRead])
