@@ -23,6 +23,18 @@ class PaymentStatusEnum(str, enum.Enum):
     failed = "failed"
 
 # -------------------------
+# PAYMENT METHOD ENUM
+# -------------------------
+
+class PaymentMethodEnum(str, enum.Enum):
+    credit_card = "credit_card"
+    debit_card = "debit_card"
+    net_banking = "net_banking"
+    upi = "upi"
+    wallet = "wallet"
+    cod = "cod"  # Cash on Delivery
+
+# -------------------------
 # FOLLOWERS ASSOCIATION TABLE
 # -------------------------
 
@@ -236,3 +248,25 @@ class Message(Base):
 
     sender = relationship("User", foreign_keys=[sender_id])
     receiver = relationship("User", foreign_keys=[receiver_id])
+
+# -------------------------
+# PAYMENT MODEL
+# -------------------------
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    order_id = Column(String(36), ForeignKey("orders.id"), nullable=False)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    transaction_id = Column(String(100), unique=True, nullable=True)  # From payment gateway
+    amount = Column(Float, nullable=False)
+    status = Column(SqlEnum(PaymentStatusEnum, native_enum=False), nullable=False, default=PaymentStatusEnum.pending)
+    method = Column(SqlEnum(PaymentMethodEnum, native_enum=False), nullable=False)
+    paid_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    user = relationship("User", backref="payments")
+    order = relationship("Order", backref="payment")
+
