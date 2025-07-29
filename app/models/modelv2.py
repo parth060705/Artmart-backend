@@ -31,7 +31,6 @@ class PaymentMethodEnum(str, enum.Enum):
     debit_card = "debit_card"
     net_banking = "net_banking"
     upi = "upi"
-    wallet = "wallet"
     cod = "cod"  # Cash on Delivery
 
 # -------------------------
