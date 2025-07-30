@@ -16,6 +16,7 @@ from app.database import Base
 class RoleEnum(str, enum.Enum):
     user = "user"
     admin = "admin"
+    store = "store"
 
 class PaymentStatusEnum(str, enum.Enum):
     pending = "pending"
@@ -61,6 +62,7 @@ class User(Base):
     profileImage = Column(String(255), nullable=True)
     profileImagePublicId = Column(String(255), nullable=True)       ######
     createdAt = Column(DateTime, default=datetime.utcnow)
+    updatedAt = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  ######
     location = Column(String(100), nullable=True)
     pincode = Column(CHAR(6), nullable=True)
     gender = Column(String(20), nullable=True)
@@ -242,9 +244,10 @@ class Message(Base):
     content = Column(Text, nullable=True)  # Can be empty for typing
     timestamp = Column(DateTime, default=datetime.utcnow)
     is_read = Column(Boolean, default=False)
-    is_typing = Column(Boolean, default=False)
+    # is_typing = Column(Boolean, default=False)
     message_type = Column(String(20), default="text")  # "text", "typing", etc.
 
+    # Relationships
     sender = relationship("User", foreign_keys=[sender_id])
     receiver = relationship("User", foreign_keys=[receiver_id])
 
