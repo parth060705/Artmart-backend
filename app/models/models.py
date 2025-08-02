@@ -244,7 +244,6 @@ class Message(Base):
     content = Column(Text, nullable=True)  # Can be empty for typing
     timestamp = Column(DateTime, default=datetime.utcnow)
     is_read = Column(Boolean, default=False)
-    # is_typing = Column(Boolean, default=False)
     message_type = Column(String(20), default="text")  # "text", "typing", etc.
 
     # Relationships
