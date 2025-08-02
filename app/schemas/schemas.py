@@ -4,8 +4,9 @@ from datetime import datetime
 from typing import Optional, Literal, List
 
 # ENUM TYPES
-RoleType = Literal["user", "admin"]
+RoleType = Literal["user", "admin", "store"]
 PaymentStatus = Literal["pending", "paid", "failed"]
+PaymentMethodEnum = Literal["credit_card", "debit_card", "net_banking", "upi", "cod"]
 
 # -------------------------------
 # TOKENS
@@ -56,6 +57,7 @@ class UserBase(BaseModel):
     location: Optional[str] = None
     gender: Optional[str] = None
     age: Optional[int] = None
+    bio: Optional[str] = None
     pincode: Optional[str] = Field(default=None, pattern=r'^\d{6}$')
     phone: Optional[str] = Field(default=None, pattern=r'^(\+91)?\d{10}$')
 
@@ -69,6 +71,7 @@ class UserCreate(BaseModel):
     location: Optional[str] = None
     gender: Optional[str] = None
     age: Optional[int] = None
+    bio: Optional[str] = None
     pincode: Optional[str] = Field(default=None, pattern=r'^\d{6}$')
     phone: Optional[str] = Field(default=None, pattern=r'^(\+91)?\d{10}$')
 
@@ -78,11 +81,12 @@ class UserUpdate(BaseModel):
     location: Optional[str] = None
     gender: Optional[str] = None
     age: Optional[int] = None
+    bio: Optional[str] = None
     pincode: Optional[str] = Field(default=None, pattern=r'^\d{6}$')
     phone: Optional[str] = Field(default=None, pattern=r'^(\+91)?\d{10}$')
 
 class UserRead(UserBase):
-    id: UUID
+    # id: UUID
     createdAt: datetime
 
     class Config:
@@ -102,6 +106,7 @@ class UserSearch(BaseModel):
     location: Optional[str] = None
     gender: Optional[str] = None
     age: Optional[int] = None
+    bio: Optional[str] = None
    
     class Config:
         from_attributes = True

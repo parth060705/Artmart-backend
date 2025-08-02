@@ -40,6 +40,7 @@ def create_user(db: Session, user: schemas.UserCreate):
         profileImage=str(user.profileImage) if user.profileImage else None,
         location=user.location,
         gender=user.gender,
+        bio=user.bio,
         age=user.age,
         phone=str(user.phone) if user.phone else None,
         pincode=str(user.pincode) if user.pincode else None 
@@ -79,7 +80,6 @@ def upload_image_to_cloudinary(file: UploadFile):
         "url": result["secure_url"]
     }
 
-
 def update_user_details(db: Session, user_id: int, user_update: schemas.UserUpdate):
     db_user = db.query(models.User).filter(models.User.id == user_id).first()
     if not db_user:
@@ -92,6 +92,8 @@ def update_user_details(db: Session, user_id: int, user_update: schemas.UserUpda
         db_user.gender = user_update.gender
     if user_update.age is not None:
         db_user.age = user_update.age
+    if user_update.bio is not None:
+        db_user.bio = user_update.bio    
     if user_update.pincode is not None:
         db_user.pincode = str(user_update.pincode)
     if user_update.phone is not None:

@@ -16,11 +16,23 @@ from app.database import Base
 class RoleEnum(str, enum.Enum):
     user = "user"
     admin = "admin"
+    store = "store"
 
 class PaymentStatusEnum(str, enum.Enum):
     pending = "pending"
     paid = "paid"
     failed = "failed"
+
+# -------------------------
+# PAYMENT METHOD ENUM
+# -------------------------
+
+class PaymentMethodEnum(str, enum.Enum):
+    credit_card = "credit_card"
+    debit_card = "debit_card"
+    net_banking = "net_banking"
+    upi = "upi"
+    cod = "cod"  # Cash on Delivery
 
 # -------------------------
 # FOLLOWERS ASSOCIATION TABLE
@@ -48,12 +60,15 @@ class User(Base):
     passwordHash = Column(String(255), nullable=False)
     role = Column(SqlEnum(RoleEnum, native_enum=False), nullable=False, default=RoleEnum.user)
     profileImage = Column(String(255), nullable=True)
+    profileImagePublicId = Column(String(255), nullable=True)       ######
     createdAt = Column(DateTime, default=datetime.utcnow)
+    updatedAt = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  ######
     location = Column(String(100), nullable=True)
     pincode = Column(CHAR(6), nullable=True)
     gender = Column(String(20), nullable=True)
     age = Column(Integer, nullable=True)
     phone = Column(String(15), nullable=True)
+    bio = Column(String(500), nullable=True)        ####
 
     # Relationships
     artworks = relationship("Artwork", back_populates="artist")
@@ -98,6 +113,7 @@ class Artwork(Base):
     title = Column(String(200), nullable=False)
     description = Column(Text)
     images = Column(JSON, nullable=True, default=list)
+    tags = Column(JSON, default=list, nullable=True)         #####
     price = Column(Float, nullable=False)
     category = Column(String(100), nullable=False)
     artistId = Column(String(36), ForeignKey("users.id"))
@@ -214,3 +230,45 @@ class Cart(Base):
     # Relationships
     user = relationship("User", back_populates="cart_items")
     artwork = relationship("Artwork", back_populates="cart_items")
+
+# -------------------------
+# MESSAGE MODEL                              ##########
+# -------------------------
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    sender_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    receiver_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    content = Column(Text, nullable=True)  # Can be empty for typing
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    is_read = Column(Boolean, default=False)
+    # is_typing = Column(Boolean, default=False)
+    message_type = Column(String(20), default="text")  # "text", "typing", etc.
+
+    # Relationships
+    sender = relationship("User", foreign_keys=[sender_id])
+    receiver = relationship("User", foreign_keys=[receiver_id])
+
+# -------------------------
+# PAYMENT MODEL
+# -------------------------
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    order_id = Column(String(36), ForeignKey("orders.id"), nullable=False)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    transaction_id = Column(String(100), unique=True, nullable=True)  # From payment gateway
+    amount = Column(Float, nullable=False)
+    status = Column(SqlEnum(PaymentStatusEnum, native_enum=False), nullable=False, default=PaymentStatusEnum.pending)
+    method = Column(SqlEnum(PaymentMethodEnum, native_enum=False), nullable=False)
+    paid_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    user = relationship("User", backref="payments")
+    order = relationship("Order", backref="payment")
+
