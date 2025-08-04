@@ -732,7 +732,12 @@ def delete_artwork_admin(db: Session, artwork_id: UUID):
 
                                               # ORDERS
 def list_all_orders(db: Session):
-    return db.query(models.Order).options(joinedload(models.Order.buyer)).all()
+    return db.query(models.Order)\
+        .options(
+            joinedload(models.Order.buyer),
+            joinedload(models.Order.artwork)
+        )\
+        .all()
 
 def delete_order(db: Session, order_id: UUID):
     order = db.query(models.Order).filter(models.Order.id == str(order_id)).first()

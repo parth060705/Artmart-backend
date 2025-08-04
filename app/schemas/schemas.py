@@ -250,6 +250,9 @@ class UserDetail(BaseModel):
     name: str
     location: Optional[str] = None
 
+class ArtworkDetail(BaseModel):
+    title: str
+    price: float    
 
 class OrderBase(BaseModel):
     artworkId: Optional[UUID]
@@ -263,7 +266,8 @@ class OrderRead(OrderBase):
     id: UUID
     buyerId: UUID
     createdAt: datetime
-    buyer:UserDetail
+    buyer: UserDetail
+    artwork: ArtworkDetail
 
     class Config:
         from_attributes = True
