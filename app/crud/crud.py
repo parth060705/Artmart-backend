@@ -14,6 +14,12 @@ from fastapi import UploadFile, HTTPException
 import cloudinary.uploader
 
 
+# FOR MESSAGING
+from app.models.models import Message
+from app.schemas.schemas import MessageCreate
+from datetime import datetime
+
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # -------------------------
@@ -613,6 +619,40 @@ def get_artworks_with_artist_filters(
     if filters:
         query = query.filter(and_(*filters))
     return query.options(joinedload(models.Artwork.artist)).all()
+
+# -------------------------
+# MESSAGING OPERATIONS
+# -------------------------
+
+def create_message(db: Session, sender_id: str, msg: MessageCreate) -> Message:
+    message = Message(
+        sender_id=sender_id,
+        receiver_id=msg.receiver_id,
+        content=msg.content,
+        timestamp=datetime.utcnow(),
+        message_type="text",
+    )
+    db.add(message)
+    db.commit()
+    db.refresh(message)
+    return message
+
+
+def mark_messages_as_read(db: Session, sender_id: str, receiver_id: str):
+    db.query(Message).filter(
+        Message.sender_id == sender_id,
+        Message.receiver_id == receiver_id,
+        Message.is_read == False
+    ).update({Message.is_read: True})
+    db.commit()
+
+
+def get_unread_count(db: Session, receiver_id: str, sender_id: str) -> int:
+    return db.query(Message).filter_by(
+        sender_id=sender_id,
+        receiver_id=receiver_id,
+        is_read=False
+    ).count()
 
 
 # ------------------------------------------------------------------------------------------------------------------

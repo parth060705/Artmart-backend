@@ -7,6 +7,7 @@ from typing import Optional, Literal, List
 RoleType = Literal["user", "admin", "store"]
 PaymentStatus = Literal["pending", "paid", "failed"]
 PaymentMethodEnum = Literal["credit_card", "debit_card", "net_banking", "upi", "cod"]
+MessageType = Literal["message", "typing", "read"]
 
 # -------------------------------
 # TOKENS
@@ -371,4 +372,27 @@ class FollowFollowers(FollowsUser):
 
     class Config:
         from_attributes = True 
+
+# -------------------------------
+# FOLLOW SCHEMAS
+# -------------------------------
+
+class MessageBase(BaseModel):
+    receiver_id: str
+    content: Optional[str] = None
+    action: Literal["message", "typing", "read"]
+
+class MessageCreate(MessageBase):
+    pass
+
+class MessageOut(BaseModel):
+    sender_id: str
+    receiver_id: str
+    content: str
+    timestamp: datetime
+    is_read: bool = False
+
+    class Config:
+        from_attributes = True
+
 

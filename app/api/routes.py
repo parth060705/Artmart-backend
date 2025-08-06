@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session  
 from fastapi import Query, Form
 from uuid import UUID
-from typing import List, Optional
+from typing import List, Optional,Dict
 from fastapi.security import OAuth2PasswordRequestForm
 from app.core.auth import get_current_user
 from app.core.auth import get_current_admin
@@ -16,6 +16,10 @@ from app.crud.crud import serialize_user
 from app.models import models
 from sqlalchemy.orm import joinedload
 
+# FOR MEASSAGING
+from fastapi import WebSocket, WebSocketDisconnect, APIRouter, Depends
+from app.schemas.schemas import (MessageCreate)
+from app.crud.crud import create_message
 
 from app.schemas.schemas import (
     UserCreate, UserRead, ProfileImageResponse, UserUpdate, UserSearch, ArtworkMe,
@@ -32,7 +36,7 @@ router = APIRouter()
 # FOR PROTECTED LEVEL ROUTES
 user_router = APIRouter(
     tags=["authorized"],
-    dependencies=[Depends(get_current_user)]  # Dependency Injection
+    # dependencies=[Depends(get_current_user)]  # Dependency Injection
 )
 
 # FOR ADMIN LEVEL ROUTES
@@ -40,6 +44,14 @@ admin_router = APIRouter(
     tags=["admin"],
     dependencies=[Depends(get_current_admin)]
 )
+
+# FOR CHAT LEVEL ROUTES
+chat_router = APIRouter(
+    tags=["Chat"],
+    dependencies=[Depends(get_current_user)]
+)
+active_connections: Dict[str, WebSocket] = {}
+
 
 # ------------------------------------------
 # AUTHORIZATION & AUTHENTICATION ENDPOINTS
@@ -455,6 +467,54 @@ def get_my_following(
         "count": len(following)
     }
 
+# -------------------------
+#  CHAT ENDPOINTS
+# -------------------------
+
+@chat_router.websocket("/ws/{user_id}")
+async def websocket_endpoint(websocket: WebSocket, user_id: str, db: Session = Depends(get_db)):
+    await websocket.accept()
+    active_connections[user_id] = websocket
+
+    try:
+        while True:
+            data = await websocket.receive_json()
+            msg = MessageCreate(**data)
+
+            if msg.action == "message":
+                saved_msg = create_message.create_message(db, sender_id=user_id, msg=msg)
+
+                payload = {
+                    "action": "message",
+                    "sender_id": user_id,
+                    "content": saved_msg.content,
+                    "timestamp": saved_msg.timestamp.isoformat()
+                }
+
+                if msg.receiver_id in active_connections:
+                    await active_connections[msg.receiver_id].send_json(payload)
+
+            elif msg.action == "typing":
+                if msg.receiver_id in active_connections:
+                    await active_connections[msg.receiver_id].send_json({
+                        "action": "typing",
+                        "sender_id": user_id,
+                        "is_typing": True
+                    })
+
+            elif msg.action == "read":
+                create_message.mark_messages_as_read(
+                    db, sender_id=msg.receiver_id, receiver_id=user_id
+                )
+                if msg.receiver_id in active_connections:
+                    await active_connections[msg.receiver_id].send_json({
+                        "action": "read",
+                        "by_user": user_id
+                    })
+
+    except WebSocketDisconnect:
+        del active_connections[user_id]
+
 # ------------------------------------------------------------------------------------------------------------------
 #                                        ADMIN & SUPER-ADMIN ENDPOINTS
 # -------------------------------------------------------------------------------------------------------------------
@@ -612,4 +672,4 @@ def list_follow_followers(db: Session = Depends(get_db)):
 
 
 #-------------------------------------------------------------------------------------------------------------
-__all__ = ["router","user_router","admin_router"]
+__all__ = ["router","user_router","admin_router","chat_router"]
