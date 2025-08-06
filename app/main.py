@@ -16,7 +16,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "https://art-mart-sigma.vercel.app", "https://art-mart-git-admin-parth-gharats-projects.vercel.app"],    
+    allow_origins=["http://localhost:5173", "https://art-mart-sigma.vercel.app", "https://art-mart-git-admin-parth-gharats-projects.vercel.app", "https://websocketking.com"],    
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -37,4 +37,5 @@ app.include_router(chat_router, prefix="/api/auth/chat", tags=["Chat"])
 # http://127.0.0.1:8000/docs     swagger ui
 #  uvicorn app.main:app --reload 
 
+#wss://yourdomain.com/api/ws/1c4af9bf-36e9-45f1-a9e7-14db00e47edf
 
