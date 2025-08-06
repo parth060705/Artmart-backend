@@ -150,6 +150,7 @@ class ArtworkAdmin(BaseModel):
     description: Optional[str] = None
     images: Optional[List[HttpUrl]] = None
     price: float
+    tags: Optional[list[str]] = None
     artistId: str
     createdAt: datetime
     category: str
@@ -162,6 +163,7 @@ class ArtworkBase(BaseModel):
     description: Optional[str] = None
     images: Optional[List[HttpUrl]] = None
     price: float
+    tags: Optional[list[str]] = None
     category: str
     artist: ArtworkArtist
     how_many_like: Optional[likeArt] = None 
@@ -182,6 +184,7 @@ class ArtworkCreate(BaseModel):
     title: str
     description: Optional[str] = None
     price: float
+    tags: Optional[list[str]] = None
     category: str
 
 class ArtworkUpdate(BaseModel):
@@ -189,6 +192,7 @@ class ArtworkUpdate(BaseModel):
     description: Optional[str] = None
     category: Optional[str] = None
     price: Optional[float] = None
+    tags: Optional[list[str]] = None
     isSold: Optional[bool] = None
     images: Optional[List[HttpUrl]] = None
 
@@ -374,7 +378,7 @@ class FollowFollowers(FollowsUser):
         from_attributes = True 
 
 # -------------------------------
-# FOLLOW SCHEMAS
+# CHAT SCHEMAS
 # -------------------------------
 
 class MessageBase(BaseModel):

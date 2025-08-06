@@ -207,6 +207,7 @@ def get_artworks_with_filters(
 def create_artwork(
     title: str = Form(...),
     price: float = Form(...),
+    tags: list[str] = Form(...),
     category: str = Form(...),
     description: str = Form(...),
     files: List[UploadFile] = File(...),  # MULTIPLE files now
@@ -217,6 +218,7 @@ def create_artwork(
         title=title,
         description=description,
         price=price,
+        tags=tags,
         category=category,
     )
     return crud.create_artwork(
@@ -233,6 +235,7 @@ def update_artwork(
     description: Optional[str] = Form(None),
     category: Optional[str] = Form(None),
     price: Optional[float] = Form(None),
+    tags: Optional[list[str]] = Form(None),
     isSold: Optional[bool] = Form(None),
     files: Optional[List[UploadFile]] = File(None),
     db: Session = Depends(get_db),
@@ -248,6 +251,7 @@ def update_artwork(
         description=description,
         category=category,
         price=price,
+        tags=tags,
         isSold=isSold
     )
 
@@ -279,6 +283,7 @@ def list_artworks_route(db: Session = Depends(get_db)):
                 description=art.description,
                 category=art.category,
                 price=art.price,
+                tags=art.tags,
                 isSold=art.isSold,
                 images=art.images,
                 createdAt=art.createdAt,
@@ -304,6 +309,7 @@ def get_artwork(artwork_id: UUID, db: Session = Depends(get_db)):
         description=db_artwork.description,
         category=db_artwork.category,
         price=db_artwork.price,
+        tags=db_artwork.tags,
         isSold=db_artwork.isSold,
         images=db_artwork.images,
         createdAt=db_artwork.createdAt,
@@ -594,6 +600,7 @@ def update_artwork(
     description: Optional[str] = Form(None),
     category: Optional[str] = Form(None),
     price: Optional[float] = Form(None),
+    tags: Optional [list[str]] = Form(None),
     isSold: Optional[bool] = Form(None),
     files: Optional[List[UploadFile]] = File(None),
     db: Session = Depends(get_db),
@@ -610,6 +617,7 @@ def update_artwork(
         description=description,
         category=category,
         price=price,
+        tags=tags,
         isSold=isSold
     )
 
