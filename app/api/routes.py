@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session  
 from fastapi import Query, Form
+from pydantic import ValidationError
 from uuid import UUID
 from typing import List, Optional,Dict
 from fastapi.security import OAuth2PasswordRequestForm
@@ -477,26 +478,38 @@ def get_my_following(
 #  CHAT ENDPOINTS
 # -------------------------
 
-@chat_router.websocket("/ws/{user_id}")
-async def websocket_endpoint(websocket: WebSocket, user_id: str, db: Session = Depends(get_db)):
+@router.websocket("/ws/{user_id}") # ws://localhost:8000/api/ws/{user_id}, ws://localhost:8000/api/auth/chat/ws/{user_id}
+async def websocket_endpoint(websocket: WebSocket, user_id: str):
     await websocket.accept()
+    db: Session = next(get_db())
     active_connections[user_id] = websocket
+    print(f"✅ WebSocket connection established for user: {user_id}")
 
     try:
         while True:
-            data = await websocket.receive_json()
-            msg = MessageCreate(**data)
+            try:
+                data = await websocket.receive_json()
+                print(f"📥 Received from {user_id}: {data}")
+                msg = MessageCreate(**data)  # Validate input
+            except ValidationError as ve:
+                print("❌ Pydantic validation error:", ve)
+                await websocket.send_json({
+                    "error": "Invalid message format",
+                    "details": ve.errors()
+                })
+                continue
+            except Exception as e:
+                print(f"❌ JSON receive/parse failed: {e}")
+                break
 
             if msg.action == "message":
-                saved_msg = create_message.create_message(db, sender_id=user_id, msg=msg)
-
+                saved_msg = create_message(db, sender_id=user_id, msg=msg)
                 payload = {
                     "action": "message",
                     "sender_id": user_id,
                     "content": saved_msg.content,
                     "timestamp": saved_msg.timestamp.isoformat()
                 }
-
                 if msg.receiver_id in active_connections:
                     await active_connections[msg.receiver_id].send_json(payload)
 
@@ -519,7 +532,13 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str, db: Session = D
                     })
 
     except WebSocketDisconnect:
-        del active_connections[user_id]
+        print(f"⚠️ Disconnected: {user_id}")
+    except Exception as e:
+        print(f"🔥 Unexpected error: {e}")
+    finally:
+        db.close()
+        active_connections.pop(user_id, None)
+        print(f"🧹 Cleaned up connection for user: {user_id}")
 
 # ------------------------------------------------------------------------------------------------------------------
 #                                        ADMIN & SUPER-ADMIN ENDPOINTS
