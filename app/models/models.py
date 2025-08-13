@@ -115,6 +115,7 @@ class Artwork(Base):
     images = Column(JSON, nullable=True, default=list)
     tags = Column(JSON, default=list, nullable=True)         #####
     price = Column(Float, nullable=False)
+    quantity = Column(Integer, nullable=True)                 #####
     category = Column(String(100), nullable=False)
     artistId = Column(String(36), ForeignKey("users.id"))
     createdAt = Column(DateTime, default=datetime.utcnow)

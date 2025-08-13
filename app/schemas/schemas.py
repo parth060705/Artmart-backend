@@ -151,6 +151,7 @@ class ArtworkAdmin(BaseModel):
     images: Optional[List[HttpUrl]] = None
     price: float
     tags: Optional[list[str]] = None
+    quantity: Optional[int] = None
     artistId: str
     createdAt: datetime
     category: str
@@ -164,6 +165,8 @@ class ArtworkBase(BaseModel):
     images: Optional[List[HttpUrl]] = None
     price: float
     tags: Optional[list[str]] = None
+    quantity: Optional[int] = None
+    isInCart: Optional[bool] = None # for isincart flag
     category: str
     artist: ArtworkArtist
     how_many_like: Optional[likeArt] = None 
@@ -185,6 +188,7 @@ class ArtworkCreate(BaseModel):
     description: Optional[str] = None
     price: float
     tags: Optional[list[str]] = None
+    quantity: Optional[int] = None
     category: str
 
 class ArtworkUpdate(BaseModel):
@@ -193,6 +197,7 @@ class ArtworkUpdate(BaseModel):
     category: Optional[str] = None
     price: Optional[float] = None
     tags: Optional[list[str]] = None
+    quantity: Optional[int] = None
     isSold: Optional[bool] = None
     images: Optional[List[HttpUrl]] = None
 

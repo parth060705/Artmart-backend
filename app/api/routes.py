@@ -209,6 +209,7 @@ def create_artwork(
     title: str = Form(...),
     price: float = Form(...),
     tags: list[str] = Form(...),
+    quantity: int = Form(...),
     category: str = Form(...),
     description: str = Form(...),
     files: List[UploadFile] = File(...),  # MULTIPLE files now
@@ -220,6 +221,7 @@ def create_artwork(
         description=description,
         price=price,
         tags=tags,
+        quantity=quantity,
         category=category,
     )
     return crud.create_artwork(
@@ -237,6 +239,7 @@ def update_artwork(
     category: Optional[str] = Form(None),
     price: Optional[float] = Form(None),
     tags: Optional[list[str]] = Form(None),
+    quantity: Optional[int] = Form(None),
     isSold: Optional[bool] = Form(None),
     files: Optional[List[UploadFile]] = File(None),
     db: Session = Depends(get_db),
@@ -253,6 +256,7 @@ def update_artwork(
         category=category,
         price=price,
         tags=tags,
+        quantity=quantity,
         isSold=isSold
     )
 
@@ -285,6 +289,7 @@ def list_artworks_route(db: Session = Depends(get_db)):
                 category=art.category,
                 price=art.price,
                 tags=art.tags,
+                quantity=art.quantity,
                 isSold=art.isSold,
                 images=art.images,
                 createdAt=art.createdAt,
@@ -297,6 +302,14 @@ def list_artworks_route(db: Session = Depends(get_db)):
             )
         )
     return result
+
+@user_router.get("/artworks", response_model=List[ArtworkRead])
+def list_artworks_route(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return crud.list_artworks_with_cart_flag(db, current_user.id)
+
 
 @router.get("/artworks/{artwork_id}", response_model=ArtworkRead)
 def get_artwork(artwork_id: UUID, db: Session = Depends(get_db)):
@@ -311,6 +324,7 @@ def get_artwork(artwork_id: UUID, db: Session = Depends(get_db)):
         category=db_artwork.category,
         price=db_artwork.price,
         tags=db_artwork.tags,
+        quantity=db_artwork.quantity,
         isSold=db_artwork.isSold,
         images=db_artwork.images,
         createdAt=db_artwork.createdAt,
