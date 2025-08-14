@@ -642,6 +642,7 @@ def update_artwork(
     description: Optional[str] = Form(None),
     category: Optional[str] = Form(None),
     price: Optional[float] = Form(None),
+    quantity: Optional[int] = Form(None),
     tags: Optional [list[str]] = Form(None),
     isSold: Optional[bool] = Form(None),
     files: Optional[List[UploadFile]] = File(None),
@@ -659,6 +660,7 @@ def update_artwork(
         description=description,
         category=category,
         price=price,
+        quantity=quantity,
         tags=tags,
         isSold=isSold
     )
