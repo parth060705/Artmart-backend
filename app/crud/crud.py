@@ -521,16 +521,56 @@ def remove_wishlist_item(db: Session, user_id: UUID, artwork_id: UUID):
 # CART OPERATIONS
 # -------------------------
 
-def add_to_cart(db: Session, item: schemas.CartCreate, user_id: UUID):
-    db_cart = models.Cart(
-        userId=str(user_id),
-        artworkId=str(item.artworkId)
-    )
-    db.add(db_cart)
-    db.commit()
-    db.refresh(db_cart)
-    return db_cart
+# def add_to_cart(db: Session, item: schemas.CartCreate, user_id: UUID):
+#     db_cart = models.Cart(
+#         userId=str(user_id),
+#         artworkId=str(item.artworkId),
+#         quantity=int(item.quantity)
+#     )
+#     db.add(db_cart)
+#     db.commit()
+#     db.refresh(db_cart)
+#     return db_cart
+#--------------------------------------------------------
+def add_to_cart(db: Session, cart_data: schemas.CartCreate):
+    artwork = db.query(models.Artwork).filter(models.Artwork.id == str(cart_data.artworkId)).first()
+    if not artwork:
+        raise ValueError("Artwork not found")
 
+    if cart_data.purchase_quantity is None:
+        cart_data.purchase_quantity = 1
+
+    # Check stock availability
+    if artwork.quantity < cart_data.purchase_quantity:
+        raise ValueError("Not enough stock available")
+
+    # Check if item already exists in cart
+    existing_cart_item = db.query(models.Cart).filter(
+        models.Cart.userId == str(cart_data.userId),
+        models.Cart.artworkId == str(cart_data.artworkId)
+    ).first()
+
+    if existing_cart_item:
+        # Update quantity
+        new_quantity = existing_cart_item.purchase_quantity + cart_data.purchase_quantity
+        if new_quantity > artwork.quantity:
+            raise ValueError("Not enough stock available")
+        existing_cart_item.purchase_quantity = new_quantity
+        db.commit()
+        db.refresh(existing_cart_item)
+        return existing_cart_item
+    else:
+        cart_item = models.Cart(
+            userId=str(cart_data.userId),
+            artworkId=str(cart_data.artworkId),
+            purchase_quantity=cart_data.purchase_quantity
+        )
+        db.add(cart_item)
+        db.commit()
+        db.refresh(cart_item)
+        return cart_item
+
+#--------------------------------------------------------
 
 def get_user_cart(db: Session, user_id: UUID):
     user_id = str(user_id)

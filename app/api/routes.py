@@ -428,10 +428,19 @@ def remove_from_wishlist(artwork_id: UUID, current_user: User = Depends(get_curr
 # CART ENDPOINTS
 # -------------------------
 
-@user_router.post("/cart", response_model=CartCreatePublic)
-def add_to_cart(item: CartCreatePublic, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    internal_item = CartCreate(userId=current_user.id, artworkId=item.artworkId)
-    return crud.add_to_cart(db, internal_item, user_id=current_user.id)
+@user_router.post("/cart", response_model=CartRead)
+def add_to_cart(
+    item: CartCreatePublic,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    internal_item = CartCreate(
+        userId=current_user.id,
+        artworkId=item.artworkId,
+        purchase_quantity=item.purchase_quantity
+    )
+    return crud.add_to_cart(db, internal_item)
+
 
 @user_router.get("/cart", response_model=List[CartRead])
 def get_cart(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):

@@ -343,16 +343,21 @@ class WishlistRemove(WishlistCreate):
 
 class CartCreatePublic(BaseModel):
     artworkId: UUID
+    purchase_quantity: int = 1  # Default to 1
 
 class CartCreate(BaseModel):
     userId: UUID
     artworkId: UUID
+    purchase_quantity: int = 1  # Match default from public schema
 
 class CartRead(CartCreate):
     id: UUID
     createdAt: datetime
 
-class CartRemove(CartCreate):
+    class Config:
+        from_attributes = True
+
+class CartRemove(BaseModel):
     id: UUID
 
     class Config:

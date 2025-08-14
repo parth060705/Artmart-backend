@@ -115,7 +115,7 @@ class Artwork(Base):
     images = Column(JSON, nullable=True, default=list)
     tags = Column(JSON, default=list, nullable=True)         #####
     price = Column(Float, nullable=False)
-    quantity = Column(Integer, nullable=True)                 #####
+    quantity = Column(Integer, nullable=False, default=1)                 #####
     category = Column(String(100), nullable=False)
     artistId = Column(String(36), ForeignKey("users.id"))
     createdAt = Column(DateTime, default=datetime.utcnow)
@@ -226,6 +226,7 @@ class Cart(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     userId = Column(String(36), ForeignKey("users.id"))
     artworkId = Column(String(36), ForeignKey("artworks.id"))
+    purchase_quantity = Column(Integer, nullable=False, default=1)
     createdAt = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
