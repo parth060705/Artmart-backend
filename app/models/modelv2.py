@@ -17,6 +17,7 @@ class RoleEnum(str, enum.Enum):
     user = "user"
     admin = "admin"
     store = "store"
+    community = "community" ########################
 
 class PaymentStatusEnum(str, enum.Enum):
     pending = "pending"
@@ -60,15 +61,15 @@ class User(Base):
     passwordHash = Column(String(255), nullable=False)
     role = Column(SqlEnum(RoleEnum, native_enum=False), nullable=False, default=RoleEnum.user)
     profileImage = Column(String(255), nullable=True)
-    profileImagePublicId = Column(String(255), nullable=True)       ######
+    profileImagePublicId = Column(String(255), nullable=True)
     createdAt = Column(DateTime, default=datetime.utcnow)
-    updatedAt = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  ######
+    updatedAt = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  
     location = Column(String(100), nullable=True)
     pincode = Column(CHAR(6), nullable=True)
     gender = Column(String(20), nullable=True)
     age = Column(Integer, nullable=True)
     phone = Column(String(15), nullable=True)
-    bio = Column(String(500), nullable=True)        ####
+    bio = Column(String(500), nullable=True)       
 
     # Relationships
     artworks = relationship("Artwork", back_populates="artist")
@@ -113,8 +114,9 @@ class Artwork(Base):
     title = Column(String(200), nullable=False)
     description = Column(Text)
     images = Column(JSON, nullable=True, default=list)
-    tags = Column(JSON, default=list, nullable=True)         #####
+    tags = Column(JSON, default=list, nullable=True) 
     price = Column(Float, nullable=False)
+    quantity = Column(Integer, nullable=False, default=1)  
     category = Column(String(100), nullable=False)
     artistId = Column(String(36), ForeignKey("users.id"))
     createdAt = Column(DateTime, default=datetime.utcnow)
@@ -225,6 +227,7 @@ class Cart(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     userId = Column(String(36), ForeignKey("users.id"))
     artworkId = Column(String(36), ForeignKey("artworks.id"))
+    purchase_quantity = Column(Integer, nullable=False, default=1)
     createdAt = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -232,7 +235,7 @@ class Cart(Base):
     artwork = relationship("Artwork", back_populates="cart_items")
 
 # -------------------------
-# MESSAGE MODEL                              ##########
+# MESSAGE MODEL                           
 # -------------------------
 
 class Message(Base):
@@ -244,7 +247,6 @@ class Message(Base):
     content = Column(Text, nullable=True)  # Can be empty for typing
     timestamp = Column(DateTime, default=datetime.utcnow)
     is_read = Column(Boolean, default=False)
-    # is_typing = Column(Boolean, default=False)
     message_type = Column(String(20), default="text")  # "text", "typing", etc.
 
     # Relationships
