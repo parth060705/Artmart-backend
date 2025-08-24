@@ -189,6 +189,7 @@ def get_artworks_with_filters(
     category: Optional[str] = None,
     artist_name: Optional[str] = None,
     location: Optional[str] = None,
+    tags: Optional[str] = None,                                #
     db: Session = Depends(get_db)
 ):
     return get_artworks_with_artist_filters(
@@ -197,7 +198,8 @@ def get_artworks_with_filters(
         price=price,
         category=category,
         artist_name=artist_name,
-        location=location
+        location=location,
+        tags=tags                                                   #
     )
 
 # -------------------------

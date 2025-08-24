@@ -676,6 +676,7 @@ def get_artworks_with_artist_filters(
     category: Optional[str] = None,
     artist_name: Optional[str] = None,
     location: Optional[str] = None,
+    tags: Optional[str] = None,                                     #
     user_id: Optional[str] = None,
 ):
     query = db.query(models.Artwork).join(models.Artwork.artist)
@@ -692,6 +693,8 @@ def get_artworks_with_artist_filters(
         filters.append(models.User.name.ilike(f"%{artist_name}%"))
     if location:
         filters.append(models.User.location.ilike(f"%{location}%"))
+    if tags:                                                                   #
+        filters.append(models.Artwork.tags.ilike(f"%{tags}%"))    
     if user_id:
         filters.append(models.User.id == user_id)
 
