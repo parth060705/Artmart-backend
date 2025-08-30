@@ -117,9 +117,9 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
     return crud.create_user(db, user)
 
-@router.post("/upload-image")
-def upload_image(file: UploadFile = File(...)):
-    return upload_image_to_cloudinary(file)
+# @router.post("/upload-image")
+# def upload_image(file: UploadFile = File(...)):
+#     return upload_image_to_cloudinary(file)
 
 @user_router.get("/me", response_model=UserRead)
 def read_users_me(current_user: User = Depends(get_current_user)):
