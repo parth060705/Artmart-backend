@@ -32,6 +32,7 @@ from app.schemas.schemas import (
     FollowFollowers, DeleteMessageUser, UserUpdateAdmin
 )
 
+# FOR PUBIC LEVEL ROUTES
 router = APIRouter()
 
 # FOR PROTECTED LEVEL ROUTES
@@ -116,10 +117,6 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     return crud.create_user(db, user)
-
-# @router.post("/upload-image")
-# def upload_image(file: UploadFile = File(...)):
-#     return upload_image_to_cloudinary(file)
 
 @user_router.get("/me", response_model=UserRead)
 def read_users_me(current_user: User = Depends(get_current_user)):
@@ -233,6 +230,7 @@ def create_artwork(
         files=files,  # <-- List of UploadFile
     )
 
+#---------------------------------UPDATE, REPLACE AND DELETE IMAGE-------------------------------------
 @user_router.patch("/update/artworks/{artwork_id}", response_model=ArtworkRead)
 def update_artwork(
     artwork_id: UUID,
@@ -243,15 +241,9 @@ def update_artwork(
     tags: Optional[list[str]] = Form(None),
     quantity: Optional[int] = Form(None),
     isSold: Optional[bool] = Form(None),
-    files: Optional[List[UploadFile]] = File(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
-    valid_files = [
-        f for f in (files or [])
-        if isinstance(f, UploadFile) and f.filename and f.content_type != "application/octet-stream"
-    ]
-
+):    
     artwork_update = ArtworkUpdate(
         title=title,
         description=description,
@@ -261,15 +253,42 @@ def update_artwork(
         quantity=quantity,
         isSold=isSold
     )
-
     return crud.update_artwork(
         db=db,
         artwork_id=str(artwork_id),
         user_id=str(current_user.id),
         artwork_update=artwork_update,
-        files=valid_files  # pass only real files
     )
 
+@user_router.post("/artworks/{artwork_id}/images", response_model=ArtworkRead)
+async def add_artwork_images(
+    artwork_id: UUID,
+    files: List[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return await crud.add_artwork_images(db, artwork_id, current_user.id, files)
+
+@user_router.patch("/artworks/{artwork_id}/images", response_model=ArtworkRead)
+async def update_artwork_image(
+    artwork_id: UUID,
+    old_image_url: str = Form(...),
+    new_file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return await crud.update_artwork_image(db, artwork_id, current_user.id, old_image_url, new_file)
+
+@user_router.delete("/artworks/{artwork_id}/images", response_model=ArtworkRead)
+def delete_artwork_image(
+    artwork_id: UUID,
+    image_url: str = Form(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return crud.delete_artwork_image(db, artwork_id, current_user.id, image_url)
+
+#---------------------------------------------------------------------------------------------------------
 @user_router.delete("/artworks/{artwork_id}", response_model=ArtworkDelete)
 def delete_artwork(
     artwork_id: UUID,

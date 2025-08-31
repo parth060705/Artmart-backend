@@ -109,46 +109,11 @@ def update_user_details(db: Session, user_id: int, user_update: schemas.UserUpda
     return db_user
 
 #----------------------------------------------------------------------------------
+
+#################### FOR REPLACING PROFILE PHOTOS FROM CLOUDINARY AFTER UPDATING
 UPLOAD_DIR = "uploads"
 ALLOWED_EXTENSIONS = {"jpeg", "jpg", "png", "svg"}
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/svg+xml"}
-
-# def update_user_profile_image(db: Session, user_id: UUID, file: UploadFile):
-#     print("[DEBUG] User ID:", user_id)
-#     print("[DEBUG] File type:", file.content_type)
-#     print("[DEBUG] Cloudinary API key:", cloudinary.config().api_key)  # See if it's None
-#     print("[DEBUG] Cloudinary Cloud name:", cloudinary.config().cloud_name)
-
-#     if file.content_type not in ALLOWED_MIME_TYPES:
-#         raise HTTPException(status_code=400, detail="Unsupported file type")
-
-#     contents = file.file.read()
-#     if len(contents) > 5 * 1024 * 1024:
-#         raise HTTPException(status_code=400, detail="File too large (max 5MB)")
-#     file.file.seek(0)
-
-#     user = db.query(models.User).filter(models.User.id == str(user_id)).first()
-#     if not user:
-#         raise HTTPException(status_code=404, detail="User not found")
-
-#     try:
-#         result = cloudinary.uploader.upload(file.file, folder="user_profiles")
-#         print("[DEBUG] Upload result:", result)
-#     except Exception as e:
-#         print("[ERROR] Cloudinary upload failed:", str(e))
-#         raise HTTPException(status_code=500, detail=f"Cloudinary error: {str(e)}")
-
-#     user.profileImage = result["secure_url"]
-#     db.commit()
-#     db.refresh(user)
-
-#     return {
-#         "message": "Profile image uploaded successfully",
-#         "profileImage": user.profileImage
-#     }
-
-
-#################### FOR REPLACING PROFILE PHOTOS FROM CLOUDINARY AFTER UPDATING
 
 def update_user_profile_image(db: Session, user_id: UUID, file: UploadFile):
     print("[DEBUG] User ID:", user_id)
@@ -255,7 +220,7 @@ def create_artwork(
         "artworkImages": image_urls
     }
 
- 
+#------------------------------------------------------------------------------------------------------
                                             # UPDATE ARTWORK #
 def update_artwork(
     db: Session,
@@ -304,6 +269,8 @@ def update_artwork(
     db.commit()
     db.refresh(db_artwork)
     return db_artwork
+
+#------------------------------------------------------------------------------------------------------------
 
                                           # DELETE ARTWORK
 def delete_artwork(db: Session, artwork_id: UUID, user_id: UUID):
@@ -358,7 +325,6 @@ def list_artworks_with_cart_flag(db: Session, user_id: UUID):
         })
 
     return enriched_artworks
-
 
                                            # GET SPECIFIC ARTWORK
 def get_artwork(db: Session, artwork_id: UUID):
