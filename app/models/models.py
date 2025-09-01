@@ -112,7 +112,12 @@ class Artwork(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     title = Column(String(200), nullable=False)
     description = Column(Text)
-    images = Column(JSON, nullable=True, default=list)
+    # images = Column(JSON, nullable=True, default=list)
+    images = relationship(
+        "ArtworkImage",
+        cascade="all, delete-orphan",
+        back_populates="artwork",
+    )
     tags = Column(JSON, default=list, nullable=True)         #####
     price = Column(Float, nullable=False)
     quantity = Column(Integer, nullable=False, default=1)                 #####
@@ -129,6 +134,19 @@ class Artwork(Base):
     cart_items = relationship("Cart", back_populates="artwork")
     likes = relationship("ArtworkLike", back_populates="artwork", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="artwork", cascade="all, delete-orphan")
+
+
+class ArtworkImage(Base):
+    __tablename__ = "artwork_images"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    artwork_id = Column(String(36), ForeignKey("artworks.id"))
+    url = Column(String(500), nullable=False)       # Cloudinary URLs can be long
+    public_id = Column(String(255), nullable=False) # public_id is shorter
+
+
+    # Relationships
+    artwork = relationship("Artwork", back_populates="images")
 
 # -------------------------
 # ARTWORK LIKES

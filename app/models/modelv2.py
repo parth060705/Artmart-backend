@@ -17,7 +17,6 @@ class RoleEnum(str, enum.Enum):
     user = "user"
     admin = "admin"
     store = "store"
-    community = "community" ########################
 
 class PaymentStatusEnum(str, enum.Enum):
     pending = "pending"
@@ -61,15 +60,15 @@ class User(Base):
     passwordHash = Column(String(255), nullable=False)
     role = Column(SqlEnum(RoleEnum, native_enum=False), nullable=False, default=RoleEnum.user)
     profileImage = Column(String(255), nullable=True)
-    profileImagePublicId = Column(String(255), nullable=True)
+    profileImagePublicId = Column(String(255), nullable=True)       ######
     createdAt = Column(DateTime, default=datetime.utcnow)
-    updatedAt = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  
+    updatedAt = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  ######
     location = Column(String(100), nullable=True)
     pincode = Column(CHAR(6), nullable=True)
     gender = Column(String(20), nullable=True)
     age = Column(Integer, nullable=True)
     phone = Column(String(15), nullable=True)
-    bio = Column(String(500), nullable=True)       
+    bio = Column(String(500), nullable=True)        ####
 
     # Relationships
     artworks = relationship("Artwork", back_populates="artist")
@@ -114,13 +113,14 @@ class Artwork(Base):
     title = Column(String(200), nullable=False)
     description = Column(Text)
     images = Column(JSON, nullable=True, default=list)
-    tags = Column(JSON, default=list, nullable=True) 
+    tags = Column(JSON, default=list, nullable=True)         #####
     price = Column(Float, nullable=False)
-    quantity = Column(Integer, nullable=False, default=1)  
+    quantity = Column(Integer, nullable=False, default=1)                 #####
     category = Column(String(100), nullable=False)
     artistId = Column(String(36), ForeignKey("users.id"))
     createdAt = Column(DateTime, default=datetime.utcnow)
     isSold = Column(Boolean, default=False)
+    images_rel = relationship("ArtworkImage", cascade="all, delete-orphan", back_populates="artwork")
 
     # Relationships
     artist = relationship("User", back_populates="artworks")
@@ -130,6 +130,18 @@ class Artwork(Base):
     cart_items = relationship("Cart", back_populates="artwork")
     likes = relationship("ArtworkLike", back_populates="artwork", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="artwork", cascade="all, delete-orphan")
+
+
+class ArtworkImage(Base):
+    __tablename__ = "artwork_images"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    artwork_id = Column(String(36), ForeignKey("artworks.id"))
+    url = Column(String, nullable=False)
+    public_id = Column(String, nullable=False)
+     
+    # Relationships
+    artwork = relationship("Artwork", back_populates="images_rel")
 
 # -------------------------
 # ARTWORK LIKES
@@ -235,7 +247,7 @@ class Cart(Base):
     artwork = relationship("Artwork", back_populates="cart_items")
 
 # -------------------------
-# MESSAGE MODEL                           
+# MESSAGE MODEL                              ##########
 # -------------------------
 
 class Message(Base):

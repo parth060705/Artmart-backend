@@ -230,7 +230,7 @@ def create_artwork(
         files=files,  # <-- List of UploadFile
     )
 
-#---------------------------------UPDATE, REPLACE AND DELETE IMAGE-------------------------------------
+#---------------------------------UPDATE ARTWORK, ADD, REPLACE AND DELETE IMAGE-------------------------------------
 @user_router.patch("/update/artworks/{artwork_id}", response_model=ArtworkRead)
 def update_artwork(
     artwork_id: UUID,
@@ -259,34 +259,37 @@ def update_artwork(
         user_id=str(current_user.id),
         artwork_update=artwork_update,
     )
+# -------------------------
+# ARTWORK IMAGE ROUTES
+# -------------------------
 
 @user_router.post("/artworks/{artwork_id}/images", response_model=ArtworkRead)
-async def add_artwork_images(
+def add_artwork_images(
     artwork_id: UUID,
     files: List[UploadFile] = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return await crud.add_artwork_images(db, artwork_id, current_user.id, files)
+    return crud.add_artwork_images(db, str(artwork_id), str(current_user.id), files)
 
 @user_router.patch("/artworks/{artwork_id}/images", response_model=ArtworkRead)
-async def update_artwork_image(
+def update_artwork_image(
     artwork_id: UUID,
-    old_image_url: str = Form(...),
+    old_public_id: str = Form(...),
     new_file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return await crud.update_artwork_image(db, artwork_id, current_user.id, old_image_url, new_file)
+    return crud.update_artwork_image(db, str(artwork_id), str(current_user.id), old_public_id, new_file)
 
 @user_router.delete("/artworks/{artwork_id}/images", response_model=ArtworkRead)
 def delete_artwork_image(
     artwork_id: UUID,
-    image_url: str = Form(...),
+    public_id: str = Form(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return crud.delete_artwork_image(db, artwork_id, current_user.id, image_url)
+    return crud.delete_artwork_image(db, str(artwork_id), str(current_user.id), public_id)
 
 #---------------------------------------------------------------------------------------------------------
 @user_router.delete("/artworks/{artwork_id}", response_model=ArtworkDelete)

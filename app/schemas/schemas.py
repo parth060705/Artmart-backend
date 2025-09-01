@@ -136,6 +136,14 @@ class HasLikedResponse(BaseModel): # MESSAGE IF YOU LIKED
 # -------------------------------
 # ARTWORK SCHEMAS
 # -------------------------------
+class ArtworkImageRead(BaseModel):
+    id: UUID
+    url: str
+    public_id: str
+
+    class Config:
+        from_attributes = True   # ✅ for Pydantic v2
+
 
 class ArtworkArtist(BaseModel):
     username: str
@@ -148,7 +156,7 @@ class ArtworkAdmin(BaseModel):
     id: str
     title: str
     description: Optional[str] = None
-    images: Optional[List[HttpUrl]] = None
+    images: List[ArtworkImageRead] = Field(default_factory=list)
     price: float
     tags: Optional[list[str]] = None
     quantity: Optional[int] = None
@@ -162,7 +170,7 @@ class ArtworkBase(BaseModel):
     id: str
     title: str
     description: Optional[str] = None
-    images: Optional[List[HttpUrl]] = None
+    images: List[ArtworkImageRead] = Field(default_factory=list)
     price: float
     tags: Optional[list[str]] = None
     quantity: Optional[int] = None
@@ -186,6 +194,7 @@ class ArtworkRead(ArtworkBase):
 class ArtworkCreate(BaseModel):
     title: str
     description: Optional[str] = None
+    images: List[ArtworkImageRead] = Field(default_factory=list)
     price: float
     tags: Optional[list[str]] = None
     quantity: Optional[int] = None
@@ -199,7 +208,7 @@ class ArtworkUpdate(BaseModel):
     tags: Optional[list[str]] = None
     quantity: Optional[int] = None
     isSold: Optional[bool] = None
-    images: Optional[List[HttpUrl]] = None
+    images: List[ArtworkImageRead] = Field(default_factory=list)
 
 class ArtworkCreateResponse(BaseModel): # MESSAGE AFTER CREATION
     message: str
@@ -221,7 +230,7 @@ class ArtworkMe(BaseModel):
     description: Optional[str]
     price: float
     category: str
-    images: Optional[List[HttpUrl]]
+    images: List[ArtworkImageRead] = Field(default_factory=list)
     artistId: str
     createdAt: datetime
     isSold: bool

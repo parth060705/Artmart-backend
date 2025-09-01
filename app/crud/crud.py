@@ -164,7 +164,7 @@ def update_user_profile_image(db: Session, user_id: UUID, file: UploadFile):
 # -------------------------
 # ARTWORK OPERATIONS
 # -------------------------
-                   
+
                                                # CREATE ARTWORK #
 ALLOWED_EXTENSIONS = {"jpeg", "jpg", "png", "svg"}
 ALLOWED_MIME_TYPES = {
@@ -175,49 +175,118 @@ ALLOWED_MIME_TYPES = {
 }
 MAX_FILE_SIZE_MB = 20
 
+# def create_artwork(
+#     db: Session,
+#     artwork_data: schemas.ArtworkCreate,
+#     user_id: UUID,
+#     files: List[UploadFile]
+# ):
+#     user = db.query(models.User).filter(models.User.id == str(user_id)).first()
+#     if not user:
+#         raise HTTPException(status_code=404, detail="User not found")
+
+#     db_artwork = models.Artwork(**artwork_data.dict(), artistId=str(user_id), images=[])
+#     db_artwork.images = image_urls
+#     db.add(db_artwork)
+#     db.commit()
+#     db.refresh(db_artwork)
+
+#     image_urls = []
+
+#     for file in files:
+#         if file.content_type not in ALLOWED_MIME_TYPES:
+#             raise HTTPException(status_code=400, detail=f"Unsupported file type: {file.content_type}")
+
+#         contents = file.file.read()
+#         if len(contents) > MAX_FILE_SIZE_MB * 1024 * 1024:
+#             raise HTTPException(status_code=400, detail=f"File too large (max {MAX_FILE_SIZE_MB}MB)")
+#         file.file.seek(0)
+
+#         try:
+#             result = cloudinary.uploader.upload(file.file, folder="artworks")
+#             secure_url = result.get("secure_url")
+#             if not secure_url:
+#                 raise ValueError("Missing secure_url in Cloudinary response")
+#             image_urls.append(secure_url)
+#         except Exception as e:
+#             raise HTTPException(status_code=500, detail=f"Cloudinary error: {str(e)}")
+
+#     db_artwork.images = image_urls
+#     db.commit()
+#     db.refresh(db_artwork)
+
+#     return {
+#         "message": "Artwork created and images uploaded successfully",
+#         "artwork": db_artwork,
+#         "artworkImages": image_urls
+#     }
+
 def create_artwork(
     db: Session,
     artwork_data: schemas.ArtworkCreate,
     user_id: UUID,
-    files: List[UploadFile]
+    files: List[UploadFile],
 ):
+    # ✅ Ensure artist exists
     user = db.query(models.User).filter(models.User.id == str(user_id)).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    db_artwork = models.Artwork(**artwork_data.dict(), artistId=str(user_id), images=[])
+    # ✅ Create base artwork (no images at first)
+    db_artwork = models.Artwork(
+        **artwork_data.dict(exclude={"images"}),  # don’t pass schema images
+        artistId=str(user_id),
+    )
     db.add(db_artwork)
     db.commit()
     db.refresh(db_artwork)
 
-    image_urls = []
+    artwork_images = []
 
+    # ✅ Upload images to Cloudinary + store in ArtworkImage table
     for file in files:
         if file.content_type not in ALLOWED_MIME_TYPES:
-            raise HTTPException(status_code=400, detail=f"Unsupported file type: {file.content_type}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported file type: {file.content_type}",
+            )
 
         contents = file.file.read()
         if len(contents) > MAX_FILE_SIZE_MB * 1024 * 1024:
-            raise HTTPException(status_code=400, detail=f"File too large (max {MAX_FILE_SIZE_MB}MB)")
+            raise HTTPException(
+                status_code=400,
+                detail=f"File too large (max {MAX_FILE_SIZE_MB}MB)",
+            )
         file.file.seek(0)
 
         try:
             result = cloudinary.uploader.upload(file.file, folder="artworks")
             secure_url = result.get("secure_url")
-            if not secure_url:
-                raise ValueError("Missing secure_url in Cloudinary response")
-            image_urls.append(secure_url)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Cloudinary error: {str(e)}")
+            public_id = result.get("public_id")
+            if not secure_url or not public_id:
+                raise ValueError("Missing data in Cloudinary response")
 
-    db_artwork.images = image_urls
+            # ✅ Create ArtworkImage object and link to artwork
+            db_image = models.ArtworkImage(
+                artwork_id=db_artwork.id,
+                url=secure_url,
+                public_id=public_id,
+            )
+            db.add(db_image)
+            artwork_images.append(db_image)
+
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Cloudinary error: {str(e)}",
+            )
+
     db.commit()
     db.refresh(db_artwork)
 
     return {
         "message": "Artwork created and images uploaded successfully",
-        "artwork": db_artwork,
-        "artworkImages": image_urls
+        "artwork": db_artwork,  # will include joined ArtworkImage via relationship
     }
 
 #------------------------------------------------------------------------------------------------------
@@ -270,6 +339,75 @@ def update_artwork(
     db.refresh(db_artwork)
     return db_artwork
 
+# --------------------
+# ADD IMAGE
+# --------------------
+def add_artwork_images(db, artwork_id: str, user_id: str, files: list):
+    artwork = db.query(models.Artwork).filter_by(id=artwork_id, artistId=user_id).first()
+    if not artwork:
+        raise HTTPException(status_code=404, detail="Artwork not found")
+
+    new_images = []
+    for file in files:
+        upload_result = cloudinary.uploader.upload(file.file, folder="artworks")
+        new_images.append({
+            "url": upload_result["secure_url"],
+            "public_id": upload_result["public_id"]
+        })
+
+    # Append new images to existing
+    artwork.images.extend(new_images)
+    db.commit()
+    db.refresh(artwork)
+    return artwork
+
+# --------------------
+# REPLACE IMAGE
+# --------------------
+def replace_artwork_image(db, artwork_id: str, user_id: str, old_public_id: str, file):
+    artwork = db.query(models.Artwork).filter_by(id=artwork_id, artistId=user_id).first()
+    if not artwork:
+        raise HTTPException(status_code=404, detail="Artwork not found")
+
+    # Remove old from cloudinary
+    cloudinary.uploader.destroy(old_public_id)
+
+    # Upload new one
+    upload_result = cloudinary.uploader.upload(file.file, folder="artworks")
+    new_img = {
+        "url": upload_result["secure_url"],
+        "public_id": upload_result["public_id"]
+    }
+
+    # Replace in DB
+    for idx, img in enumerate(artwork.images):
+        if img["public_id"] == old_public_id:
+            artwork.images[idx] = new_img
+            break
+    else:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    db.commit()
+    db.refresh(artwork)
+    return artwork
+
+# --------------------
+# DELETE IMAGE
+# --------------------
+def delete_artwork_image(db, artwork_id: str, user_id: str, public_id: str):
+    artwork = db.query(models.Artwork).filter_by(id=artwork_id, artistId=user_id).first()
+    if not artwork:
+        raise HTTPException(status_code=404, detail="Artwork not found")
+
+    # Delete from cloudinary
+    cloudinary.uploader.destroy(public_id)
+
+    # Remove from DB list
+    artwork.images = [img for img in artwork.images if img["public_id"] != public_id]
+
+    db.commit()
+    db.refresh(artwork)
+    return artwork
 #------------------------------------------------------------------------------------------------------------
 
                                           # DELETE ARTWORK
