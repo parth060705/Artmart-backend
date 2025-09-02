@@ -971,16 +971,32 @@ def update_artwork(
     db.refresh(db_artwork)
     return db_artwork
 
-def delete_artwork_admin(db: Session, artwork_id: UUID):
-    artwork = db.query(models.Artwork).filter(models.Artwork.id == str(artwork_id)).first()
+def delete_artwork_admin(db: Session, artwork_id: str):
+    # ✅ Load artwork with its related images in one query
+    artwork = (
+        db.query(models.Artwork)
+        .options(joinedload(models.Artwork.images))  # eager load images
+        .filter(models.Artwork.id == artwork_id)
+        .first()
+    )
+
     if not artwork:
         raise HTTPException(status_code=404, detail="Artwork not found")
 
+    # ✅ Delete all images from Cloudinary
+    for img in artwork.images:   # ArtworkImage objects
+        try:
+            cloudinary.uploader.destroy(img.public_id)
+        except Exception as e:
+            print(f"⚠️ Cloudinary cleanup failed for {img.public_id}: {e}")
+
     db.delete(artwork)
     db.commit()
-    return {"message": "Artwork deleted successfully", "artwork_id": artwork_id}
 
-
+    return {
+        "message": "Artwork deleted successfully",
+        "artwork_id": artwork_id
+    }
                                               # ORDERS
 def list_all_orders(db: Session):
     return db.query(models.Order)\

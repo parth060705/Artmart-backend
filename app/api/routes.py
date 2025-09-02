@@ -653,11 +653,11 @@ def list_artworks(db: Session = Depends(get_db)):
     return crud.list_artworks(db)
 
 @admin_router.delete("/artworks/{artwork_id}", response_model=ArtworkDelete)
-def delete_artwork_admin(
+def delete_artwork_admin_route(
     artwork_id: UUID,
     db: Session = Depends(get_db)
 ):
-    return crud.delete_artwork_admin(db=db, artwork_id=artwork_id)
+    return crud.delete_artwork_admin(db=db, artwork_id=str(artwork_id))
 
 @admin_router.patch("/update/artworks/{artwork_id}", response_model=ArtworkRead)
 def update_artwork(
