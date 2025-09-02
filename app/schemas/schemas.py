@@ -89,6 +89,7 @@ class UserUpdate(BaseModel):
 class UserRead(UserBase):
     # id: UUID
     createdAt: datetime
+    updatedAt: datetime
 
     class Config:
         from_attributes = True  

@@ -343,20 +343,29 @@ def update_artwork(
 # ADD IMAGE
 # --------------------
 def add_artwork_images(db, artwork_id: str, user_id: str, files: list):
-    artwork = db.query(models.Artwork).filter_by(id=artwork_id, artistId=user_id).first()
+    artwork = (
+        db.query(models.Artwork)
+        .filter_by(id=artwork_id, artistId=user_id)
+        .first()
+    )
     if not artwork:
         raise HTTPException(status_code=404, detail="Artwork not found")
 
     new_images = []
     for file in files:
         upload_result = cloudinary.uploader.upload(file.file, folder="artworks")
-        new_images.append({
-            "url": upload_result["secure_url"],
-            "public_id": upload_result["public_id"]
-        })
 
-    # Append new images to existing
+        # create SQLAlchemy model, not dict
+        db_image = models.ArtworkImage(
+            artwork_id=artwork.id,
+            url=upload_result["secure_url"],
+            public_id=upload_result["public_id"],
+        )
+        db.add(db_image)
+        new_images.append(db_image)
+
     artwork.images.extend(new_images)
+
     db.commit()
     db.refresh(artwork)
     return artwork
@@ -364,28 +373,31 @@ def add_artwork_images(db, artwork_id: str, user_id: str, files: list):
 # --------------------
 # REPLACE IMAGE
 # --------------------
-def replace_artwork_image(db, artwork_id: str, user_id: str, old_public_id: str, file):
-    artwork = db.query(models.Artwork).filter_by(id=artwork_id, artistId=user_id).first()
+def update_artwork_image(db, artwork_id: str, user_id: str, old_public_id: str, file):
+    artwork = (
+        db.query(models.Artwork)
+        .filter_by(id=artwork_id, artistId=user_id)
+        .first()
+    )
     if not artwork:
         raise HTTPException(status_code=404, detail="Artwork not found")
-
-    # Remove old from cloudinary
-    cloudinary.uploader.destroy(old_public_id)
-
-    # Upload new one
-    upload_result = cloudinary.uploader.upload(file.file, folder="artworks")
-    new_img = {
-        "url": upload_result["secure_url"],
-        "public_id": upload_result["public_id"]
-    }
-
-    # Replace in DB
-    for idx, img in enumerate(artwork.images):
-        if img["public_id"] == old_public_id:
-            artwork.images[idx] = new_img
-            break
-    else:
+    
+    # checking image in db
+    db_image = (
+        db.query(models.ArtworkImage)
+        .filter_by(artwork_id=artwork.id, public_id=old_public_id)
+        .first()
+    )
+    if not db_image:
         raise HTTPException(status_code=404, detail="Image not found")
+    
+    # destroy image from db
+    cloudinary.uploader.destroy(old_public_id)
+    
+    # update the image
+    upload_result = cloudinary.uploader.upload(file.file, folder="artworks")
+    db_image.url = upload_result["secure_url"]
+    db_image.public_id = upload_result["public_id"]
 
     db.commit()
     db.refresh(artwork)
@@ -395,18 +407,31 @@ def replace_artwork_image(db, artwork_id: str, user_id: str, old_public_id: str,
 # DELETE IMAGE
 # --------------------
 def delete_artwork_image(db, artwork_id: str, user_id: str, public_id: str):
-    artwork = db.query(models.Artwork).filter_by(id=artwork_id, artistId=user_id).first()
+    artwork = (
+        db.query(models.Artwork)
+        .filter_by(id=artwork_id, artistId=user_id)
+        .first()
+    )
     if not artwork:
         raise HTTPException(status_code=404, detail="Artwork not found")
 
-    # Delete from cloudinary
+    # Find the image record
+    db_image = (
+        db.query(models.ArtworkImage)
+        .filter_by(artwork_id=artwork.id, public_id=public_id)
+        .first()
+    )
+    if not db_image:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    # Delete from Cloudinary
     cloudinary.uploader.destroy(public_id)
 
-    # Remove from DB list
-    artwork.images = [img for img in artwork.images if img["public_id"] != public_id]
-
+    # Remove from DB
+    db.delete(db_image)
     db.commit()
     db.refresh(artwork)
+
     return artwork
 #------------------------------------------------------------------------------------------------------------
 
