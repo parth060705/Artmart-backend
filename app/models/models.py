@@ -60,15 +60,17 @@ class User(Base):
     passwordHash = Column(String(255), nullable=False)
     role = Column(SqlEnum(RoleEnum, native_enum=False), nullable=False, default=RoleEnum.user)
     profileImage = Column(String(255), nullable=True)
-    profileImagePublicId = Column(String(255), nullable=True)       ######
+    profileImagePublicId = Column(String(255), nullable=True)       
     createdAt = Column(DateTime, default=datetime.utcnow)
-    updatedAt = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  ######
+    updatedAt = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow) 
     location = Column(String(100), nullable=True)
     pincode = Column(CHAR(6), nullable=True)
     gender = Column(String(20), nullable=True)
     age = Column(Integer, nullable=True)
     phone = Column(String(15), nullable=True)
-    bio = Column(String(500), nullable=True)        ####
+    bio = Column(String(500), nullable=True)
+    isActive = Column(Boolean, default=False)         ####
+ 
 
     # Relationships
     artworks = relationship("Artwork", back_populates="artist")
@@ -118,13 +120,14 @@ class Artwork(Base):
         cascade="all, delete-orphan",
         back_populates="artwork",
     )
-    tags = Column(JSON, default=list, nullable=True)         #####
+    tags = Column(JSON, default=list, nullable=True)        
     price = Column(Float, nullable=False)
-    quantity = Column(Integer, nullable=False, default=1)                 #####
+    quantity = Column(Integer, nullable=False, default=1)                 
     category = Column(String(100), nullable=False)
     artistId = Column(String(36), ForeignKey("users.id"))
     createdAt = Column(DateTime, default=datetime.utcnow)
     isSold = Column(Boolean, default=False)
+    isDeleted = Column(Boolean, default=False)     ####
 
     # Relationships
     artist = relationship("User", back_populates="artworks")
@@ -252,7 +255,7 @@ class Cart(Base):
     artwork = relationship("Artwork", back_populates="cart_items")
 
 # -------------------------
-# MESSAGE MODEL                              ##########
+# MESSAGE MODEL            
 # -------------------------
 
 class Message(Base):
@@ -280,7 +283,7 @@ class Payment(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     order_id = Column(String(36), ForeignKey("orders.id"), nullable=False)
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
-    transaction_id = Column(String(100), unique=True, nullable=True)  # From payment gateway
+    transaction_id = Column(String(100), unique=True, nullable=True)
     amount = Column(Float, nullable=False)
     status = Column(SqlEnum(PaymentStatusEnum, native_enum=False), nullable=False, default=PaymentStatusEnum.pending)
     method = Column(SqlEnum(PaymentMethodEnum, native_enum=False), nullable=False)
