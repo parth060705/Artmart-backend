@@ -189,7 +189,7 @@ def get_artworks_with_filters(
     tags: Optional[str] = None,                                #
     db: Session = Depends(get_db)
 ):
-    return get_artworks_with_artist_filters(
+    return crud.get_artworks_with_artist_filters(
         db,
         title=title,
         price=price,
@@ -587,6 +587,17 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
         active_connections.pop(user_id, None)
         print(f"🧹 Cleaned up connection for user: {user_id}")
 
+# -------------------------
+#  HOME FEED ENDPOINTS
+# -------------------------
+
+@user_router.get("/homefeed", response_model=List[ArtworkRead])
+def home_feed(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    return crud.get_home_feed(db, current_user)        
+
 # ------------------------------------------------------------------------------------------------------------------
 #                                        ADMIN & SUPER-ADMIN ENDPOINTS
 # -------------------------------------------------------------------------------------------------------------------
@@ -636,7 +647,7 @@ def search_users_filters(
     
     db: Session = Depends(get_db)
 ):
-    return get_users_filters(
+    return crud.get_users_filters(
         db,
         user_id=user_id,
         name=name,
@@ -709,7 +720,7 @@ def search_artworks_with_filters(
 
     db: Session = Depends(get_db)
 ):
-    return get_artworks_with_artist_filters(
+    return crud.get_artworks_with_artist_filters(
         db,
         artwork_id=artwork_id,
         title=title,

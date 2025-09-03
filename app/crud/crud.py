@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_ , and_
+from sqlalchemy import or_ , and_, func, text
 from fastapi import HTTPException, UploadFile, File
 from uuid import UUID
 from uuid import uuid4
@@ -164,7 +164,6 @@ def update_user_profile_image(db: Session, user_id: UUID, file: UploadFile):
 # -------------------------
 # ARTWORK OPERATIONS
 # -------------------------
-
                                                # CREATE ARTWORK #
 ALLOWED_EXTENSIONS = {"jpeg", "jpg", "png", "svg"}
 ALLOWED_MIME_TYPES = {
@@ -174,52 +173,6 @@ ALLOWED_MIME_TYPES = {
     "image/svg+xml"
 }
 MAX_FILE_SIZE_MB = 20
-
-# def create_artwork(
-#     db: Session,
-#     artwork_data: schemas.ArtworkCreate,
-#     user_id: UUID,
-#     files: List[UploadFile]
-# ):
-#     user = db.query(models.User).filter(models.User.id == str(user_id)).first()
-#     if not user:
-#         raise HTTPException(status_code=404, detail="User not found")
-
-#     db_artwork = models.Artwork(**artwork_data.dict(), artistId=str(user_id), images=[])
-#     db_artwork.images = image_urls
-#     db.add(db_artwork)
-#     db.commit()
-#     db.refresh(db_artwork)
-
-#     image_urls = []
-
-#     for file in files:
-#         if file.content_type not in ALLOWED_MIME_TYPES:
-#             raise HTTPException(status_code=400, detail=f"Unsupported file type: {file.content_type}")
-
-#         contents = file.file.read()
-#         if len(contents) > MAX_FILE_SIZE_MB * 1024 * 1024:
-#             raise HTTPException(status_code=400, detail=f"File too large (max {MAX_FILE_SIZE_MB}MB)")
-#         file.file.seek(0)
-
-#         try:
-#             result = cloudinary.uploader.upload(file.file, folder="artworks")
-#             secure_url = result.get("secure_url")
-#             if not secure_url:
-#                 raise ValueError("Missing secure_url in Cloudinary response")
-#             image_urls.append(secure_url)
-#         except Exception as e:
-#             raise HTTPException(status_code=500, detail=f"Cloudinary error: {str(e)}")
-
-#     db_artwork.images = image_urls
-#     db.commit()
-#     db.refresh(db_artwork)
-
-#     return {
-#         "message": "Artwork created and images uploaded successfully",
-#         "artwork": db_artwork,
-#         "artworkImages": image_urls
-#     }
 
 def create_artwork(
     db: Session,
@@ -864,6 +817,58 @@ def get_unread_count(db: Session, receiver_id: str, sender_id: str) -> int:
         receiver_id=receiver_id,
         is_read=False
     ).count()
+
+# -------------------------
+# HOME FEED OPERATIONS
+# -------------------------
+
+def get_home_feed(db: Session, current_user, limit: int = 20):
+    # Collect following user IDs
+    following_ids = [u.id for u in current_user.following]
+
+    # 1 Artworks from following
+    feed_artworks = (
+        db.query(models.Artwork)
+        .filter(models.Artwork.artistId.in_(following_ids))
+        .order_by(models.Artwork.createdAt.desc())
+        .limit(limit)
+        .all()
+    )
+
+    # 2 Preferred tags from liked artworks
+    liked_tags = (
+        db.query(models.Artwork.tags)
+        .join(models.ArtworkLike, models.ArtworkLike.artworkId == models.Artwork.id)
+        .filter(models.ArtworkLike.userId == current_user.id)  
+        .all()
+    )
+
+    # Flatten the tag lists
+    preferred_tags = {tag for tags_tuple in liked_tags for tag in (tags_tuple[0] or [])}
+
+    # 3 Recommended artworks (not from self or following)
+    recommended_query = (
+        db.query(models.Artwork)
+        .filter(
+            models.Artwork.artistId != current_user.id,        
+            ~models.Artwork.artistId.in_(following_ids),
+        )
+        .order_by(text("RAND()"))  # use func.random()
+    )
+
+    # Add tag-based recommendations if user has preferences
+    if preferred_tags:
+        tag_conditions = [
+            func.json_contains(models.Artwork.tags, f'"{tag}"') for tag in preferred_tags
+        ]
+        recommended_query = recommended_query.filter(or_(*tag_conditions))
+
+    recommended_artworks = recommended_query.limit(limit).all()
+
+    # 4️ Combine
+    combined_feed = feed_artworks + recommended_artworks
+    return combined_feed
+
 
 
 # ------------------------------------------------------------------------------------------------------------------
