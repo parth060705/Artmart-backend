@@ -823,23 +823,21 @@ def get_unread_count(db: Session, receiver_id: str, sender_id: str) -> int:
 # -------------------------
 
 def get_home_feed(db: Session, current_user, limit: int = 20):
-    """
-    Create feed based on followers, liked artworks, and related tags.
-    Randomizes results on each refresh.
-    """
     following_ids = [u.id for u in current_user.following]
 
-    # 1️ Artworks from following
+    # 1️⃣ Artworks from following
     feed_artworks = (
         db.query(models.Artwork)
+        .options(joinedload(models.Artwork.artist), 
+                 joinedload(models.Artwork.likes),
+                 joinedload(models.Artwork.images))
         .filter(models.Artwork.artistId.in_(following_ids))
         .order_by(func.random())
-        # .order_by(models.Artwork.createdAt.desc())   # uncomment it, this is by craetedAt of artwork
         .limit(limit)
         .all()
     )
 
-    # 2️ Preferred tags from liked artworks
+    # 2️⃣ Preferred tags from liked artworks
     liked_tags = (
         db.query(models.Artwork.tags)
         .join(models.ArtworkLike, models.ArtworkLike.artworkId == models.Artwork.id)
@@ -849,23 +847,24 @@ def get_home_feed(db: Session, current_user, limit: int = 20):
 
     preferred_tags = set()
     for tags_tuple in liked_tags:
-        if isinstance(tags_tuple[0], list): 
+        if isinstance(tags_tuple[0], list):
             preferred_tags.update(tags_tuple[0])
-        elif isinstance(tags_tuple[0], str):  
-            preferred_tags.update([t.strip() for t in tags_tuple[0].split(",") if t.strip()])        
+        elif isinstance(tags_tuple[0], str):
+            preferred_tags.update([t.strip() for t in tags_tuple[0].split(",") if t.strip()])
 
-    # 3️ Recommended artworks (not from self or following)
+    # 3️⃣ Recommended artworks (not from self or following)
     recommended_query = (
         db.query(models.Artwork)
+        .options(joinedload(models.Artwork.artist), 
+                 joinedload(models.Artwork.likes),
+                 joinedload(models.Artwork.images))
         .filter(
             models.Artwork.artistId != current_user.id,
-            ~models.Artwork.artistId.in_(following_ids),
+            ~models.Artwork.artistId.in_(following_ids)
         )
-        .order_by(func.random()) 
-        # .order_by(models.Artwork.createdAt.desc())   # uncomment it, this is by createdAt of artwork
+        .order_by(func.random())
     )
 
-    # Add tag-based recommendations
     if preferred_tags:
         tag_conditions = [
             func.json_contains(models.Artwork.tags, f'"{tag}"') for tag in preferred_tags
@@ -874,10 +873,11 @@ def get_home_feed(db: Session, current_user, limit: int = 20):
 
     recommended_artworks = recommended_query.limit(limit).all()
 
-    # 4️ Combine
+    # 4️⃣ Combine and slice to final limit if needed
     combined_feed = feed_artworks + recommended_artworks
-    return combined_feed
+    combined_feed = combined_feed[:limit]
 
+    return combined_feed
 
 # -------------------------
 #  RECOMMENDATION ENDPOINTS
