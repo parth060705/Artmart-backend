@@ -596,7 +596,18 @@ def home_feed(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    return crud.get_home_feed(db, current_user)        
+    return crud.get_home_feed(db, current_user) 
+
+# -------------------------
+#  RECOMMENDATION ENDPOINTS
+# -------------------------
+
+@router.get("/recommend/{artwork_id}", response_model=List[ArtworkRead])
+def recommendation_engine(
+    artwork_id: UUID,
+    db: Session = Depends(get_db),
+):
+    return crud.get_recommendation(db, artwork_id=artwork_id)
 
 # ------------------------------------------------------------------------------------------------------------------
 #                                        ADMIN & SUPER-ADMIN ENDPOINTS

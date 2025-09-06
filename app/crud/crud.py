@@ -823,40 +823,49 @@ def get_unread_count(db: Session, receiver_id: str, sender_id: str) -> int:
 # -------------------------
 
 def get_home_feed(db: Session, current_user, limit: int = 20):
-    # Collect following user IDs
+    """
+    Create feed based on followers, liked artworks, and related tags.
+    Randomizes results on each refresh.
+    """
     following_ids = [u.id for u in current_user.following]
 
-    # 1 Artworks from following
+    # 1️ Artworks from following
     feed_artworks = (
         db.query(models.Artwork)
         .filter(models.Artwork.artistId.in_(following_ids))
-        .order_by(models.Artwork.createdAt.desc())
+        .order_by(func.random())
+        # .order_by(models.Artwork.createdAt.desc())   # uncomment it, this is by craetedAt of artwork
         .limit(limit)
         .all()
     )
 
-    # 2 Preferred tags from liked artworks
+    # 2️ Preferred tags from liked artworks
     liked_tags = (
         db.query(models.Artwork.tags)
         .join(models.ArtworkLike, models.ArtworkLike.artworkId == models.Artwork.id)
-        .filter(models.ArtworkLike.userId == current_user.id)  
+        .filter(models.ArtworkLike.userId == current_user.id)
         .all()
     )
 
-    # Flatten the tag lists
-    preferred_tags = {tag for tags_tuple in liked_tags for tag in (tags_tuple[0] or [])}
+    preferred_tags = set()
+    for tags_tuple in liked_tags:
+        if isinstance(tags_tuple[0], list): 
+            preferred_tags.update(tags_tuple[0])
+        elif isinstance(tags_tuple[0], str):  
+            preferred_tags.update([t.strip() for t in tags_tuple[0].split(",") if t.strip()])        
 
-    # 3 Recommended artworks (not from self or following)
+    # 3️ Recommended artworks (not from self or following)
     recommended_query = (
         db.query(models.Artwork)
         .filter(
-            models.Artwork.artistId != current_user.id,        
+            models.Artwork.artistId != current_user.id,
             ~models.Artwork.artistId.in_(following_ids),
         )
-        .order_by(text("RAND()"))  # use func.random()
+        .order_by(func.random()) 
+        # .order_by(models.Artwork.createdAt.desc())   # uncomment it, this is by createdAt of artwork
     )
 
-    # Add tag-based recommendations if user has preferences
+    # Add tag-based recommendations
     if preferred_tags:
         tag_conditions = [
             func.json_contains(models.Artwork.tags, f'"{tag}"') for tag in preferred_tags
@@ -868,6 +877,59 @@ def get_home_feed(db: Session, current_user, limit: int = 20):
     # 4️ Combine
     combined_feed = feed_artworks + recommended_artworks
     return combined_feed
+
+
+# -------------------------
+#  RECOMMENDATION ENDPOINTS
+# -------------------------
+
+def get_recommendation(db: Session, artwork_id: UUID, limit: int = 10) -> List[schemas.ArtworkRead]:
+    target_artwork = db.query(models.Artwork)\
+    .options(joinedload(models.Artwork.artist),
+             joinedload(models.Artwork.likes),
+             joinedload(models.Artwork.images))\
+    .filter(models.Artwork.id == artwork_id, models.Artwork.isDeleted == False)\
+    .first()
+
+
+    if not target_artwork:
+        print("❌ No target artwork found")
+        return []
+
+    filters = []
+
+    # Title filter
+    if target_artwork.title:
+        words = [w.strip() for w in target_artwork.title.split() if w.strip()]
+        if words:
+            filters.append(or_(*[models.Artwork.title.ilike(f"%{w}%") for w in words]))
+
+    # Category filter
+    if target_artwork.category:
+        filters.append(models.Artwork.category.ilike(target_artwork.category))
+
+    # Tags filter
+    preferred_tags = set()
+    if target_artwork.tags:
+        if isinstance(target_artwork.tags, list):
+            for entry in target_artwork.tags:
+                preferred_tags.update([t.strip() for t in entry.split(",") if t.strip()])
+        elif isinstance(target_artwork.tags, str):
+            preferred_tags.update([t.strip() for t in target_artwork.tags.split(",") if t.strip()])
+
+    if preferred_tags:
+        tag_filters = [models.Artwork.tags.ilike(f"%{tag}%") for tag in preferred_tags]
+        filters.append(or_(*tag_filters))
+
+    # Query other artworks excluding the target
+    query = db.query(models.Artwork).filter(models.Artwork.id != artwork_id)
+    if filters:
+        query = query.filter(or_(*filters))
+
+    results = query.order_by(func.random()).limit(limit).all()
+
+    # Convert to Pydantic schemas
+    return [schemas.ArtworkRead.model_validate(art) for art in results]
 
 
 
