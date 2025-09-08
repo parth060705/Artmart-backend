@@ -20,7 +20,7 @@ app.add_middleware(
                     "https://art-mart-sigma.vercel.app",
                     "https://art-mart-git-admin-parth-gharats-projects.vercel.app",  
                     "https://websocketking.com",
-                    'https://art-mart-git-tryouts-parth-gharats-projects.vercel.app/'],    
+                    'https://art-mart-git-tryouts-parth-gharats-projects.vercel.app'],    
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
