@@ -525,7 +525,7 @@ def get_my_following(
 #  CHAT ENDPOINTS
 # -------------------------
 
-@router.websocket("/ws/{user_id}") # ws://localhost:8000/api/ws/{user_id}, ws://localhost:8000/api/auth/chat/ws/{user_id}
+@chat_router.websocket("/ws/{user_id}") # ws://localhost:8000/api/auth/chat/ws/{user_id}
 async def websocket_endpoint(websocket: WebSocket, user_id: str):
     await websocket.accept()
     db: Session = next(get_db())
