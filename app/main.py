@@ -16,11 +16,13 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173",
-                    "https://art-mart-sigma.vercel.app",
-                    "https://art-mart-git-admin-parth-gharats-projects.vercel.app",  
-                    "https://websocketking.com",
-                    'https://art-mart-git-tryouts-parth-gharats-projects.vercel.app'],    
+    allow_origins=[
+        "http://localhost:5173",
+        "https://art-mart-sigma.vercel.app",
+        "https://websocketking.com",
+        'https://art-mart-git-tryouts-parth-gharats-projects.vercel.app',
+        "https://*.app.github.dev",
+                    ],    
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
