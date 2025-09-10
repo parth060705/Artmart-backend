@@ -113,6 +113,10 @@ def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
 
 @router.post("/register", response_model=UserRead, responses={400: {"model": ErrorResponse}})
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
+
+    # Check password strength, uncomment it to use
+    # crud.validate_password_strength(user.password)
+
     if crud.get_user_by_email(db, user.email):
         raise HTTPException(
             status_code=400,

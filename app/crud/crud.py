@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_ , and_, func, text
-from fastapi import HTTPException, UploadFile, File
+from fastapi import HTTPException, UploadFile, File, status
 from uuid import UUID
 from uuid import uuid4
 from app.models import models
@@ -13,6 +13,7 @@ from typing import List, Optional
 from fastapi import UploadFile, HTTPException
 import cloudinary.uploader
 import random, string
+import re
 
 
 # FOR MESSAGING
@@ -35,6 +36,34 @@ def get_user(db: Session, user_id: UUID):
 
 def get_user_by_username(db: Session, username: str):
     return db.query(models.User).filter(models.User.username == username).first()
+
+# validation for hard password
+def validate_password_strength(password: str):
+    if len(password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"message": "Password must be at least 8 characters long"}
+        )
+    if not re.search(r"[A-Z]", password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"message": "Password must contain an uppercase letter"}
+        )
+    if not re.search(r"[a-z]", password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"message": "Password must contain a lowercase letter"}
+        )
+    if not re.search(r"\d", password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"message": "Password must contain a number"}
+        )
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"message": "Password must contain a special character"}
+        )
 
 # for suggesting unique username
 def suggest_usernames(db: Session, base_username: str, max_suggestions: int = 5):
