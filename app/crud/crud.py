@@ -12,6 +12,7 @@ import cloudinary
 from typing import List, Optional
 from fastapi import UploadFile, HTTPException
 import cloudinary.uploader
+import random, string
 
 
 # FOR MESSAGING
@@ -35,14 +36,27 @@ def get_user(db: Session, user_id: UUID):
 def get_user_by_username(db: Session, username: str):
     return db.query(models.User).filter(models.User.username == username).first()
 
+# for suggesting unique username
+def suggest_usernames(db: Session, base_username: str, max_suggestions: int = 5):
+    base = base_username.lower().replace(" ", "").replace(".", "").replace("_", "")
+    suggestions = []
+
+    while len(suggestions) < max_suggestions:
+        suffix = ''.join(random.choices(string.digits, k=3))
+        candidate = f"{base}{suffix}"
+        if not db.query(models.User).filter_by(username=candidate).first():
+            suggestions.append(candidate)
+    return suggestions
+
 def create_user(db: Session, user: schemas.UserCreate):
     hashed_password = pwd_context.hash(user.password)
+
     db_user = models.User(
         name=user.name,
         email=user.email,
         username=user.username,
         passwordHash=hashed_password,
-        role=RoleEnum.user,
+        role=models.RoleEnum.user,
         profileImage=str(user.profileImage) if user.profileImage else None,
         location=user.location,
         gender=user.gender,
@@ -55,7 +69,6 @@ def create_user(db: Session, user: schemas.UserCreate):
     db.commit()
     db.refresh(db_user)
     return db_user
-
 
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/svg+xml"}
 def upload_image_to_cloudinary(file: UploadFile):

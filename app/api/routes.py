@@ -29,7 +29,7 @@ from app.schemas.schemas import (
     OrderCreate, OrderRead, OrderDelete, ReviewCreate, ReviewRead,WishlistCreate,
     WishlistRead, WishlistCreatePublic, CartCreate, CartRead, CartCreatePublic,
     LikeCountResponse, HasLikedResponse, CommentCreate, CommentRead, FollowList,
-    FollowFollowers, DeleteMessageUser, UserUpdateAdmin
+    FollowFollowers, DeleteMessageUser, UserUpdateAdmin, ErrorResponse
 )
 
 # FOR PUBIC LEVEL ROUTES
@@ -111,11 +111,21 @@ def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
 # USER ENDPOINTS
 # -------------------------
 
-@router.post("/register", response_model=UserRead)
+@router.post("/register", response_model=UserRead, responses={400: {"model": ErrorResponse}})
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
-    db_user = crud.get_user_by_email(db, email=user.email)
-    if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+    if crud.get_user_by_email(db, user.email):
+        raise HTTPException(
+            status_code=400,
+            detail={"message": "Email already registered"}
+        )
+
+    if crud.get_user_by_username(db, user.username):
+        suggestions = crud.suggest_usernames(db, user.username)
+        raise HTTPException(
+            status_code=400,
+            detail={"message": "Username already taken", "suggestions": suggestions}
+        )
+
     return crud.create_user(db, user)
 
 @user_router.get("/me", response_model=UserRead)

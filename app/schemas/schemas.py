@@ -62,7 +62,10 @@ class UserBase(BaseModel):
     pincode: Optional[str] = Field(default=None, pattern=r'^\d{6}$')
     phone: Optional[str] = Field(default=None, pattern=r'^(\+91)?\d{10}$')
 
-
+class ErrorResponse(BaseModel):
+    message: str
+    suggestions: Optional[List[str]] = None
+    
 class UserCreate(BaseModel):
     password: str
     name: str
