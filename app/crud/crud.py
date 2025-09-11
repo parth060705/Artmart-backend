@@ -37,7 +37,7 @@ def get_user(db: Session, user_id: UUID):
 def get_user_by_username(db: Session, username: str):
     return db.query(models.User).filter(models.User.username == username).first()
 
-# validation for hard password
+# validation for strong password
 def validate_password_strength(password: str):
     if len(password) < 8:
         raise HTTPException(
