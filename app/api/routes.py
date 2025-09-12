@@ -534,40 +534,69 @@ def get_my_following(
 # -------------------------
 #  CHAT ENDPOINTS
 # -------------------------
+from fastapi import WebSocket, WebSocketDisconnect
+from typing import Dict
+from app.crud.crud import get_user_by_username, create_message
+from app.database import get_db
+from app.schemas.schemas import MessageCreate
+from app.core.auth import decode_access_token
+from sqlalchemy.orm import Session
+from datetime import datetime
+
+active_connections: Dict[str, WebSocket] = {}
+
+async def get_current_user_ws(websocket: WebSocket) -> tuple:
+    token = websocket.query_params.get("token")
+    if not token:
+        await websocket.close(code=1008)
+        return None, None
+
+    username = decode_access_token(token)
+    if not username:
+        await websocket.close(code=1008)
+        return None, None
+
+    db: Session = next(get_db())
+    user = get_user_by_username(db, username)
+    if not user:
+        await websocket.close(code=1008)
+        return None, None
+
+    return user, db
+
 
 @chat_router.websocket("/ws")
-async def websocket_endpoint(
-    websocket: WebSocket,
-    current_user: User = Depends(get_current_user),  # ✅ auto get user_id
-    db: Session = Depends(get_db)
-):
-    user_id = str(current_user.id)
+async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
+
+    user, db = await get_current_user_ws(websocket)
+    if not user:
+        return
+
+    user_id = str(user.id)
     active_connections[user_id] = websocket
-    print(f"✅ WebSocket connected for user: {user_id}")
+    print(f"✅ WebSocket connected for user: {user.username} ({user_id})")
 
     try:
         while True:
             try:
                 data = await websocket.receive_json()
                 msg = MessageCreate(**data)
-            except Exception as e:
+            except Exception:
                 await websocket.send_json({"error": "Invalid message format"})
                 continue
 
             if msg.action == "message":
                 saved_msg = create_message(db, sender_id=user_id, msg=msg)
-                payload = MessageOut(
-                    sender_id=user_id,
-                    receiver_id=msg.receiver_id,
-                    content=saved_msg.content,
-                    timestamp=saved_msg.timestamp,
-                    is_read=False,
-                    action="message",
-                    message_type="text"
-                )
+                payload = {
+                    "action": "message",
+                    "sender_id": user_id,
+                    "content": saved_msg.content,
+                    "timestamp": saved_msg.timestamp.isoformat()
+                }
                 if msg.receiver_id in active_connections:
-                    await active_connections[msg.receiver_id].send_json(payload.model_dump())
+                    await active_connections[msg.receiver_id].send_json(payload)
+
             elif msg.action == "typing":
                 if msg.receiver_id in active_connections:
                     await active_connections[msg.receiver_id].send_json({
@@ -575,8 +604,11 @@ async def websocket_endpoint(
                         "sender_id": user_id,
                         "is_typing": True
                     })
+
             elif msg.action == "read":
-                mark_messages_as_read(db, sender_id=msg.receiver_id, receiver_id=user_id)
+                create_message.mark_messages_as_read(
+                    db, sender_id=msg.receiver_id, receiver_id=user_id
+                )
                 if msg.receiver_id in active_connections:
                     await active_connections[msg.receiver_id].send_json({
                         "action": "read",
@@ -587,8 +619,8 @@ async def websocket_endpoint(
         print(f"⚠️ Disconnected: {user_id}")
     finally:
         active_connections.pop(user_id, None)
+        db.close()
         print(f"🧹 Cleaned up connection for user: {user_id}")
-
 # -------------------------
 #  HOME FEED ENDPOINTS
 # -------------------------
