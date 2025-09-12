@@ -19,8 +19,8 @@ from sqlalchemy.orm import joinedload
 
 # FOR MEASSAGING
 from fastapi import WebSocket, WebSocketDisconnect, APIRouter, Depends
-from app.schemas.schemas import (MessageCreate)
-from app.crud.crud import create_message
+from app.schemas.schemas import (MessageCreate, MessageOut)
+from app.crud.crud import (create_message, mark_messages_as_read)
 
 from app.schemas.schemas import (
     UserCreate, UserRead, ProfileImageResponse, UserUpdate, UserSearch, ArtworkMe,
@@ -48,12 +48,8 @@ admin_router = APIRouter(
 )
 
 # FOR CHAT LEVEL ROUTES
-chat_router = APIRouter(
-    tags=["Chat"],
-    dependencies=[Depends(get_current_user)]
-)
+chat_router = APIRouter(tags=["Chat"])
 active_connections: Dict[str, WebSocket] = {}
-
 
 # ------------------------------------------
 # AUTHORIZATION & AUTHENTICATION ENDPOINTS
@@ -539,41 +535,39 @@ def get_my_following(
 #  CHAT ENDPOINTS
 # -------------------------
 
-@chat_router.websocket("/ws/{user_id}") # ws://localhost:8000/api/auth/chat/ws/{user_id}
-async def websocket_endpoint(websocket: WebSocket, user_id: str):
+@chat_router.websocket("/ws")
+async def websocket_endpoint(
+    websocket: WebSocket,
+    current_user: User = Depends(get_current_user),  # ✅ auto get user_id
+    db: Session = Depends(get_db)
+):
+    user_id = str(current_user.id)
     await websocket.accept()
-    db: Session = next(get_db())
     active_connections[user_id] = websocket
-    print(f"✅ WebSocket connection established for user: {user_id}")
+    print(f"✅ WebSocket connected for user: {user_id}")
 
     try:
         while True:
             try:
                 data = await websocket.receive_json()
-                print(f"📥 Received from {user_id}: {data}")
-                msg = MessageCreate(**data)  # Validate input
-            except ValidationError as ve:
-                print("❌ Pydantic validation error:", ve)
-                await websocket.send_json({
-                    "error": "Invalid message format",
-                    "details": ve.errors()
-                })
-                continue
+                msg = MessageCreate(**data)
             except Exception as e:
-                print(f"❌ JSON receive/parse failed: {e}")
-                break
+                await websocket.send_json({"error": "Invalid message format"})
+                continue
 
             if msg.action == "message":
                 saved_msg = create_message(db, sender_id=user_id, msg=msg)
-                payload = {
-                    "action": "message",
-                    "sender_id": user_id,
-                    "content": saved_msg.content,
-                    "timestamp": saved_msg.timestamp.isoformat()
-                }
+                payload = MessageOut(
+                    sender_id=user_id,
+                    receiver_id=msg.receiver_id,
+                    content=saved_msg.content,
+                    timestamp=saved_msg.timestamp,
+                    is_read=False,
+                    action="message",
+                    message_type="text"
+                )
                 if msg.receiver_id in active_connections:
-                    await active_connections[msg.receiver_id].send_json(payload)
-
+                    await active_connections[msg.receiver_id].send_json(payload.model_dump())
             elif msg.action == "typing":
                 if msg.receiver_id in active_connections:
                     await active_connections[msg.receiver_id].send_json({
@@ -581,11 +575,8 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                         "sender_id": user_id,
                         "is_typing": True
                     })
-
             elif msg.action == "read":
-                create_message.mark_messages_as_read(
-                    db, sender_id=msg.receiver_id, receiver_id=user_id
-                )
+                mark_messages_as_read(db, sender_id=msg.receiver_id, receiver_id=user_id)
                 if msg.receiver_id in active_connections:
                     await active_connections[msg.receiver_id].send_json({
                         "action": "read",
@@ -594,10 +585,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
 
     except WebSocketDisconnect:
         print(f"⚠️ Disconnected: {user_id}")
-    except Exception as e:
-        print(f"🔥 Unexpected error: {e}")
     finally:
-        db.close()
         active_connections.pop(user_id, None)
         print(f"🧹 Cleaned up connection for user: {user_id}")
 

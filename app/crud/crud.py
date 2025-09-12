@@ -854,11 +854,17 @@ def mark_messages_as_read(db: Session, sender_id: str, receiver_id: str):
 
 
 def get_unread_count(db: Session, receiver_id: str, sender_id: str) -> int:
-    return db.query(Message).filter_by(
-        sender_id=sender_id,
-        receiver_id=receiver_id,
-        is_read=False
+    return db.query(Message).filter(
+        Message.sender_id == sender_id,
+        Message.receiver_id == receiver_id,
+        Message.is_read == False
     ).count()
+
+def get_messages_between(db: Session, user1_id: str, user2_id: str, limit: int = 50):
+    return db.query(Message).filter(
+        ((Message.sender_id == user1_id) & (Message.receiver_id == user2_id)) |
+        ((Message.sender_id == user2_id) & (Message.receiver_id == user1_id))
+    ).order_by(Message.timestamp.desc()).limit(limit).all()
 
 # -------------------------
 # HOME FEED OPERATIONS
