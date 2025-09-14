@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from app.api import routes
-from app.api.routes import admin_router, user_router, chat_router
+from app.api.routes import admin_router, user_router
+from app.api.chat_routes import chat_router
 from app.database import engine, Base
 from app.models import models
 from fastapi.middleware.cors import CORSMiddleware
