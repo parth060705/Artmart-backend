@@ -7,6 +7,14 @@ from app.schemas.chat_schemas import MessageCreate
 from app.core.auth import decode_access_token
 from sqlalchemy.orm import Session
 from datetime import datetime
+from fastapi import Depends
+from fastapi import APIRouter
+from sqlalchemy.orm import Session
+from typing import List
+from app.crud.chat_crud import get_messages_between
+from app.schemas.chat_schemas import MessageOut
+from app.core.auth import get_current_user
+from app.database import get_db
 
 # -------------------------
 # ROUTER & CONNECTIONS
@@ -39,9 +47,10 @@ async def get_current_user_ws(websocket: WebSocket) -> tuple:
     return user, db
 
 
+# ------------------------- # localhost: ws://127.0.0.1:8000/api/auth/chat/ws?token=<ACCESS_TOKEN>
+# CHAT ENDPOINT             # render: wss://fastapi-app-61yp.onrender.com/api/auth/chat/ws?token=<ACCESS_TOKEN>
 # -------------------------
-# CHAT ENDPOINT
-# -------------------------
+
 @chat_router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     # Authenticate user first
@@ -128,3 +137,17 @@ async def websocket_endpoint(websocket: WebSocket):
         active_connections.pop(user_id, None)
         db.close()
         print(f"🧹 Cleaned up connection for user: {user_id}")
+
+# -------------------------
+# CHAT HISTORY ENDPOINT
+# ------------------------
+
+@chat_router.get("/history/{other_user_id}", response_model=List[MessageOut])
+def get_chat_history(
+    other_user_id: str,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+    limit: int = 50
+):
+    messages = get_messages_between(db, current_user.id, other_user_id, limit)
+    return messages        
