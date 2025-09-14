@@ -17,7 +17,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["auroraa.in","http://localhost:5173","https://art-mart-sigma.vercel.app","https://websocketking.com",'https://art-mart-git-tryouts-parth-gharats-projects.vercel.app',"https://*.app.github.dev",],    
+    allow_origins=["https://www.auroraa.in","http://localhost:5173","https://art-mart-sigma.vercel.app","https://websocketking.com",'https://art-mart-git-tryouts-parth-gharats-projects.vercel.app',"https://*.app.github.dev",],    
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
