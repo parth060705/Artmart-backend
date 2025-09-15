@@ -90,7 +90,7 @@ class UserUpdate(BaseModel):
     phone: Optional[str] = Field(default=None, pattern=r'^(\+91)?\d{10}$')
 
 class UserRead(UserBase):
-    # id: UUID
+    id: UUID
     createdAt: datetime
     updatedAt: Optional[datetime] = None
 
