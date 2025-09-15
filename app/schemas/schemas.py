@@ -105,6 +105,7 @@ class DeleteMessageUser(BaseModel):  # ADMIN level
     message: str    
 
 class UserSearch(BaseModel):
+    id: str
     name: str
     username: str
     profileImage: Optional[HttpUrl] = None
@@ -146,7 +147,7 @@ class ArtworkImageRead(BaseModel):
     public_id: str
 
     class Config:
-        from_attributes = True   # ✅ for Pydantic v2
+        from_attributes = True
 
 
 class ArtworkArtist(BaseModel):

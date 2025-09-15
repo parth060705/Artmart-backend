@@ -22,7 +22,6 @@ from app.database import get_db
 chat_router = APIRouter(tags=["Chat"])
 active_connections: Dict[str, WebSocket] = {}  # user_id -> WebSocket
 
-
 # -------------------------
 # AUTH HELPERS
 # -------------------------
