@@ -345,12 +345,83 @@ def list_artworks_route(
 ):
     return crud.list_artworks_with_cart_flag(db, current_user.id)
 
+#----------------------------------------------------------------------------------------
+# @router.get("/artworks/{artwork_id}", response_model=ArtworkRead)
+# def get_artwork(artwork_id: UUID, db: Session = Depends(get_db)):
+#     db_artwork = db.query(models.Artwork).options(joinedload(models.Artwork.artist)).filter(models.Artwork.id == str(artwork_id)).first()
+#     if not db_artwork:
+#         raise HTTPException(status_code=404, detail="Artwork not found")
+#     like_count = len(db_artwork.likes) if db_artwork.likes else 0
+#     return ArtworkRead(
+#         id=db_artwork.id,
+#         title=db_artwork.title,
+#         description=db_artwork.description,
+#         category=db_artwork.category,
+#         price=db_artwork.price,
+#         tags=db_artwork.tags,
+#         quantity=db_artwork.quantity,
+#         isSold=db_artwork.isSold,
+#         images=db_artwork.images,
+#         createdAt=db_artwork.createdAt,
+#         artistId=db_artwork.artistId,
+#         artist=ArtworkArtist(
+#             username=db_artwork.artist.username,
+#             profileImage=db_artwork.artist.profileImage
+#         ),
+#         how_many_like={"like_count": like_count}
+
+#     )
+
+from fastapi.security import OAuth2PasswordBearer
+from typing import Optional
+
+# HELPER CLASS FOR AUTHENTICATION BY TOKEN
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login", auto_error=False)
+
+def get_current_user_optional(
+    token: Optional[str] = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    if not token:
+        return None
+    
+    try:
+        return get_current_user(token=token, db=db)
+    except HTTPException as e:
+        if e.status_code == 401:
+            return None
+        raise e
+
+    
 @router.get("/artworks/{artwork_id}", response_model=ArtworkRead)
-def get_artwork(artwork_id: UUID, db: Session = Depends(get_db)):
-    db_artwork = db.query(models.Artwork).options(joinedload(models.Artwork.artist)).filter(models.Artwork.id == str(artwork_id)).first()
+def get_artwork(
+    artwork_id: UUID,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user_optional)
+):
+    db_artwork = (
+        db.query(models.Artwork)
+        .options(joinedload(models.Artwork.artist))
+        .filter(models.Artwork.id == str(artwork_id))
+        .first()
+    )
     if not db_artwork:
         raise HTTPException(status_code=404, detail="Artwork not found")
+
     like_count = len(db_artwork.likes) if db_artwork.likes else 0
+
+    # default = None (unauthenticated)
+    is_in_cart: Optional[bool] = None
+
+    if user:
+        cart_item = (
+            db.query(models.Cart)
+            .filter(models.Cart.userId == user.id,
+                    models.Cart.artworkId == db_artwork.id)
+            .first()
+        )
+        is_in_cart = bool(cart_item)
+
     return ArtworkRead(
         id=db_artwork.id,
         title=db_artwork.title,
@@ -367,9 +438,11 @@ def get_artwork(artwork_id: UUID, db: Session = Depends(get_db)):
             username=db_artwork.artist.username,
             profileImage=db_artwork.artist.profileImage
         ),
-        how_many_like={"like_count": like_count}
+        how_many_like={"like_count": like_count},
+        isInCart=is_in_cart
     )
 
+#----------------------------------------------------------------------------------------
 @router.get("/artworks/{user_id}", response_model=List[ArtworkRead])
 def get_user_artworks(user_id: UUID, db: Session = Depends(get_db)):
     return crud.get_artworks_by_user(db, user_id=user_id)
