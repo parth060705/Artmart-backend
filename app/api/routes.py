@@ -338,7 +338,6 @@ def delete_artwork_image(
     current_user: User = Depends(get_current_user)
 ):
     return crud.delete_artwork_image(db, str(artwork_id), str(current_user.id), public_id)
-
 #---------------------------------------------------------------------------------------------------------
 
 @user_router.delete("/artworks/{artwork_id}", response_model=ArtworkDelete)
@@ -347,9 +346,6 @@ def delete_artwork(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)):
     return crud.delete_artwork(db, artwork_id=artwork_id, user_id=current_user.id)
-#------------------------------------------------------------------------------
-
-
 
 @router.get("/artworks", response_model=List[ArtworkRead])
 def list_artworks_route(
@@ -358,9 +354,6 @@ def list_artworks_route(
 ):
     # Fetch artworks using CRUD
     artworks = crud.list_artworks(db)
-
-    # Shuffle to ensure random order
-    random.shuffle(artworks)
 
     # Build a set of artwork IDs in the user's cart (if logged in)
     cart_ids = None
@@ -393,6 +386,7 @@ def list_artworks_route(
                 artistId=art.artistId,
                 how_many_like={"like_count": like_count},
                 artist=ArtworkArtist(
+                    id=art.artist.id, 
                     username=art.artist.username,
                     profileImage=art.artist.profileImage
                 ),
@@ -402,35 +396,27 @@ def list_artworks_route(
 
     return result
 
-
-
-
-#------------------------------------------------------------------------------
 @router.get("/artworks/{artwork_id}", response_model=ArtworkRead)
-def get_artwork(
+def get_artwork_route(
     artwork_id: UUID,
     db: Session = Depends(get_db),
     user=Depends(get_current_user_optional)
 ):
-    db_artwork = (
-        db.query(models.Artwork)
-        .options(joinedload(models.Artwork.artist))
-        .filter(models.Artwork.id == str(artwork_id))
-        .first()
-    )
+    db_artwork = crud.get_artwork(db, artwork_id)
     if not db_artwork:
         raise HTTPException(status_code=404, detail="Artwork not found")
 
     like_count = len(db_artwork.likes) if db_artwork.likes else 0
 
-    # default = None (unauthenticated)
+    # default = None for guest
     is_in_cart: Optional[bool] = None
-
     if user:
         cart_item = (
             db.query(models.Cart)
-            .filter(models.Cart.userId == user.id,
-                    models.Cart.artworkId == db_artwork.id)
+            .filter(
+                models.Cart.userId == user.id,
+                models.Cart.artworkId == db_artwork.id
+            )
             .first()
         )
         is_in_cart = bool(cart_item)
@@ -448,6 +434,7 @@ def get_artwork(
         createdAt=db_artwork.createdAt,
         artistId=db_artwork.artistId,
         artist=ArtworkArtist(
+            id=db_artwork.artist.id, 
             username=db_artwork.artist.username,
             profileImage=db_artwork.artist.profileImage
         ),

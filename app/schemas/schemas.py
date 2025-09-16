@@ -157,6 +157,7 @@ class ArtworkImageRead(BaseModel):
 
 
 class ArtworkArtist(BaseModel):
+    id: UUID      
     username: str
     profileImage: Optional[str] = None
 

@@ -9,7 +9,7 @@ from app.schemas import schemas
 from passlib.context import CryptContext
 import cloudinary.uploader
 import cloudinary
-from typing import List, Optional
+from typing import List, Optional, Dict
 from fastapi import UploadFile, HTTPException
 import cloudinary.uploader
 import random, string
@@ -222,12 +222,10 @@ def create_artwork(
     user_id: UUID,
     files: List[UploadFile],
 ):
-    # ✅ Ensure artist exists
     user = db.query(models.User).filter(models.User.id == str(user_id)).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # ✅ Create base artwork (no images at first)
     db_artwork = models.Artwork(
         **artwork_data.dict(exclude={"images"}),  # don’t pass schema images
         artistId=str(user_id),
@@ -238,7 +236,7 @@ def create_artwork(
 
     artwork_images = []
 
-    # ✅ Upload images to Cloudinary + store in ArtworkImage table
+    # Upload images to Cloudinary + store in ArtworkImage table
     for file in files:
         if file.content_type not in ALLOWED_MIME_TYPES:
             raise HTTPException(
@@ -261,7 +259,7 @@ def create_artwork(
             if not secure_url or not public_id:
                 raise ValueError("Missing data in Cloudinary response")
 
-            # ✅ Create ArtworkImage object and link to artwork
+            # Create ArtworkImage object and link to artwork
             db_image = models.ArtworkImage(
                 artwork_id=db_artwork.id,
                 url=secure_url,
@@ -441,70 +439,24 @@ def delete_artwork(db: Session, artwork_id: UUID, user_id: UUID):
     db.commit()
     return {"message": "Artwork deleted successfully", "artwork_id": artwork_id}
 
-                                        # GET ARTWORK
-
-def list_artworks(db: Session):
+                                        # GET ARTWORK                                  
+def list_artworks(db: Session) -> List[models.Artwork]:
     artworks = (
         db.query(models.Artwork)
-        .options(
-            joinedload(models.Artwork.artist),
-            joinedload(models.Artwork.likes)
-        )
-        .order_by(func.rand())  # random ordering done by the DB
+        .options(joinedload(models.Artwork.artist), joinedload(models.Artwork.likes))
+        .order_by(func.random())  # PostgreSQL; use func.rand() for MySQL
         .all()
     )
     return artworks
 
-                                  
-# def list_artworks(db: Session):
-#     return (
-#         db.query(models.Artwork).options(joinedload(models.Artwork.artist),joinedload(models.Artwork.likes)).all())
-
-# def list_artworks_with_cart_flag(db: Session, user_id: UUID):
-#     artworks = (
-#         db.query(models.Artwork)
-#         .options(
-#             joinedload(models.Artwork.artist),
-#             joinedload(models.Artwork.likes)
-#         )
-#         .all()
-#     )
-#     # Get all artwork IDs in this user's cart
-#     cart_items = db.query(models.Cart.artworkId).filter_by(userId=str(user_id)).all()
-#     cart_ids = {item.artworkId for item in cart_items}
-
-#     enriched_artworks = []
-#     for art in artworks:
-#         like_count = len(art.likes) if art.likes else 0
-#         enriched_artworks.append({
-#             "id": art.id,
-#             "title": art.title,
-#             "description": art.description,
-#             "category": art.category,
-#             "price": art.price,
-#             "quantity": art.quantity,
-#             "tags": art.tags,
-#             "isSold": art.isSold,
-#             "images": art.images,
-#             "createdAt": art.createdAt,
-#             "artistId": art.artistId,
-#             "how_many_like": {"like_count": like_count},
-#             "artist": {
-#                 "username": art.artist.username,
-#                 "profileImage": art.artist.profileImage
-#             },
-#             "isInCart": str(art.id) in cart_ids
-#         })
-
-#     return enriched_artworks
-
-
-
                                            # GET SPECIFIC ARTWORK
 def get_artwork(db: Session, artwork_id: UUID):
-    return db.query(models.Artwork)\
-        .options(joinedload(models.Artwork.likes), joinedload(models.Artwork.artist))\
-        .filter(models.Artwork.id == artwork_id).first()
+    return (
+        db.query(models.Artwork)
+        .options(joinedload(models.Artwork.artist), joinedload(models.Artwork.likes))
+        .filter(models.Artwork.id == str(artwork_id))
+        .first()
+    )
 
                                           # GET MY ARTWORK
 def get_artworks_by_user(db: Session, user_id: str):
