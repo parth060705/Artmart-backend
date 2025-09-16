@@ -16,6 +16,8 @@ from app.crud.crud import get_artworks_with_artist_filters, get_users_filters, u
 from app.crud.crud import serialize_user
 from app.models import models
 from sqlalchemy.orm import joinedload
+from fastapi.security import OAuth2PasswordBearer
+from typing import Optional
 
 # FOR MEASSAGING
 from fastapi import WebSocket, WebSocketDisconnect, APIRouter, Depends
@@ -103,6 +105,23 @@ def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
         "token_type": "bearer"
     }
 
+# HELPER CLASS FOR AUTHENTICATION BY TOKEN     USED IN (SPECIFIC ARTWORKS ROUTES)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login", auto_error=False)
+
+def get_current_user_optional(
+    token: Optional[str] = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    if not token:
+        return None
+    
+    try:
+        return get_current_user(token=token, db=db)
+    except HTTPException as e:
+        if e.status_code == 401:
+            return None
+        raise e
+
 # -------------------------
 # USER ENDPOINTS
 # -------------------------
@@ -139,18 +158,35 @@ def read_user(user_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
-@user_router.patch("/update/users/me", response_model=UserRead)  
+@user_router.patch("/update/users/me", response_model=UserRead)
 def update_current_user(
-    user_update: UserUpdate,
+    name: str = Form(None),
+    location: str = Form(None),
+    gender: str = Form(None),
+    age: int = Form(None),
+    bio: str = Form(None),
+    pincode: str = Form(None),
+    phone: str = Form(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    user_update = UserUpdate(
+        name=name,
+        location=location,
+        gender=gender,
+        age=age,
+        bio=bio,
+        pincode=pincode,
+        phone=phone
+    )
+
     updated_user = crud.update_user_details(
         db=db,
         user_id=current_user.id,
         user_update=user_update
     )
     return updated_user
+
 
 @user_router.patch("/update/users/image", response_model=ProfileImageResponse)
 def update_profile_image(
@@ -371,27 +407,6 @@ def list_artworks_route(
 #         how_many_like={"like_count": like_count}
 
 #     )
-
-from fastapi.security import OAuth2PasswordBearer
-from typing import Optional
-
-# HELPER CLASS FOR AUTHENTICATION BY TOKEN
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login", auto_error=False)
-
-def get_current_user_optional(
-    token: Optional[str] = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
-):
-    if not token:
-        return None
-    
-    try:
-        return get_current_user(token=token, db=db)
-    except HTTPException as e:
-        if e.status_code == 401:
-            return None
-        raise e
-
     
 @router.get("/artworks/{artwork_id}", response_model=ArtworkRead)
 def get_artwork(

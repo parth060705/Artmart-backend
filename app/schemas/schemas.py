@@ -89,6 +89,12 @@ class UserUpdate(BaseModel):
     pincode: Optional[str] = Field(default=None, pattern=r'^\d{6}$')
     phone: Optional[str] = Field(default=None, pattern=r'^(\+91)?\d{10}$')
 
+    @field_validator("pincode", "phone", mode="before")
+    def empty_string_to_none(cls, v):
+        if v == "":
+            return None
+        return v
+
 class UserRead(UserBase):
     id: UUID
     createdAt: datetime
