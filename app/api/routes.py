@@ -18,6 +18,8 @@ from app.models import models
 from sqlalchemy.orm import joinedload
 from fastapi.security import OAuth2PasswordBearer
 from typing import Optional
+import random
+
 
 # FOR MEASSAGING
 from fastapi import WebSocket, WebSocketDisconnect, APIRouter, Depends
@@ -345,60 +347,23 @@ def delete_artwork(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)):
     return crud.delete_artwork(db, artwork_id=artwork_id, user_id=current_user.id)
+#------------------------------------------------------------------------------
 
 
-#-------------------------------------------------------------------------
-
-# @router.get("/artworks", response_model=List[ArtworkRead])
-# def list_artworks_route(db: Session = Depends(get_db)):
-#     artworks = crud.list_artworks(db)
-#     result = []
-#     for art in artworks:
-#         like_count = len(art.likes) if art.likes else 0
-#         result.append(
-#             ArtworkRead(
-#                 id=art.id,
-#                 title=art.title,
-#                 description=art.description,
-#                 category=art.category,
-#                 price=art.price,
-#                 tags=art.tags,
-#                 quantity=art.quantity,
-#                 isSold=art.isSold,
-#                 images=art.images,
-#                 createdAt=art.createdAt,
-#                 artistId=art.artistId,
-#                 how_many_like={"like_count": like_count},
-#                 artist=ArtworkArtist(
-#                     username=art.artist.username,
-#                     profileImage=art.artist.profileImage
-#                 ),
-#             )
-#         )
-#     return result
-
-# @user_router.get("/artworks", response_model=List[ArtworkRead])
-# def list_artworks_route(
-#     current_user: User = Depends(get_current_user),
-#     db: Session = Depends(get_db)
-# ):
-#     return crud.list_artworks_with_cart_flag(db, current_user.id)
 
 @router.get("/artworks", response_model=List[ArtworkRead])
 def list_artworks_route(
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user_optional)  #  works for both guest & auth
+    current_user=Depends(get_current_user_optional)  # guest OR logged in
 ):
-    artworks = (
-        db.query(models.Artwork)
-        .options(joinedload(models.Artwork.artist), joinedload(models.Artwork.likes))
-        .all()
-    )
+    # Fetch artworks using CRUD
+    artworks = crud.list_artworks(db)
 
-    # default (guest)
+    # Shuffle to ensure random order
+    random.shuffle(artworks)
+
+    # Build a set of artwork IDs in the user's cart (if logged in)
     cart_ids = None
-
-    # if logged in → build set of artwork IDs in cart
     if current_user:
         cart_items = (
             db.query(models.Cart.artworkId)
@@ -407,12 +372,11 @@ def list_artworks_route(
         )
         cart_ids = {item.artworkId for item in cart_items}
 
+    # Construct the response
     result = []
     for art in artworks:
         like_count = len(art.likes) if art.likes else 0
-        is_in_cart = None
-        if cart_ids is not None:
-            is_in_cart = str(art.id) in cart_ids
+        is_in_cart = str(art.id) in cart_ids if cart_ids else None
 
         result.append(
             ArtworkRead(
@@ -432,13 +396,16 @@ def list_artworks_route(
                     username=art.artist.username,
                     profileImage=art.artist.profileImage
                 ),
-                isInCart=is_in_cart  #  null for guest, true/false for auth
+                isInCart=is_in_cart  # null for guest, true/false for logged in
             )
         )
 
     return result
 
-#---------------------------------------------------------------------------
+
+
+
+#------------------------------------------------------------------------------
 @router.get("/artworks/{artwork_id}", response_model=ArtworkRead)
 def get_artwork(
     artwork_id: UUID,

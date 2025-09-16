@@ -442,9 +442,23 @@ def delete_artwork(db: Session, artwork_id: UUID, user_id: UUID):
     return {"message": "Artwork deleted successfully", "artwork_id": artwork_id}
 
                                         # GET ARTWORK
+
 def list_artworks(db: Session):
-    return (
-        db.query(models.Artwork).options(joinedload(models.Artwork.artist),joinedload(models.Artwork.likes)).all())
+    artworks = (
+        db.query(models.Artwork)
+        .options(
+            joinedload(models.Artwork.artist),
+            joinedload(models.Artwork.likes)
+        )
+        .order_by(func.rand())  # random ordering done by the DB
+        .all()
+    )
+    return artworks
+
+                                  
+# def list_artworks(db: Session):
+#     return (
+#         db.query(models.Artwork).options(joinedload(models.Artwork.artist),joinedload(models.Artwork.likes)).all())
 
 # def list_artworks_with_cart_flag(db: Session, user_id: UUID):
 #     artworks = (
@@ -485,45 +499,7 @@ def list_artworks(db: Session):
 #     return enriched_artworks
 
 
-def list_artworks_with_cart_flag(db: Session, user_id: UUID):
-    artworks = (
-        db.query(models.Artwork)
-        .options(
-            joinedload(models.Artwork.artist),
-            joinedload(models.Artwork.likes)
-        )
-        .order_by(func.rand())   # random ordering
-        .all()
-    )
 
-    # Get all artwork IDs in this user's cart
-    cart_items = db.query(models.Cart.artworkId).filter_by(userId=str(user_id)).all()
-    cart_ids = {item.artworkId for item in cart_items}
-
-    enriched_artworks = []
-    for art in artworks:
-        like_count = len(art.likes) if art.likes else 0
-        enriched_artworks.append({
-            "id": art.id,
-            "title": art.title,
-            "description": art.description,
-            "category": art.category,
-            "price": art.price,
-            "quantity": art.quantity,
-            "tags": art.tags,
-            "isSold": art.isSold,
-            "images": art.images,
-            "createdAt": art.createdAt,
-            "artistId": art.artistId,
-            "how_many_like": {"like_count": like_count},
-            "artist": {
-                "username": art.artist.username,
-                "profileImage": art.artist.profileImage
-            },
-            "isInCart": str(art.id) in cart_ids
-        })
-
-    return enriched_artworks
                                            # GET SPECIFIC ARTWORK
 def get_artwork(db: Session, artwork_id: UUID):
     return db.query(models.Artwork)\
