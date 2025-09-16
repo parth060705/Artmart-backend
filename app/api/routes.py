@@ -346,12 +346,74 @@ def delete_artwork(
     current_user: User = Depends(get_current_user)):
     return crud.delete_artwork(db, artwork_id=artwork_id, user_id=current_user.id)
 
+
+#-------------------------------------------------------------------------
+
+# @router.get("/artworks", response_model=List[ArtworkRead])
+# def list_artworks_route(db: Session = Depends(get_db)):
+#     artworks = crud.list_artworks(db)
+#     result = []
+#     for art in artworks:
+#         like_count = len(art.likes) if art.likes else 0
+#         result.append(
+#             ArtworkRead(
+#                 id=art.id,
+#                 title=art.title,
+#                 description=art.description,
+#                 category=art.category,
+#                 price=art.price,
+#                 tags=art.tags,
+#                 quantity=art.quantity,
+#                 isSold=art.isSold,
+#                 images=art.images,
+#                 createdAt=art.createdAt,
+#                 artistId=art.artistId,
+#                 how_many_like={"like_count": like_count},
+#                 artist=ArtworkArtist(
+#                     username=art.artist.username,
+#                     profileImage=art.artist.profileImage
+#                 ),
+#             )
+#         )
+#     return result
+
+# @user_router.get("/artworks", response_model=List[ArtworkRead])
+# def list_artworks_route(
+#     current_user: User = Depends(get_current_user),
+#     db: Session = Depends(get_db)
+# ):
+#     return crud.list_artworks_with_cart_flag(db, current_user.id)
+
 @router.get("/artworks", response_model=List[ArtworkRead])
-def list_artworks_route(db: Session = Depends(get_db)):
-    artworks = crud.list_artworks(db)
+def list_artworks_route(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user_optional)  #  works for both guest & auth
+):
+    artworks = (
+        db.query(models.Artwork)
+        .options(joinedload(models.Artwork.artist), joinedload(models.Artwork.likes))
+        .all()
+    )
+
+    # default (guest)
+    cart_ids = None
+
+    # if logged in → build set of artwork IDs in cart
+    if current_user:
+        cart_items = (
+            db.query(models.Cart.artworkId)
+            .filter_by(userId=str(current_user.id))
+            .all()
+        )
+        cart_ids = {item.artworkId for item in cart_items}
+
     result = []
     for art in artworks:
         like_count = len(art.likes) if art.likes else 0
+        is_in_cart = None
+        if cart_ids is not None:
+            is_in_cart = str(art.id) in cart_ids
+
         result.append(
             ArtworkRead(
                 id=art.id,
@@ -370,44 +432,13 @@ def list_artworks_route(db: Session = Depends(get_db)):
                     username=art.artist.username,
                     profileImage=art.artist.profileImage
                 ),
+                isInCart=is_in_cart  #  null for guest, true/false for auth
             )
         )
+
     return result
 
-@user_router.get("/artworks", response_model=List[ArtworkRead])
-def list_artworks_route(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    return crud.list_artworks_with_cart_flag(db, current_user.id)
-
-#----------------------------------------------------------------------------------------
-# @router.get("/artworks/{artwork_id}", response_model=ArtworkRead)
-# def get_artwork(artwork_id: UUID, db: Session = Depends(get_db)):
-#     db_artwork = db.query(models.Artwork).options(joinedload(models.Artwork.artist)).filter(models.Artwork.id == str(artwork_id)).first()
-#     if not db_artwork:
-#         raise HTTPException(status_code=404, detail="Artwork not found")
-#     like_count = len(db_artwork.likes) if db_artwork.likes else 0
-#     return ArtworkRead(
-#         id=db_artwork.id,
-#         title=db_artwork.title,
-#         description=db_artwork.description,
-#         category=db_artwork.category,
-#         price=db_artwork.price,
-#         tags=db_artwork.tags,
-#         quantity=db_artwork.quantity,
-#         isSold=db_artwork.isSold,
-#         images=db_artwork.images,
-#         createdAt=db_artwork.createdAt,
-#         artistId=db_artwork.artistId,
-#         artist=ArtworkArtist(
-#             username=db_artwork.artist.username,
-#             profileImage=db_artwork.artist.profileImage
-#         ),
-#         how_many_like={"like_count": like_count}
-
-#     )
-    
+#---------------------------------------------------------------------------
 @router.get("/artworks/{artwork_id}", response_model=ArtworkRead)
 def get_artwork(
     artwork_id: UUID,
@@ -457,7 +488,6 @@ def get_artwork(
         isInCart=is_in_cart
     )
 
-#----------------------------------------------------------------------------------------
 @router.get("/artworks/{user_id}", response_model=List[ArtworkRead])
 def get_user_artworks(user_id: UUID, db: Session = Depends(get_db)):
     return crud.get_artworks_by_user(db, user_id=user_id)

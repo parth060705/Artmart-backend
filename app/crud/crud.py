@@ -446,6 +446,45 @@ def list_artworks(db: Session):
     return (
         db.query(models.Artwork).options(joinedload(models.Artwork.artist),joinedload(models.Artwork.likes)).all())
 
+# def list_artworks_with_cart_flag(db: Session, user_id: UUID):
+#     artworks = (
+#         db.query(models.Artwork)
+#         .options(
+#             joinedload(models.Artwork.artist),
+#             joinedload(models.Artwork.likes)
+#         )
+#         .all()
+#     )
+#     # Get all artwork IDs in this user's cart
+#     cart_items = db.query(models.Cart.artworkId).filter_by(userId=str(user_id)).all()
+#     cart_ids = {item.artworkId for item in cart_items}
+
+#     enriched_artworks = []
+#     for art in artworks:
+#         like_count = len(art.likes) if art.likes else 0
+#         enriched_artworks.append({
+#             "id": art.id,
+#             "title": art.title,
+#             "description": art.description,
+#             "category": art.category,
+#             "price": art.price,
+#             "quantity": art.quantity,
+#             "tags": art.tags,
+#             "isSold": art.isSold,
+#             "images": art.images,
+#             "createdAt": art.createdAt,
+#             "artistId": art.artistId,
+#             "how_many_like": {"like_count": like_count},
+#             "artist": {
+#                 "username": art.artist.username,
+#                 "profileImage": art.artist.profileImage
+#             },
+#             "isInCart": str(art.id) in cart_ids
+#         })
+
+#     return enriched_artworks
+
+
 def list_artworks_with_cart_flag(db: Session, user_id: UUID):
     artworks = (
         db.query(models.Artwork)
@@ -453,8 +492,10 @@ def list_artworks_with_cart_flag(db: Session, user_id: UUID):
             joinedload(models.Artwork.artist),
             joinedload(models.Artwork.likes)
         )
+        .order_by(func.rand())   # random ordering
         .all()
     )
+
     # Get all artwork IDs in this user's cart
     cart_items = db.query(models.Cart.artworkId).filter_by(userId=str(user_id)).all()
     cart_ids = {item.artworkId for item in cart_items}
@@ -483,7 +524,6 @@ def list_artworks_with_cart_flag(db: Session, user_id: UUID):
         })
 
     return enriched_artworks
-
                                            # GET SPECIFIC ARTWORK
 def get_artwork(db: Session, artwork_id: UUID):
     return db.query(models.Artwork)\
@@ -508,6 +548,7 @@ def get_artworks_by_user(db: Session, user_id: str):
 
     return artworks
 
+#--------------------------
 # LIKES OPERATIONS
 # -------------------------
 
@@ -838,46 +879,6 @@ def get_artworks_with_artist_filters(
     if filters:
         query = query.filter(and_(*filters))
     return query.options(joinedload(models.Artwork.artist)).all()
-
-# # -------------------------
-# # MESSAGING OPERATIONS
-# # -------------------------
-
-# def create_message(db: Session, sender_id: str, msg: MessageCreate) -> Message:
-#     message = Message(
-#         sender_id=sender_id,
-#         receiver_id=msg.receiver_id,
-#         content=msg.content,
-#         timestamp=datetime.utcnow(),
-#         message_type="text",
-#     )
-#     db.add(message)
-#     db.commit()
-#     db.refresh(message)
-#     return message
-
-
-# def mark_messages_as_read(db: Session, sender_id: str, receiver_id: str):
-#     db.query(Message).filter(
-#         Message.sender_id == sender_id,
-#         Message.receiver_id == receiver_id,
-#         Message.is_read == False
-#     ).update({Message.is_read: True})
-#     db.commit()
-
-
-# def get_unread_count(db: Session, receiver_id: str, sender_id: str) -> int:
-#     return db.query(Message).filter(
-#         Message.sender_id == sender_id,
-#         Message.receiver_id == receiver_id,
-#         Message.is_read == False
-#     ).count()
-
-# def get_messages_between(db: Session, user1_id: str, user2_id: str, limit: int = 50):
-#     return db.query(Message).filter(
-#         ((Message.sender_id == user1_id) & (Message.receiver_id == user2_id)) |
-#         ((Message.sender_id == user2_id) & (Message.receiver_id == user1_id))
-#     ).order_by(Message.timestamp.desc()).limit(limit).all()
 
 # -------------------------
 # HOME FEED OPERATIONS
