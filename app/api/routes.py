@@ -107,7 +107,7 @@ def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
         "token_type": "bearer"
     }
 
-# HELPER CLASS FOR AUTHENTICATION BY TOKEN     USED IN (SPECIFIC ARTWORKS ROUTES)
+# HELPER CLASS FOR AUTHENTICATION BY TOKEN     USED IN (SPECIFIC ARTWORKS ROUTES, LIST ARTWORK)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login", auto_error=False)
 
 def get_current_user_optional(

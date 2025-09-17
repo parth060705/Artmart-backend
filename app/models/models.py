@@ -70,6 +70,7 @@ class User(Base):
     phone = Column(String(15), nullable=True)
     bio = Column(String(500), nullable=True)
     isActive = Column(Boolean, default=False)         ####
+    isAgreedtoTC = Column(Boolean, default=False)         ####
  
 
     # Relationships
@@ -114,7 +115,6 @@ class Artwork(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     title = Column(String(200), nullable=False)
     description = Column(Text)
-    # images = Column(JSON, nullable=True, default=list)
     images = relationship(
         "ArtworkImage",
         cascade="all, delete-orphan",
@@ -128,6 +128,7 @@ class Artwork(Base):
     createdAt = Column(DateTime, default=datetime.utcnow)
     isSold = Column(Boolean, default=False)
     isDeleted = Column(Boolean, default=False)     ####
+    forSale = Column(Boolean, default=False)     ####
 
     # Relationships
     artist = relationship("User", back_populates="artworks")
