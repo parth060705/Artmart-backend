@@ -147,7 +147,7 @@ class HasLikedResponse(BaseModel): # MESSAGE IF YOU LIKED
 # -------------------------------
 # ARTWORK SCHEMAS
 # -------------------------------
-class ArtworkImageRead(BaseModel):
+class ArtworkImageRead(BaseModel): # IMAGES FORMAT
     id: UUID
     url: str
     public_id: str
@@ -155,13 +155,12 @@ class ArtworkImageRead(BaseModel):
     class Config:
         from_attributes = True
 
-
-class ArtworkArtist(BaseModel):
+class ArtworkArtist(BaseModel): # ARTIST 
     id: UUID      
     username: str
     profileImage: Optional[str] = None
 
-class likeArt(BaseModel): 
+class likeArt(BaseModel): # LIKE
     like_count: int    
 
 class ArtworkAdmin(BaseModel):
@@ -361,7 +360,13 @@ class WishlistRemove(WishlistCreate):
 # -------------------------------
 # CART SCHEMAS
 # -------------------------------
+class CartArtworkRead(BaseModel): 
+    id: UUID
+    images: List[ArtworkImageRead] = Field(default_factory=list)
 
+    class Config:
+        from_attributes = True
+        
 class CartCreatePublic(BaseModel):
     artworkId: UUID
     purchase_quantity: int = 1  # Default to 1
@@ -373,6 +378,7 @@ class CartCreate(BaseModel):
 
 class CartRead(CartCreate):
     id: UUID
+    artwork: CartArtworkRead  
     createdAt: datetime
 
     class Config:
@@ -407,36 +413,3 @@ class FollowFollowers(FollowsUser):
 
     class Config:
         from_attributes = True 
-
-# -------------------------------
-# CHAT SCHEMAS
-# -------------------------------
-
-# class MessageBase(BaseModel):
-#     receiver_id: str
-#     content: Optional[str] = None
-#     action: Literal["message", "typing", "read"]
-
-#     @field_validator("content")
-#     @classmethod
-#     def validate_content(cls, v, info):
-#         # info.data contains all other fields
-#         action = info.data.get("action")
-#         if action == "message" and not v:
-#             raise ValueError("content is required when action is 'message'")
-#         return v
-
-# class MessageCreate(MessageBase):
-#     message_type: Optional[str] = "text"
-
-# class MessageOut(BaseModel):
-#     sender_id: str
-#     receiver_id: str
-#     content: Optional[str] = None
-#     timestamp: datetime
-#     is_read: bool = False
-#     action: Literal["message", "typing", "read"] = "message"
-#     message_type: str = "text"
-
-#     class Config:
-#         from_attributes = True

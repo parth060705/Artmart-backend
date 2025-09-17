@@ -680,7 +680,14 @@ def add_to_cart(db: Session, cart_data: schemas.CartCreate):
 
 def get_user_cart(db: Session, user_id: UUID):
     user_id = str(user_id)
-    return db.query(models.Cart).filter(models.Cart.userId == user_id).all()
+    return (
+        db.query(models.Cart)
+        .options(
+            joinedload(models.Cart.artwork).joinedload(models.Artwork.images)
+        )
+        .filter(models.Cart.userId == user_id)
+        .all()
+    )
 
 def remove_cart_item(db: Session, user_id: UUID, artwork_id: UUID):
     item = db.query(models.Cart).filter_by(userId=str(user_id), artworkId=str(artwork_id)).first()

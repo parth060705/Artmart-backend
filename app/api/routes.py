@@ -352,7 +352,6 @@ def list_artworks_route(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user_optional)  # guest OR logged in
 ):
-    # Fetch artworks using CRUD
     artworks = crud.list_artworks(db)
 
     # Build a set of artwork IDs in the user's cart (if logged in)
@@ -537,7 +536,7 @@ def remove_from_wishlist(artwork_id: UUID, current_user: User = Depends(get_curr
 # CART ENDPOINTS
 # -------------------------
 
-@user_router.post("/cart", response_model=CartRead)
+@user_router.post("/cart", response_model=CartCreate)
 def add_to_cart(
     item: CartCreatePublic,
     current_user: models.User = Depends(get_current_user),
