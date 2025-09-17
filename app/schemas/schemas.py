@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, HttpUrl, Field, field_validator
+from pydantic import BaseModel, EmailStr, HttpUrl, Field, field_validator, model_validator
 from uuid import UUID
 from datetime import datetime
 from typing import Optional, Literal, List
@@ -168,7 +168,8 @@ class ArtworkAdmin(BaseModel):
     title: str
     description: Optional[str] = None
     images: List[ArtworkImageRead] = Field(default_factory=list)
-    price: float
+    # price: float
+    price: Optional[float] = None   # <-- optional
     tags: Optional[list[str]] = None
     quantity: Optional[int] = None
     artistId: str
@@ -182,7 +183,9 @@ class ArtworkBase(BaseModel):
     title: str
     description: Optional[str] = None
     images: List[ArtworkImageRead] = Field(default_factory=list)
-    price: float
+    # price: float
+    price: Optional[float] = None   # <-- optional
+    # quantity: Optional[int] = None
     tags: Optional[list[str]] = None
     quantity: Optional[int] = None
     isInCart: Optional[bool] = None # for isincart flag
@@ -202,14 +205,44 @@ class ArtworkRead(ArtworkBase):
     class Config:
         from_attributes = True
 
+# class ArtworkCreate(BaseModel):
+#     title: str
+#     description: Optional[str] = None
+#     images: List[ArtworkImageRead] = Field(default_factory=list)
+#     price: float
+#     tags: Optional[list[str]] = None
+#     quantity: Optional[int] = None
+#     category: str
+#     isSale: bool   
+   
 class ArtworkCreate(BaseModel):
     title: str
     description: Optional[str] = None
     images: List[ArtworkImageRead] = Field(default_factory=list)
-    price: float
-    tags: Optional[list[str]] = None
+    price: Optional[float] = None
     quantity: Optional[int] = None
+    tags: Optional[list[str]] = None
     category: str
+    forSale: bool
+
+    @model_validator(mode="before")
+    def check_price_quantity_for_sale(cls, values):
+        for_sale = values.get("forSale")
+        price = values.get("price")
+        quantity = values.get("quantity")
+        if for_sale:
+            if price is None:
+                raise ValueError("Price is required when artwork is for sale")
+            if quantity is None:
+                raise ValueError("Quantity is required when artwork is for sale")
+        return values
+                          
+
+
+
+
+
+
 
 class ArtworkUpdate(BaseModel):
     title: Optional[str] = None
@@ -239,7 +272,8 @@ class ArtworkMe(BaseModel):
     id: str
     title: str
     description: Optional[str]
-    price: float
+    # price: float
+    price: Optional[float] = None   # <-- optional
     category: str
     images: List[ArtworkImageRead] = Field(default_factory=list)
     artistId: str

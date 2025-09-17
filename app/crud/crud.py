@@ -14,6 +14,7 @@ from fastapi import UploadFile, HTTPException
 import cloudinary.uploader
 import random, string
 import re
+from sqlalchemy.exc import SQLAlchemyError
 
 
 # FOR MESSAGING
@@ -206,7 +207,7 @@ def update_user_profile_image(db: Session, user_id: UUID, file: UploadFile):
 # -------------------------
 # ARTWORK OPERATIONS
 # -------------------------
-                                               # CREATE ARTWORK #
+                                              # CREATE ARTWORK #
 ALLOWED_EXTENSIONS = {"jpeg", "jpg", "png", "svg"}
 ALLOWED_MIME_TYPES = {
     "image/jpeg",
@@ -216,71 +217,148 @@ ALLOWED_MIME_TYPES = {
 }
 MAX_FILE_SIZE_MB = 20
 
+# def create_artwork(
+#     db: Session,
+#     artwork_data: schemas.ArtworkCreate,
+#     user_id: UUID,
+#     files: List[UploadFile],
+# ):
+#     user = db.query(models.User).filter(models.User.id == str(user_id)).first()
+#     if not user:
+#         raise HTTPException(status_code=404, detail="User not found")
+
+#     db_artwork = models.Artwork(
+#         **artwork_data.dict(exclude={"images"}),  # don’t pass schema images
+#         artistId=str(user_id),
+#     )
+#     db.add(db_artwork)
+#     db.commit()
+#     db.refresh(db_artwork)
+
+#     artwork_images = []
+
+#     # Upload images to Cloudinary + store in ArtworkImage table
+#     for file in files:
+#         if file.content_type not in ALLOWED_MIME_TYPES:
+#             raise HTTPException(
+#                 status_code=400,
+#                 detail=f"Unsupported file type: {file.content_type}",
+#             )
+
+#         contents = file.file.read()
+#         if len(contents) > MAX_FILE_SIZE_MB * 1024 * 1024:
+#             raise HTTPException(
+#                 status_code=400,
+#                 detail=f"File too large (max {MAX_FILE_SIZE_MB}MB)",
+#             )
+#         file.file.seek(0)
+
+#         try:
+#             result = cloudinary.uploader.upload(file.file, folder="artworks")
+#             secure_url = result.get("secure_url")
+#             public_id = result.get("public_id")
+#             if not secure_url or not public_id:
+#                 raise ValueError("Missing data in Cloudinary response")
+
+#             # Create ArtworkImage object and link to artwork
+#             db_image = models.ArtworkImage(
+#                 artwork_id=db_artwork.id,
+#                 url=secure_url,
+#                 public_id=public_id,
+#             )
+#             db.add(db_image)
+#             artwork_images.append(db_image)
+
+#         except Exception as e:
+#             raise HTTPException(
+#                 status_code=500,
+#                 detail=f"Cloudinary error: {str(e)}",
+#             )
+
+#     db.commit()
+#     db.refresh(db_artwork)
+
+#     return {
+#         "message": "Artwork created and images uploaded successfully",
+#         "artwork": db_artwork,  # will include joined ArtworkImage via relationship
+#     }
+
+
 def create_artwork(
     db: Session,
     artwork_data: schemas.ArtworkCreate,
     user_id: UUID,
     files: List[UploadFile],
 ):
+    # 1️⃣ Check user exists
     user = db.query(models.User).filter(models.User.id == str(user_id)).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    db_artwork = models.Artwork(
-        **artwork_data.dict(exclude={"images"}),  # don’t pass schema images
-        artistId=str(user_id),
-    )
-    db.add(db_artwork)
-    db.commit()
-    db.refresh(db_artwork)
+    # 2️⃣ Enforce forSale logic
+    if artwork_data.forSale:   # <-- changed from isSale to forSale
+        if artwork_data.price is None:
+            raise HTTPException(status_code=400, detail="Price is required for sale artwork")
+        if artwork_data.quantity is None:
+            raise HTTPException(status_code=400, detail="Quantity is required for sale artwork")
+    else:
+        # If not for sale, nullify price/quantity to avoid accidental DB insert
+        artwork_data.price = None
+        artwork_data.quantity = None
 
-    artwork_images = []
+    try:
+        # 3️⃣ Create artwork record
+        db_artwork = models.Artwork(
+            **artwork_data.dict(exclude={"images"}),  # exclude images from schema
+            artistId=str(user_id),
+        )
+        db.add(db_artwork)
+        db.flush()  # flush to get artwork ID before images
 
-    # Upload images to Cloudinary + store in ArtworkImage table
-    for file in files:
-        if file.content_type not in ALLOWED_MIME_TYPES:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Unsupported file type: {file.content_type}",
-            )
+        # 4️⃣ Upload images to Cloudinary
+        for file in files:
+            if file.content_type not in ALLOWED_MIME_TYPES:
+                raise HTTPException(
+                    status_code=400, detail=f"Unsupported file type: {file.content_type}"
+                )
 
-        contents = file.file.read()
-        if len(contents) > MAX_FILE_SIZE_MB * 1024 * 1024:
-            raise HTTPException(
-                status_code=400,
-                detail=f"File too large (max {MAX_FILE_SIZE_MB}MB)",
-            )
-        file.file.seek(0)
+            contents = file.file.read()
+            if len(contents) > MAX_FILE_SIZE_MB * 1024 * 1024:
+                raise HTTPException(
+                    status_code=400, detail=f"File too large (max {MAX_FILE_SIZE_MB}MB)"
+                )
+            file.file.seek(0)
 
-        try:
             result = cloudinary.uploader.upload(file.file, folder="artworks")
             secure_url = result.get("secure_url")
             public_id = result.get("public_id")
             if not secure_url or not public_id:
-                raise ValueError("Missing data in Cloudinary response")
+                raise HTTPException(status_code=500, detail="Cloudinary upload failed")
 
-            # Create ArtworkImage object and link to artwork
+            # 5️⃣ Create ArtworkImage record
             db_image = models.ArtworkImage(
                 artwork_id=db_artwork.id,
                 url=secure_url,
                 public_id=public_id,
             )
             db.add(db_image)
-            artwork_images.append(db_image)
 
-        except Exception as e:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Cloudinary error: {str(e)}",
-            )
+        db.commit()
+        db.refresh(db_artwork)
 
-    db.commit()
-    db.refresh(db_artwork)
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
     return {
-        "message": "Artwork created and images uploaded successfully",
-        "artwork": db_artwork,  # will include joined ArtworkImage via relationship
+        "message": "Artwork created successfully",
+        "artwork": db_artwork,
     }
+
+
 
 #------------------------------------------------------------------------------------------------------
                                             # UPDATE ARTWORK #

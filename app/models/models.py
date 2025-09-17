@@ -69,8 +69,8 @@ class User(Base):
     age = Column(Integer, nullable=True)
     phone = Column(String(15), nullable=True)
     bio = Column(String(500), nullable=True)
-    isActive = Column(Boolean, default=False)         ####
-    isAgreedtoTC = Column(Boolean, default=False)         ####
+    isActive = Column(Boolean, default=False)         
+    isAgreedtoTC = Column(Boolean, default=False)         
  
 
     # Relationships
@@ -120,15 +120,15 @@ class Artwork(Base):
         cascade="all, delete-orphan",
         back_populates="artwork",
     )
-    tags = Column(JSON, default=list, nullable=True)        
-    price = Column(Float, nullable=False)
-    quantity = Column(Integer, nullable=False, default=1)                 
+    tags = Column(JSON, default=list, nullable=True)  
+    price = Column(Float, nullable=True)                       ####
+    quantity = Column(Integer, nullable=True, default=None)    ####  
     category = Column(String(100), nullable=False)
     artistId = Column(String(36), ForeignKey("users.id"))
     createdAt = Column(DateTime, default=datetime.utcnow)
     isSold = Column(Boolean, default=False)
-    isDeleted = Column(Boolean, default=False)     ####
-    forSale = Column(Boolean, default=False)     ####
+    isDeleted = Column(Boolean, default=False)    
+    forSale = Column(Boolean, default=False)     
 
     # Relationships
     artist = relationship("User", back_populates="artworks")

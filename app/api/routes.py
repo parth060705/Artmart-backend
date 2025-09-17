@@ -19,7 +19,7 @@ from sqlalchemy.orm import joinedload
 from fastapi.security import OAuth2PasswordBearer
 from typing import Optional
 import random
-
+import json
 
 # FOR MEASSAGING
 from fastapi import WebSocket, WebSocketDisconnect, APIRouter, Depends
@@ -251,32 +251,78 @@ def get_artworks_with_filters(
 # ARTWORK ENDPOINTS
 # -------------------------
 
+# @user_router.post("/artworks", response_model=ArtworkCreateResponse)
+# def create_artwork(
+#     title: str = Form(...),
+#     price: float = Form(...),
+#     tags: list[str] = Form(...),
+#     quantity: int = Form(...),
+#     category: str = Form(...),
+#     description: str = Form(...),
+#     files: List[UploadFile] = File(...),  # MULTIPLE files now
+#     db: Session = Depends(get_db),
+#     current_user: User = Depends(get_current_user)
+# ):
+#     artwork_data = ArtworkCreate(
+#         title=title,
+#         description=description,
+#         price=price,
+#         tags=tags,
+#         quantity=quantity,
+#         category=category,
+#     )
+#     return crud.create_artwork(
+#         db=db,
+#         artwork_data=artwork_data,
+#         user_id=current_user.id,
+#         files=files,  # <-- List of UploadFile
+#     )
+
+
 @user_router.post("/artworks", response_model=ArtworkCreateResponse)
 def create_artwork(
     title: str = Form(...),
-    price: float = Form(...),
-    tags: list[str] = Form(...),
-    quantity: int = Form(...),
+    price: float = Form(None),
+    quantity: int = Form(None),
     category: str = Form(...),
-    description: str = Form(...),
-    files: List[UploadFile] = File(...),  # MULTIPLE files now
+    description: str = Form(None),
+    tags: str = Form(""),  # comma-separated string
+    forSale: bool = Form(False),
+    files: List[UploadFile] = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    # Convert comma-separated tags string into a list
+    tags_list = [t.strip() for t in tags.split(",") if t.strip()]
+
+    # Conditional validation
+    if forSale:
+        if price is None:
+            raise HTTPException(status_code=400, detail="Price is required when artwork is for sale")
+        if quantity is None:
+            raise HTTPException(status_code=400, detail="Quantity is required when artwork is for sale")
+    else:
+        price = None
+        quantity = None
+
     artwork_data = ArtworkCreate(
         title=title,
         description=description,
         price=price,
-        tags=tags,
         quantity=quantity,
         category=category,
+        tags=tags_list,
+        forSale=forSale
     )
+
     return crud.create_artwork(
         db=db,
         artwork_data=artwork_data,
         user_id=current_user.id,
-        files=files,  # <-- List of UploadFile
+        files=files,
     )
+
+
 
 #---------------------------------UPDATE ARTWORK, ADD, REPLACE AND DELETE IMAGE-------------------------------------
 @user_router.patch("/update/artworks/{artwork_id}", response_model=ArtworkRead)
