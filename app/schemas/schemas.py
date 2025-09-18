@@ -168,8 +168,7 @@ class ArtworkAdmin(BaseModel):
     title: str
     description: Optional[str] = None
     images: List[ArtworkImageRead] = Field(default_factory=list)
-    # price: float
-    price: Optional[float] = None   # <-- optional
+    price: Optional[float] = None   
     tags: Optional[list[str]] = None
     quantity: Optional[int] = None
     artistId: str
@@ -183,15 +182,15 @@ class ArtworkBase(BaseModel):
     title: str
     description: Optional[str] = None
     images: List[ArtworkImageRead] = Field(default_factory=list)
-    # price: float
-    price: Optional[float] = None   # <-- optional
-    # quantity: Optional[int] = None
+    price: Optional[float] = None
     tags: Optional[list[str]] = None
     quantity: Optional[int] = None
-    isInCart: Optional[bool] = None # for isincart flag
+    isInCart: Optional[bool] = None
     category: str
     artist: ArtworkArtist
-    how_many_like: Optional[likeArt] = None 
+    how_many_like: Optional[likeArt] = None
+    forSale: bool
+
 
 class ArtworkWithLikes(ArtworkBase):
     how_many_like: likeArt
@@ -204,16 +203,6 @@ class ArtworkRead(ArtworkBase):
 
     class Config:
         from_attributes = True
-
-# class ArtworkCreate(BaseModel):
-#     title: str
-#     description: Optional[str] = None
-#     images: List[ArtworkImageRead] = Field(default_factory=list)
-#     price: float
-#     tags: Optional[list[str]] = None
-#     quantity: Optional[int] = None
-#     category: str
-#     isSale: bool   
    
 class ArtworkCreate(BaseModel):
     title: str
@@ -237,13 +226,6 @@ class ArtworkCreate(BaseModel):
                 raise ValueError("Quantity is required when artwork is for sale")
         return values
                           
-
-
-
-
-
-
-
 class ArtworkUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
@@ -272,8 +254,7 @@ class ArtworkMe(BaseModel):
     id: str
     title: str
     description: Optional[str]
-    # price: float
-    price: Optional[float] = None   # <-- optional
+    price: Optional[float] = None
     category: str
     images: List[ArtworkImageRead] = Field(default_factory=list)
     artistId: str

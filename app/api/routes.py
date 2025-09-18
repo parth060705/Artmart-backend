@@ -393,12 +393,74 @@ def delete_artwork(
     current_user: User = Depends(get_current_user)):
     return crud.delete_artwork(db, artwork_id=artwork_id, user_id=current_user.id)
 
+# @router.get("/artworks", response_model=List[ArtworkRead])
+# def list_artworks_route(
+#     db: Session = Depends(get_db),
+#     current_user=Depends(get_current_user_optional)  # guest OR logged in
+# ):
+#     artworks = crud.list_artworks(db)
+
+#     # Build a set of artwork IDs in the user's cart (if logged in)
+#     cart_ids = None
+#     if current_user:
+#         cart_items = (
+#             db.query(models.Cart.artworkId)
+#             .filter_by(userId=str(current_user.id))
+#             .all()
+#         )
+#         cart_ids = {item.artworkId for item in cart_items}
+
+#     # Construct the response
+#     result = []
+#     for art in artworks:
+#         like_count = len(art.likes) if art.likes else 0
+#         is_in_cart = str(art.id) in cart_ids if cart_ids else None
+
+#         result.append(
+#             ArtworkRead(
+#                 id=art.id,
+#                 title=art.title,
+#                 description=art.description,
+#                 category=art.category,
+#                 price=art.price,
+#                 tags=art.tags,
+#                 quantity=art.quantity,
+#                 isSold=art.isSold,
+#                 images=art.images,
+#                 createdAt=art.createdAt,
+#                 artistId=art.artistId,
+#                 how_many_like={"like_count": like_count},
+#                 artist=ArtworkArtist(
+#                     id=art.artist.id, 
+#                     username=art.artist.username,
+#                     profileImage=art.artist.profileImage
+#                 ),
+#                 isInCart=is_in_cart,  # null for guest, true/false for logged in
+#                 forSale=art.forSale 
+#             )
+#         )
+
+#     return result
+
+from sqlalchemy.orm import Session, subqueryload
 @router.get("/artworks", response_model=List[ArtworkRead])
 def list_artworks_route(
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user_optional)  # guest OR logged in
+    current_user=Depends(get_current_user_optional)
 ):
-    artworks = crud.list_artworks(db)
+    # Fetch all artworks with relationships
+    artworks = (
+        db.query(models.Artwork)
+        .options(
+            subqueryload(models.Artwork.artist),
+            subqueryload(models.Artwork.likes),
+            subqueryload(models.Artwork.images)
+        )
+        .all()
+    )
+
+    # Keep only artworks marked for sale
+    artworks_for_sale = [a for a in artworks if a.forSale]
 
     # Build a set of artwork IDs in the user's cart (if logged in)
     cart_ids = None
@@ -410,9 +472,9 @@ def list_artworks_route(
         )
         cart_ids = {item.artworkId for item in cart_items}
 
-    # Construct the response
+    # Construct response
     result = []
-    for art in artworks:
+    for art in artworks_for_sale:
         like_count = len(art.likes) if art.likes else 0
         is_in_cart = str(art.id) in cart_ids if cart_ids else None
 
@@ -431,15 +493,19 @@ def list_artworks_route(
                 artistId=art.artistId,
                 how_many_like={"like_count": like_count},
                 artist=ArtworkArtist(
-                    id=art.artist.id, 
+                    id=art.artist.id,
                     username=art.artist.username,
                     profileImage=art.artist.profileImage
                 ),
-                isInCart=is_in_cart  # null for guest, true/false for logged in
+                isInCart=is_in_cart,
+                forSale=art.forSale
             )
         )
 
     return result
+
+
+
 
 @router.get("/artworks/{artwork_id}", response_model=ArtworkRead)
 def get_artwork_route(
@@ -484,7 +550,8 @@ def get_artwork_route(
             profileImage=db_artwork.artist.profileImage
         ),
         how_many_like={"like_count": like_count},
-        isInCart=is_in_cart
+        isInCart=is_in_cart,
+        forSale=db_artwork.forSale
     )
 
 @router.get("/artworks/{user_id}", response_model=List[ArtworkRead])

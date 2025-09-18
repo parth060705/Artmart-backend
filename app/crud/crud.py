@@ -518,15 +518,33 @@ def delete_artwork(db: Session, artwork_id: UUID, user_id: UUID):
     return {"message": "Artwork deleted successfully", "artwork_id": artwork_id}
 
                                         # GET ARTWORK                                  
-def list_artworks(db: Session) -> List[models.Artwork]:
-    artworks = (
-        db.query(models.Artwork)
-        .options(joinedload(models.Artwork.artist), joinedload(models.Artwork.likes))
-        .order_by(func.random())  # PostgreSQL; use func.rand() for MySQL
-        .all()
-    )
-    return artworks
+# def list_artworks(db: Session) -> List[models.Artwork]:
+#     artworks = (
+#         db.query(models.Artwork)
+#         .options(joinedload(models.Artwork.artist), joinedload(models.Artwork.likes))
+#         .order_by(func.random())  # PostgreSQL; use func.rand() for MySQL
+#         .all()
+#     )
+#     return artworks
 
+#-------------------------------------------------------------------------------------------------------
+
+# from sqlalchemy.orm import Session, subqueryload
+
+# def list_artworks(db: Session) -> List[models.Artwork]:
+#     artworks = (
+#         db.query(models.Artwork)
+#         .options(
+#             subqueryload(models.Artwork.artist),
+#             subqueryload(models.Artwork.likes),
+#             subqueryload(models.Artwork.images)
+#         )
+#         .all()
+#     )
+#     # Python-level filter ensures only for-sale artworks
+#     return [a for a in artworks if a.forSale]
+
+#-------------------------------------------------------------------------------------------------------
                                            # GET SPECIFIC ARTWORK
 def get_artwork(db: Session, artwork_id: UUID):
     return (
