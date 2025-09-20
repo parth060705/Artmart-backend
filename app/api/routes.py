@@ -529,9 +529,6 @@ def list_artworks_route(
 
     return result
 
-
-
-
 @router.get("/artworks/{artwork_id}", response_model=ArtworkRead)
 def get_artwork_route(
     artwork_id: UUID,
@@ -579,7 +576,7 @@ def get_artwork_route(
         forSale=db_artwork.forSale
     )
 
-@router.get("/artworks/{user_id}", response_model=List[ArtworkRead])
+@router.get("/{user_id}/artworks", response_model=List[ArtworkRead])
 def get_user_artworks(user_id: UUID, db: Session = Depends(get_db)):
     return crud.get_artworks_by_user(db, user_id=user_id)
 
