@@ -78,6 +78,7 @@ class UserCreate(BaseModel):
     bio: Optional[str] = None
     pincode: Optional[str] = Field(default=None, pattern=r'^\d{6}$')
     phone: Optional[str] = Field(default=None, pattern=r'^(\+91)?\d{10}$')
+    isAgreedtoTC: bool
 
 
 class UserUpdate(BaseModel):

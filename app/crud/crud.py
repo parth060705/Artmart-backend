@@ -38,7 +38,9 @@ def get_user(db: Session, user_id: UUID):
 def get_user_by_username(db: Session, username: str):
     return db.query(models.User).filter(models.User.username == username).first()
 
-# validation for strong password
+#---------------------------------------HELPER CLASS FOR USER REGISTER------------------------------------------------------
+
+# HELPER CLASS FOR validation for strong password
 def validate_password_strength(password: str):
     if len(password) < 8:
         raise HTTPException(
@@ -66,7 +68,7 @@ def validate_password_strength(password: str):
             detail={"message": "Password must contain a special character"}
         )
 
-# for suggesting unique username
+# HELPER CLASS FOR for suggesting unique username
 def suggest_usernames(db: Session, base_username: str, max_suggestions: int = 5):
     base = base_username.lower().replace(" ", "").replace(".", "").replace("_", "")
     suggestions = []
@@ -93,7 +95,8 @@ def create_user(db: Session, user: schemas.UserCreate):
         bio=user.bio,
         age=user.age,
         phone=str(user.phone) if user.phone else None,
-        pincode=str(user.pincode) if user.pincode else None 
+        pincode=str(user.pincode) if user.pincode else None,
+        isAgreedtoTC=user.isAgreedtoTC
     )
     db.add(db_user)
     db.commit()

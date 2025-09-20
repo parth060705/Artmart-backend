@@ -128,26 +128,70 @@ def get_current_user_optional(
 # USER ENDPOINTS
 # -------------------------
 
+# @router.post("/register", response_model=UserRead, responses={400: {"model": ErrorResponse}})
+# def register_user(user: UserCreate, db: Session = Depends(get_db)):
+
+#     # --------Check password strength, uncomment it to use---------
+#     # crud.validate_password_strength(user.password)
+
+#     if crud.get_user_by_email(db, user.email):
+#         raise HTTPException(
+#             status_code=400,
+#             detail={"message": "Email already registered"}
+#         )
+
+#     if crud.get_user_by_username(db, user.username):
+#         suggestions = crud.suggest_usernames(db, user.username)
+#         raise HTTPException(
+#             status_code=400,
+#             detail={"message": "Username already taken", "suggestions": suggestions}
+#         )
+
+#     return crud.create_user(db, user)
+
 @router.post("/register", response_model=UserRead, responses={400: {"model": ErrorResponse}})
-def register_user(user: UserCreate, db: Session = Depends(get_db)):
+def register_user(
+    name: str = Form(...),
+    email: str = Form(...),
+    username: str = Form(...),
+    password: str = Form(...),
+    location: str = Form(None),
+    gender: str = Form(None),
+    bio: str = Form(None),
+    age: int = Form(None),
+    phone: str = Form(None),
+    pincode: str = Form(None),
+    isAgreedtoTC: bool = Form(...),
+    db: Session = Depends(get_db)
+):
+    # Validation checks
+    if crud.get_user_by_email(db, email):
+        raise HTTPException(status_code=400, detail={"message": "Email already registered"})
 
-    # Check password strength, uncomment it to use
-    # crud.validate_password_strength(user.password)
-
-    if crud.get_user_by_email(db, user.email):
+    if crud.get_user_by_username(db, username):
+        suggestions = crud.suggest_usernames(db, username)
         raise HTTPException(
             status_code=400,
-            detail={"message": "Email already registered"}
+            detail={"message": "Username already taken", "suggestions": suggestions},
         )
 
-    if crud.get_user_by_username(db, user.username):
-        suggestions = crud.suggest_usernames(db, user.username)
-        raise HTTPException(
-            status_code=400,
-            detail={"message": "Username already taken", "suggestions": suggestions}
-        )
+    # Build schema object
+    user_data = UserCreate(
+        name=name,
+        email=email,
+        username=username,
+        password=password,
+        location=location,
+        gender=gender,
+        bio=bio,
+        age=age,
+        phone=phone,
+        pincode=pincode,
+        isAgreedtoTC=isAgreedtoTC
+    )
 
-    return crud.create_user(db, user)
+    return crud.create_user(db=db, user=user_data)
+
 
 @user_router.get("/me", response_model=UserRead)
 def read_users_me(current_user: User = Depends(get_current_user)):
