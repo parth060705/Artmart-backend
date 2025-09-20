@@ -128,27 +128,6 @@ def get_current_user_optional(
 # USER ENDPOINTS
 # -------------------------
 
-# @router.post("/register", response_model=UserRead, responses={400: {"model": ErrorResponse}})
-# def register_user(user: UserCreate, db: Session = Depends(get_db)):
-
-#     # --------Check password strength, uncomment it to use---------
-#     # crud.validate_password_strength(user.password)
-
-#     if crud.get_user_by_email(db, user.email):
-#         raise HTTPException(
-#             status_code=400,
-#             detail={"message": "Email already registered"}
-#         )
-
-#     if crud.get_user_by_username(db, user.username):
-#         suggestions = crud.suggest_usernames(db, user.username)
-#         raise HTTPException(
-#             status_code=400,
-#             detail={"message": "Username already taken", "suggestions": suggestions}
-#         )
-
-#     return crud.create_user(db, user)
-
 @router.post("/register", response_model=UserRead, responses={400: {"model": ErrorResponse}})
 def register_user(
     name: str = Form(...),
@@ -164,6 +143,8 @@ def register_user(
     isAgreedtoTC: bool = Form(...),
     db: Session = Depends(get_db)
 ):
+    crud.validate_password_strength(password)
+
     # Validation checks
     if crud.get_user_by_email(db, email):
         raise HTTPException(status_code=400, detail={"message": "Email already registered"})
