@@ -627,10 +627,6 @@ def add_to_Saved(db: Session, item: schemas.SavedCreate, user_id: UUID):
     db.refresh(db_Saved)
     return db_Saved
 
-# def get_user_Saved(db: Session, user_id: UUID):
-#     user_id = str(user_id)
-#     return db.query(models.Saved).filter(models.Saved.userId == user_id).all()
-
 def get_user_Saved(db: Session, user_id: UUID):
     return (
         db.query(models.Saved)
@@ -769,6 +765,15 @@ def get_following(db: Session, user_id: str):
     if not user:
         raise ValueError("User not found.")
     return user.following
+
+def is_user_following(db: Session, follower_id: str, following_id: str) -> bool:
+    follower = db.query(models.User).filter(models.User.id == follower_id).first()
+    following = db.query(models.User).filter(models.User.id == following_id).first()
+
+    if not follower or not following:
+        return False
+
+    return following in follower.following
 
 # -------------------------
 # SEARCH OPERATIONS
@@ -1005,7 +1010,7 @@ def get_users_filters(
     return query.all()
 
                                                # ARTWORKS
-def list_artworks(db: Session):
+def list_artworks_admin(db: Session):
     return db.query(models.Artwork).all()
 
 def update_artwork(

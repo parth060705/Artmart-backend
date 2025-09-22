@@ -176,7 +176,10 @@ class ArtworkAdmin(BaseModel):
     createdAt: datetime
     category: str
     artist: ArtworkArtist
-    isSold: bool   
+    isSold: bool  
+
+    class Config:
+        from_attributes = True 
 
 class ArtworkBase(BaseModel):
     id: str
@@ -438,3 +441,6 @@ class FollowFollowers(FollowsUser):
 
     class Config:
         from_attributes = True 
+
+class FollowStatus(BaseModel):
+    is_following: bool

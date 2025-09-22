@@ -15,11 +15,10 @@ from app.crud import crud
 from app.crud.crud import get_artworks_with_artist_filters, get_users_filters, upload_image_to_cloudinary
 from app.crud.crud import serialize_user
 from app.models import models
-from sqlalchemy.orm import joinedload
 from fastapi.security import OAuth2PasswordBearer
 from typing import Optional
-import random
-import json
+from sqlalchemy.orm import Session, subqueryload, joinedload
+ 
 
 # FOR MEASSAGING
 from fastapi import WebSocket, WebSocketDisconnect, APIRouter, Depends
@@ -33,7 +32,7 @@ from app.schemas.schemas import (
     OrderCreate, OrderRead, OrderDelete, ReviewCreate, ReviewRead,SavedCreate,
     SavedRead, SavedCreatePublic, CartCreate, CartRead, CartCreatePublic,
     LikeCountResponse, HasLikedResponse, CommentCreate, CommentRead, FollowList,
-    FollowFollowers, DeleteMessageUser, UserUpdateAdmin, ErrorResponse
+    FollowFollowers, DeleteMessageUser, UserUpdateAdmin, ErrorResponse, FollowStatus
 )
 
 # FOR PUBIC LEVEL ROUTES
@@ -259,7 +258,7 @@ def get_artworks_with_filters(
     category: Optional[str] = None,
     artist_name: Optional[str] = None,
     location: Optional[str] = None,
-    tags: Optional[str] = None,                                #
+    tags: Optional[str] = None,                                
     db: Session = Depends(get_db)
 ):
     return crud.get_artworks_with_artist_filters(
@@ -269,40 +268,12 @@ def get_artworks_with_filters(
         category=category,
         artist_name=artist_name,
         location=location,
-        tags=tags                                                   #
+        tags=tags                                                 
     )
 
 # -------------------------
 # ARTWORK ENDPOINTS
 # -------------------------
-
-# @user_router.post("/artworks", response_model=ArtworkCreateResponse)
-# def create_artwork(
-#     title: str = Form(...),
-#     price: float = Form(...),
-#     tags: list[str] = Form(...),
-#     quantity: int = Form(...),
-#     category: str = Form(...),
-#     description: str = Form(...),
-#     files: List[UploadFile] = File(...),  # MULTIPLE files now
-#     db: Session = Depends(get_db),
-#     current_user: User = Depends(get_current_user)
-# ):
-#     artwork_data = ArtworkCreate(
-#         title=title,
-#         description=description,
-#         price=price,
-#         tags=tags,
-#         quantity=quantity,
-#         category=category,
-#     )
-#     return crud.create_artwork(
-#         db=db,
-#         artwork_data=artwork_data,
-#         user_id=current_user.id,
-#         files=files,  # <-- List of UploadFile
-#     )
-
 
 @user_router.post("/artworks", response_model=ArtworkCreateResponse)
 def create_artwork(
@@ -418,56 +389,6 @@ def delete_artwork(
     current_user: User = Depends(get_current_user)):
     return crud.delete_artwork(db, artwork_id=artwork_id, user_id=current_user.id)
 
-# @router.get("/artworks", response_model=List[ArtworkRead])
-# def list_artworks_route(
-#     db: Session = Depends(get_db),
-#     current_user=Depends(get_current_user_optional)  # guest OR logged in
-# ):
-#     artworks = crud.list_artworks(db)
-
-#     # Build a set of artwork IDs in the user's cart (if logged in)
-#     cart_ids = None
-#     if current_user:
-#         cart_items = (
-#             db.query(models.Cart.artworkId)
-#             .filter_by(userId=str(current_user.id))
-#             .all()
-#         )
-#         cart_ids = {item.artworkId for item in cart_items}
-
-#     # Construct the response
-#     result = []
-#     for art in artworks:
-#         like_count = len(art.likes) if art.likes else 0
-#         is_in_cart = str(art.id) in cart_ids if cart_ids else None
-
-#         result.append(
-#             ArtworkRead(
-#                 id=art.id,
-#                 title=art.title,
-#                 description=art.description,
-#                 category=art.category,
-#                 price=art.price,
-#                 tags=art.tags,
-#                 quantity=art.quantity,
-#                 isSold=art.isSold,
-#                 images=art.images,
-#                 createdAt=art.createdAt,
-#                 artistId=art.artistId,
-#                 how_many_like={"like_count": like_count},
-#                 artist=ArtworkArtist(
-#                     id=art.artist.id, 
-#                     username=art.artist.username,
-#                     profileImage=art.artist.profileImage
-#                 ),
-#                 isInCart=is_in_cart,  # null for guest, true/false for logged in
-#                 forSale=art.forSale 
-#             )
-#         )
-
-#     return result
-
-from sqlalchemy.orm import Session, subqueryload
 @router.get("/artworks", response_model=List[ArtworkRead])
 def list_artworks_route(
     db: Session = Depends(get_db),
@@ -748,6 +669,18 @@ def get_my_following(
         "count": len(following)
     }
 
+@user_router.get("/{user_id}/follow", response_model=FollowStatus)
+def is_following_check(
+    user_id: str,  # target user
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.id == user_id:
+        raise HTTPException(status_code=400, detail="Cannot follow yourself")
+
+    following = crud.is_user_following(db, current_user.id, user_id)
+    return FollowStatus(is_following=following)
+
 # -------------------------
 #  HOME FEED ENDPOINTS
 # -------------------------
@@ -832,8 +765,8 @@ def search_users_filters(
 
                               # ARTWORKS
 @admin_router.get("/artworks", response_model=List[ArtworkAdmin])
-def list_artworks(db: Session = Depends(get_db)):
-    return crud.list_artworks(db)
+def list_artworks_get(db: Session = Depends(get_db)):
+    return crud.list_artworks_admin(db)
 
 @admin_router.delete("/artworks/{artwork_id}", response_model=ArtworkDelete)
 def delete_artwork_admin_route(
