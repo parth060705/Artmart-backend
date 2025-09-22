@@ -222,73 +222,6 @@ ALLOWED_MIME_TYPES = {
 }
 MAX_FILE_SIZE_MB = 20
 
-# def create_artwork(
-#     db: Session,
-#     artwork_data: schemas.ArtworkCreate,
-#     user_id: UUID,
-#     files: List[UploadFile],
-# ):
-#     user = db.query(models.User).filter(models.User.id == str(user_id)).first()
-#     if not user:
-#         raise HTTPException(status_code=404, detail="User not found")
-
-#     db_artwork = models.Artwork(
-#         **artwork_data.dict(exclude={"images"}),  # don’t pass schema images
-#         artistId=str(user_id),
-#     )
-#     db.add(db_artwork)
-#     db.commit()
-#     db.refresh(db_artwork)
-
-#     artwork_images = []
-
-#     # Upload images to Cloudinary + store in ArtworkImage table
-#     for file in files:
-#         if file.content_type not in ALLOWED_MIME_TYPES:
-#             raise HTTPException(
-#                 status_code=400,
-#                 detail=f"Unsupported file type: {file.content_type}",
-#             )
-
-#         contents = file.file.read()
-#         if len(contents) > MAX_FILE_SIZE_MB * 1024 * 1024:
-#             raise HTTPException(
-#                 status_code=400,
-#                 detail=f"File too large (max {MAX_FILE_SIZE_MB}MB)",
-#             )
-#         file.file.seek(0)
-
-#         try:
-#             result = cloudinary.uploader.upload(file.file, folder="artworks")
-#             secure_url = result.get("secure_url")
-#             public_id = result.get("public_id")
-#             if not secure_url or not public_id:
-#                 raise ValueError("Missing data in Cloudinary response")
-
-#             # Create ArtworkImage object and link to artwork
-#             db_image = models.ArtworkImage(
-#                 artwork_id=db_artwork.id,
-#                 url=secure_url,
-#                 public_id=public_id,
-#             )
-#             db.add(db_image)
-#             artwork_images.append(db_image)
-
-#         except Exception as e:
-#             raise HTTPException(
-#                 status_code=500,
-#                 detail=f"Cloudinary error: {str(e)}",
-#             )
-
-#     db.commit()
-#     db.refresh(db_artwork)
-
-#     return {
-#         "message": "Artwork created and images uploaded successfully",
-#         "artwork": db_artwork,  # will include joined ArtworkImage via relationship
-#     }
-
-
 def create_artwork(
     db: Session,
     artwork_data: schemas.ArtworkCreate,
@@ -523,33 +456,15 @@ def delete_artwork(db: Session, artwork_id: UUID, user_id: UUID):
     return {"message": "Artwork deleted successfully", "artwork_id": artwork_id}
 
                                         # GET ARTWORK                                  
-# def list_artworks(db: Session) -> List[models.Artwork]:
-#     artworks = (
-#         db.query(models.Artwork)
-#         .options(joinedload(models.Artwork.artist), joinedload(models.Artwork.likes))
-#         .order_by(func.random())  # PostgreSQL; use func.rand() for MySQL
-#         .all()
-#     )
-#     return artworks
+def list_artworks(db: Session) -> List[models.Artwork]:
+    artworks = (
+        db.query(models.Artwork)
+        .options(joinedload(models.Artwork.artist), joinedload(models.Artwork.likes))
+        .order_by(func.random())  # PostgreSQL; use func.rand() for MySQL
+        .all()
+    )
+    return artworks
 
-#-------------------------------------------------------------------------------------------------------
-
-# from sqlalchemy.orm import Session, subqueryload
-
-# def list_artworks(db: Session) -> List[models.Artwork]:
-#     artworks = (
-#         db.query(models.Artwork)
-#         .options(
-#             subqueryload(models.Artwork.artist),
-#             subqueryload(models.Artwork.likes),
-#             subqueryload(models.Artwork.images)
-#         )
-#         .all()
-#     )
-#     # Python-level filter ensures only for-sale artworks
-#     return [a for a in artworks if a.forSale]
-
-#-------------------------------------------------------------------------------------------------------
                                            # GET SPECIFIC ARTWORK
 def get_artwork(db: Session, artwork_id: UUID):
     return (
@@ -699,46 +614,44 @@ def list_reviews_for_artwork(db: Session, artwork_id: UUID):
     )
 
 # -------------------------
-# WISHLIST OPERATIONS
+# Saved OPERATIONS
 # -------------------------
 
-def add_to_wishlist(db: Session, item: schemas.WishlistCreate, user_id: UUID):
-    db_wishlist = models.Wishlist(
+def add_to_Saved(db: Session, item: schemas.SavedCreate, user_id: UUID):
+    db_Saved = models.Saved(
         userId=str(user_id),
         artworkId=str(item.artworkId)
     )
-    db.add(db_wishlist)
+    db.add(db_Saved)
     db.commit()
-    db.refresh(db_wishlist)
-    return db_wishlist
+    db.refresh(db_Saved)
+    return db_Saved
 
-def get_user_wishlist(db: Session, user_id: UUID):
-    user_id = str(user_id)
-    return db.query(models.Wishlist).filter(models.Wishlist.userId == user_id).all()
+# def get_user_Saved(db: Session, user_id: UUID):
+#     user_id = str(user_id)
+#     return db.query(models.Saved).filter(models.Saved.userId == user_id).all()
 
-def remove_wishlist_item(db: Session, user_id: UUID, artwork_id: UUID):
-    item = db.query(models.Wishlist).filter_by(userId=str(user_id), artworkId=str(artwork_id)).first()
+def get_user_Saved(db: Session, user_id: UUID):
+    return (
+        db.query(models.Saved)
+        .options(joinedload(models.Saved.artwork))
+        .filter(models.Saved.userId == str(user_id))
+        .filter(models.Saved.artworkId.isnot(None))  # exclude Saved rows with no artwork
+        .all()
+    )
+
+def remove_Saved_item(db: Session, user_id: UUID, artwork_id: UUID):
+    item = db.query(models.Saved).filter_by(userId=str(user_id), artworkId=str(artwork_id)).first()
     if not item:
-        raise HTTPException(status_code=404, detail="Wishlist item not found")
+        raise HTTPException(status_code=404, detail="Saved item not found")
     db.delete(item)
     db.commit()
-    return {"status": "success", "message": "Item removed from wishlist"}
+    return {"status": "success", "message": "Item removed from Saved"}
 
 # -------------------------
 # CART OPERATIONS
 # -------------------------
 
-# def add_to_cart(db: Session, item: schemas.CartCreate, user_id: UUID):
-#     db_cart = models.Cart(
-#         userId=str(user_id),
-#         artworkId=str(item.artworkId),
-#         quantity=int(item.quantity)
-#     )
-#     db.add(db_cart)
-#     db.commit()
-#     db.refresh(db_cart)
-#     return db_cart
-#--------------------------------------------------------
 def add_to_cart(db: Session, cart_data: schemas.CartCreate):
     artwork = db.query(models.Artwork).filter(models.Artwork.id == str(cart_data.artworkId)).first()
     if not artwork:

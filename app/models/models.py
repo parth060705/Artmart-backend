@@ -77,7 +77,7 @@ class User(Base):
     artworks = relationship("Artwork", back_populates="artist")
     orders = relationship("Order", back_populates="buyer")
     reviews = relationship("Review", back_populates="reviewer", foreign_keys="Review.reviewerId")
-    wishlist_items = relationship("Wishlist", back_populates="user")
+    Saved_items = relationship("Saved", back_populates="user")
     cart_items = relationship("Cart", back_populates="user")
     liked_artworks = relationship("ArtworkLike", back_populates="user", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="user", cascade="all, delete-orphan")
@@ -134,7 +134,7 @@ class Artwork(Base):
     artist = relationship("User", back_populates="artworks")
     orders = relationship("Order", back_populates="artwork")
     reviews = relationship("Review", back_populates="artwork")
-    wishlist_items = relationship("Wishlist", back_populates="artwork")
+    Saved_items = relationship("Saved", back_populates="artwork")
     cart_items = relationship("Cart", back_populates="artwork")
     likes = relationship("ArtworkLike", back_populates="artwork", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="artwork", cascade="all, delete-orphan")
@@ -223,11 +223,11 @@ class Review(Base):
     artist = relationship("User", foreign_keys=[artistId])
 
 # -------------------------
-# WISHLIST MODEL
+# SAVED MODEL
 # -------------------------
 
-class Wishlist(Base):
-    __tablename__ = "wishlist"
+class Saved(Base):
+    __tablename__ = "Saved"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     userId = Column(String(36), ForeignKey("users.id"))
@@ -235,8 +235,8 @@ class Wishlist(Base):
     createdAt = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
-    user = relationship("User", back_populates="wishlist_items")
-    artwork = relationship("Artwork", back_populates="wishlist_items")
+    user = relationship("User", back_populates="Saved_items")
+    artwork = relationship("Artwork", back_populates="Saved_items")
 
 # -------------------------
 # CART MODEL

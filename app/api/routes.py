@@ -30,8 +30,8 @@ from app.schemas.schemas import (
     UserCreate, UserRead, ProfileImageResponse, UserUpdate, UserSearch, ArtworkMe,
     Token, ArtworkCreate, ArtworkRead, ArtworkCreateResponse, ArtworkDelete,
     ArtworkUpdate, ArtworkCategory, UserBaseAdmin, ArtworkAdmin, ArtworkArtist,
-    OrderCreate, OrderRead, OrderDelete, ReviewCreate, ReviewRead,WishlistCreate,
-    WishlistRead, WishlistCreatePublic, CartCreate, CartRead, CartCreatePublic,
+    OrderCreate, OrderRead, OrderDelete, ReviewCreate, ReviewRead,SavedCreate,
+    SavedRead, SavedCreatePublic, CartCreate, CartRead, CartCreatePublic,
     LikeCountResponse, HasLikedResponse, CommentCreate, CommentRead, FollowList,
     FollowFollowers, DeleteMessageUser, UserUpdateAdmin, ErrorResponse
 )
@@ -651,21 +651,29 @@ def get_reviews_for_artwork(artwork_id: UUID, db: Session = Depends(get_db)):
     return crud.list_reviews_for_artwork(db, artwork_id)
 
 # -------------------------
-# WISHLIST ENDPOINTS
+# Saved ENDPOINTS
 # -------------------------
 
-@user_router.post("/wishlist", response_model=WishlistRead)
-def add_to_wishlist(item: WishlistCreatePublic, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    internal_item = WishlistCreate(userId=current_user.id, artworkId=item.artworkId)
-    return crud.add_to_wishlist(db, internal_item, user_id=current_user.id)
+@user_router.post("/Saved", response_model=SavedRead)
+def add_to_Saved(item: SavedCreatePublic, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    internal_item = SavedCreate(userId=current_user.id, artworkId=item.artworkId)
+    return crud.add_to_Saved(db, internal_item, user_id=current_user.id)
 
-@user_router.get("/wishlist", response_model=List[WishlistRead])
-def get_wishlist(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return crud.get_user_wishlist(db, current_user.id)
+# @user_router.get("/Saved", response_model=List[SavedRead])
+# def get_Saved(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+#     return crud.get_user_Saved(db, current_user.id)
 
-@user_router.delete("/wishlist/artwork/{artwork_id}")
-def remove_from_wishlist(artwork_id: UUID, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return crud.remove_wishlist_item(db, user_id=current_user.id, artwork_id=artwork_id)
+@user_router.get("/Saved", response_model=List[SavedRead])
+def get_Saved(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    Saveds = crud.get_user_Saved(db, current_user.id)
+    # Remove any rows with null artwork
+    Saveds = [w for w in Saveds if w.artwork is not None]
+    return [SavedRead.model_validate(w) for w in Saveds]
+
+
+@user_router.delete("/Saved/artwork/{artwork_id}")
+def remove_from_Saved(artwork_id: UUID, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return crud.remove_Saved_item(db, user_id=current_user.id, artwork_id=artwork_id)
 
 # -------------------------
 # CART ENDPOINTS

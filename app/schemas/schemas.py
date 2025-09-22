@@ -349,24 +349,33 @@ class ReviewRead(ReviewBase):
 
 
 # -------------------------------
-# WISHLIST SCHEMAS
+# SAVED SCHEMAS
 # -------------------------------
 
-class WishlistCreatePublic(BaseModel):
+class SavedArtworkRead(BaseModel): 
+    id: UUID
+    images: List[ArtworkImageRead] = Field(default_factory=list)
+
+    class Config:
+        from_attributes = True
+
+
+class SavedCreatePublic(BaseModel):
     artworkId: UUID
 
-class WishlistCreate(BaseModel):
+class SavedCreate(BaseModel):
     userId: UUID
     artworkId: UUID
 
-class WishlistRead(WishlistCreate):
+class SavedRead(BaseModel):
     id: UUID
+    artwork: SavedArtworkRead
     createdAt: datetime
 
     class Config:
         from_attributes = True
 
-class WishlistRemove(WishlistCreate):
+class SavedRemove(SavedCreate):
     id: UUID
 
     class Config:

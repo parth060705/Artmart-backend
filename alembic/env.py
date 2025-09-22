@@ -14,7 +14,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Import your Base and models
 from app.database import Base
-from app.models.models import User, Artwork, Order, Review, Wishlist, Cart, ArtworkLike, Comment
+from app.models.models import User, Artwork, Order, Review, Saved, Cart, ArtworkLike, Comment
 
 # Alembic Config object
 config = context.config
