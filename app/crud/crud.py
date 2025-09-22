@@ -469,8 +469,21 @@ def get_artwork(db: Session, artwork_id: UUID):
     )
 
                                           # GET MY ARTWORK
+# def get_artworks_by_user(db: Session, user_id: str):
+#     return db.query(models.Artwork).filter(models.Artwork.artistId == user_id).all()
+
 def get_artworks_by_user(db: Session, user_id: str):
-    return db.query(models.Artwork).filter(models.Artwork.artistId == user_id).all()
+    artworks = (
+        db.query(models.Artwork)
+        .options(joinedload(models.Artwork.images), joinedload(models.Artwork.likes))
+        .filter(models.Artwork.artistId == user_id)
+        .all()
+    )
+    for artwork in artworks:
+        artwork.how_many_like = likeArt(like_count=len(artwork.likes))
+
+    return artworks
+
 
                                           # GET USER ARTWORK
 def get_artworks_by_user(db: Session, user_id: str):

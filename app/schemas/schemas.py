@@ -262,6 +262,7 @@ class ArtworkMe(BaseModel):
     category: str
     images: List[ArtworkImageRead] = Field(default_factory=list)
     artistId: str
+    how_many_like: Optional[likeArt] = None
     createdAt: datetime
     isSold: bool
 

@@ -580,16 +580,13 @@ def add_to_Saved(item: SavedCreatePublic, current_user: User = Depends(get_curre
     internal_item = SavedCreate(userId=current_user.id, artworkId=item.artworkId)
     return crud.add_to_Saved(db, internal_item, user_id=current_user.id)
 
-# @user_router.get("/Saved", response_model=List[SavedRead])
-# def get_Saved(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-#     return crud.get_user_Saved(db, current_user.id)
-
 @user_router.get("/Saved", response_model=List[SavedRead])
 def get_Saved(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     Saveds = crud.get_user_Saved(db, current_user.id)
     # Remove any rows with null artwork
-    Saveds = [w for w in Saveds if w.artwork is not None]
-    return [SavedRead.model_validate(w) for w in Saveds]
+    # Saveds = [w for w in Saveds if w.artwork is not None]
+    # return [SavedRead.model_validate(w) for w in Saveds]
+    return crud.get_user_Saved(db, current_user.id)
 
 
 @user_router.delete("/Saved/artwork/{artwork_id}")
