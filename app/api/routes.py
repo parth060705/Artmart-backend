@@ -761,7 +761,7 @@ def search_users_filters(
     )
 
                               # ARTWORKS
-@admin_router.get("/artworks", response_model=List[ArtworkAdmin])
+@admin_router.get("/artworks/list", response_model=List[ArtworkAdmin])
 def list_artworks_get(db: Session = Depends(get_db)):
     return crud.list_artworks_admin(db)
 
