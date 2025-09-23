@@ -69,6 +69,7 @@ class User(Base):
     age = Column(Integer, nullable=True)
     phone = Column(String(15), nullable=True)
     bio = Column(String(500), nullable=True)
+    profile_completion = Column(Integer, default=0)
     isActive = Column(Boolean, default=False)         
     isAgreedtoTC = Column(Boolean, default=False)         
  

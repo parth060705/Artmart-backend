@@ -127,35 +127,103 @@ def get_current_user_optional(
 # USER ENDPOINTS
 # -------------------------
 
-@router.post("/register", response_model=UserRead, responses={400: {"model": ErrorResponse}})
+# @router.post("/register", response_model=UserRead, responses={400: {"model": ErrorResponse}})
+# def register_user(
+#     name: str = Form(...),
+#     email: str = Form(...),
+#     username: str = Form(...),
+#     password: str = Form(...),
+#     location: str = Form(None),
+#     gender: str = Form(None),
+#     bio: str = Form(None),
+#     age: int = Form(None),
+#     phone: str = Form(None),
+#     pincode: str = Form(None),
+#     isAgreedtoTC: bool = Form(...),
+#     db: Session = Depends(get_db)
+# ):
+#     crud.validate_password_strength(password)
+
+#     # Validation checks
+#     if crud.get_user_by_email(db, email):
+#         raise HTTPException(status_code=400, detail={"message": "Email already registered"})
+
+#     if crud.get_user_by_username(db, username):
+#         suggestions = crud.suggest_usernames(db, username)
+#         raise HTTPException(
+#             status_code=400,
+#             detail={"message": "Username already taken", "suggestions": suggestions},
+#         )
+
+#     # Build schema object
+#     user_data = UserCreate(
+#         name=name,
+#         email=email,
+#         username=username,
+#         password=password,
+#         location=location,
+#         gender=gender,
+#         bio=bio,
+#         age=age,
+#         phone=phone,
+#         pincode=pincode,
+#         isAgreedtoTC=isAgreedtoTC
+#     )
+
+#     return crud.create_user(db=db, user=user_data)
+
+# @user_router.patch("/update/users/me", response_model=UserRead)
+# def update_current_user(
+#     name: str = Form(None),
+#     location: str = Form(None),
+#     gender: str = Form(None),
+#     age: int = Form(None),
+#     bio: str = Form(None),
+#     pincode: str = Form(None),
+#     phone: str = Form(None),
+#     db: Session = Depends(get_db),
+#     current_user: User = Depends(get_current_user)
+# ):
+#     user_update = UserUpdate(
+#         name=name,
+#         location=location,
+#         gender=gender,
+#         age=age,
+#         bio=bio,
+#         pincode=pincode,
+#         phone=phone
+#     )
+
+#     updated_user = crud.update_user_details(
+#         db=db,
+#         user_id=current_user.id,
+#         user_update=user_update
+#     )
+#     return updated_user
+
+#-------------------
+@router.post("/register", response_model=UserRead)
 def register_user(
-    name: str = Form(...),
-    email: str = Form(...),
-    username: str = Form(...),
-    password: str = Form(...),
+    name: str = Form(None),
+    email: str = Form(None),
+    username: str = Form(None),
+    password: str = Form(None),
     location: str = Form(None),
     gender: str = Form(None),
     bio: str = Form(None),
     age: int = Form(None),
     phone: str = Form(None),
     pincode: str = Form(None),
-    isAgreedtoTC: bool = Form(...),
+    isAgreedtoTC: bool = Form(False),
     db: Session = Depends(get_db)
 ):
-    crud.validate_password_strength(password)
-
-    # Validation checks
-    if crud.get_user_by_email(db, email):
-        raise HTTPException(status_code=400, detail={"message": "Email already registered"})
-
-    if crud.get_user_by_username(db, username):
+    # Validation
+    if email and crud.get_user_by_email(db, email):
+        raise HTTPException(status_code=400, detail="Email already registered")
+    if username and crud.get_user_by_username(db, username):
         suggestions = crud.suggest_usernames(db, username)
-        raise HTTPException(
-            status_code=400,
-            detail={"message": "Username already taken", "suggestions": suggestions},
-        )
+        raise HTTPException(status_code=400, detail={"message": "Username taken", "suggestions": suggestions})
 
-    # Build schema object
     user_data = UserCreate(
         name=name,
         email=email,
@@ -170,18 +238,8 @@ def register_user(
         isAgreedtoTC=isAgreedtoTC
     )
 
-    return crud.create_user(db=db, user=user_data)
+    user = crud.create_user(db=db, user=user_data)
 
-
-@user_router.get("/me", response_model=UserRead)
-def read_users_me(current_user: User = Depends(get_current_user)):
-    return current_user
-
-@router.get("/user/{user_id}", response_model=UserSearch)
-def read_user(user_id: UUID, db: Session = Depends(get_db)):
-    user = crud.get_user(db, str(user_id)) 
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
     return user
 
 @user_router.patch("/update/users/me", response_model=UserRead)
@@ -194,7 +252,7 @@ def update_current_user(
     pincode: str = Form(None),
     phone: str = Form(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: models.User = Depends(get_current_user)
 ):
     user_update = UserUpdate(
         name=name,
@@ -211,8 +269,38 @@ def update_current_user(
         user_id=current_user.id,
         user_update=user_update
     )
-    return updated_user
 
+    # Return full user object with required fields
+    return {
+        "id": updated_user.id,
+        "name": updated_user.name,
+        "email": updated_user.email,
+        "username": updated_user.username,
+        "profileImage": updated_user.profileImage,
+        "location": updated_user.location,
+        "gender": updated_user.gender,
+        "age": updated_user.age,
+        "bio": updated_user.bio,
+        "pincode": updated_user.pincode,
+        "phone": updated_user.phone,
+        "profile_completion": updated_user.profile_completion,  # integer
+        "createdAt": updated_user.createdAt,
+        "updatedAt": updated_user.updatedAt
+    }
+
+
+#-------------------
+
+@user_router.get("/me", response_model=UserRead)
+def read_users_me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+@router.get("/user/{user_id}", response_model=UserSearch)
+def read_user(user_id: UUID, db: Session = Depends(get_db)):
+    user = crud.get_user(db, str(user_id)) 
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
 
 @user_router.patch("/update/users/image", response_model=ProfileImageResponse)
 def update_profile_image(

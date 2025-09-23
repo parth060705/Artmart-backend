@@ -79,7 +79,13 @@ class UserCreate(BaseModel):
     pincode: Optional[str] = Field(default=None, pattern=r'^\d{6}$')
     phone: Optional[str] = Field(default=None, pattern=r'^(\+91)?\d{10}$')
     isAgreedtoTC: bool
+    profile_completion: Optional[int] = 0      #
 
+    @field_validator("pincode", "phone", mode="before")
+    def empty_or_invalid_to_none(cls, v):
+        if v in (None, "", "string"):  # treat invalid input as None
+            return None
+        return v
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
@@ -90,9 +96,9 @@ class UserUpdate(BaseModel):
     pincode: Optional[str] = Field(default=None, pattern=r'^\d{6}$')
     phone: Optional[str] = Field(default=None, pattern=r'^(\+91)?\d{10}$')
 
-    @field_validator("pincode", "phone", mode="before")
-    def empty_string_to_none(cls, v):
-        if v == "":
+    @field_validator("age","pincode", "phone", mode="before")
+    def empty_or_invalid_to_none(cls, v):
+        if v in (None, "", "string"):  # treat invalid input as None
             return None
         return v
 
@@ -100,6 +106,7 @@ class UserRead(UserBase):
     id: UUID
     createdAt: datetime
     updatedAt: Optional[datetime] = None
+    profile_completion: int       #
 
     class Config:
         from_attributes = True  
