@@ -142,6 +142,8 @@ def calculate_completion(user) -> int:
 #     return db_user
 
 #---------------------
+
+# Create User (progressive registration)
 def create_user(db: Session, user: schemas.UserCreate):
     hashed_password = pwd_context.hash(user.password)
 
@@ -169,10 +171,7 @@ def create_user(db: Session, user: schemas.UserCreate):
     db.refresh(db_user)
     return db_user
 
-
-# -----------------------------
 # Update User (progressive registration)
-# -----------------------------
 def update_user_details(db: Session, user_id: int, user_update: schemas.UserUpdate):
     db_user = db.query(models.User).filter(models.User.id == user_id).first()
     if not db_user:

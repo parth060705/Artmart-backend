@@ -106,7 +106,7 @@ class UserRead(UserBase):
     id: UUID
     createdAt: datetime
     updatedAt: Optional[datetime] = None
-    profile_completion: int       #
+    profile_completion: Optional[int] = None      #
 
     class Config:
         from_attributes = True  
