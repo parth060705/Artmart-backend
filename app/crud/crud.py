@@ -76,23 +76,54 @@ def suggest_usernames(db: Session, base_username: str, max_suggestions: int = 5)
             suggestions.append(candidate)
     return suggestions
 
-# 3)HELPER CLASS FOR FLOW REGISTER
-def calculate_completion(user) -> int:
+# # 3)HELPER CLASS FOR FLOW REGISTER
+# def calculate_completion(user) -> int:
+#     completion = 0
+
+#     # Part 1 (40%) → Basic Info
+#     if user.name and user.username and user.passwordHash:
+#         completion += 40
+
+#     # Part 2 (30%) → Bio details
+#     if user.bio and user.gender and user.age:
+#         completion += 30
+
+#     # Part 3 (30%) → Contact info
+#     if user.location and user.pincode and user.phone:
+#         completion += 30
+
+#     return completion
+
+
+def calculate_completion(user: models.User, db: Session) -> int:
     completion = 0
 
-    # Part 1 (40%) → Basic Info
+    # Part 1: Basic info
     if user.name and user.username and user.passwordHash:
         completion += 40
 
-    # Part 2 (30%) → Bio details
+    # Part 2: Bio, gender, age
     if user.bio and user.gender and user.age:
-        completion += 30
+        completion += 20
 
-    # Part 3 (30%) → Contact info
+    # Part 3: Contact info
     if user.location and user.pincode and user.phone:
-        completion += 30
+        completion += 20
 
-    return completion
+    # Part 4: Following at least 5 users
+    num_following = db.query(models.followers_association).filter(
+        models.followers_association.c.follower_id == user.id
+    ).count()
+    if num_following >= 5:
+        completion += 20
+
+    # Part 5: At least 1 artwork
+    num_artworks = db.query(models.Artwork).filter(models.Artwork.artistId == user.id).count()
+    if num_artworks >= 1:
+        completion += 20
+
+    return min(completion, 100)
+
 #---------------------------------------------------------------------------------------------
 
 # def create_user(db: Session, user: schemas.UserCreate):
@@ -164,7 +195,7 @@ def create_user(db: Session, user: schemas.UserCreate):
     )
 
     # calculate completion
-    db_user.profile_completion = calculate_completion(db_user)
+    db_user.profile_completion = calculate_completion(db_user, db)
 
     db.add(db_user)
     db.commit()
@@ -193,8 +224,8 @@ def update_user_details(db: Session, user_id: int, user_update: schemas.UserUpda
     if user_update.phone is not None:
         db_user.phone = str(user_update.phone)
 
-    # ✅ Recalculate completion
-    db_user.profile_completion = calculate_completion(db_user)
+    # Recalculate completion
+    db_user.profile_completion = calculate_completion(db_user, db)
 
     db.commit()
     db.refresh(db_user)
@@ -358,6 +389,10 @@ def create_artwork(
         db.commit()
         db.refresh(db_artwork)
 
+        user.profile_completion = calculate_completion(user, db)
+        db.commit()
+        db.refresh(user)
+
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
@@ -368,6 +403,7 @@ def create_artwork(
     return {
         "message": "Artwork created successfully",
         "artwork": db_artwork,
+        "profile_completion": user.profile_completion
     }
 
 
@@ -805,6 +841,23 @@ def serialize_user(user: models.User):
         "profileImage": user.profileImage,
     }
 
+# def follow_user(db: Session, follower_id: str, followed_id: str):
+#     if follower_id == followed_id:
+#         raise ValueError("User cannot follow themselves.")
+
+#     follower = db.get(models.User, follower_id)
+#     followed = db.get(models.User, followed_id)
+
+#     if not follower or not followed:
+#         raise ValueError("User not found.")
+
+#     if follower.is_following(followed):
+#         return {"status": "already_following"}
+
+#     follower.follow(followed)
+#     db.commit()
+#     return {"status": "followed"}
+
 def follow_user(db: Session, follower_id: str, followed_id: str):
     if follower_id == followed_id:
         raise ValueError("User cannot follow themselves.")
@@ -816,12 +869,27 @@ def follow_user(db: Session, follower_id: str, followed_id: str):
         raise ValueError("User not found.")
 
     if follower.is_following(followed):
-        return {"status": "already_following"}
+        return {"status": "already_following", "profile_completion": follower.profile_completion}
 
-    follower.follow(followed)
-    db.commit()
-    return {"status": "followed"}
+    try:
+        # Add follow relationship
+        follower.follow(followed)
+        db.commit()
+        db.refresh(follower)
 
+        # Recalculate profile completion after follow
+        follower.profile_completion = calculate_completion(follower, db)
+        db.commit()
+        db.refresh(follower)
+
+    except Exception as e:
+        db.rollback()
+        raise e
+
+    return {
+        "status": "followed",
+        "profile_completion": follower.profile_completion
+    }
 
 def unfollow_user(db: Session, follower_id: str, followed_id: str):
     follower = db.get(models.User, follower_id)
@@ -922,63 +990,6 @@ def get_artworks_with_artist_filters(
 # -------------------------
 # HOME FEED OPERATIONS
 # -------------------------
-
-# def get_home_feed(db: Session, current_user, limit: int = 20):
-#     following_ids = [u.id for u in current_user.following]
-
-#     # 1️⃣ Artworks from following
-#     feed_artworks = (
-#         db.query(models.Artwork)
-#         .options(joinedload(models.Artwork.artist), 
-#                  joinedload(models.Artwork.likes),
-#                  joinedload(models.Artwork.images))
-#         .filter(models.Artwork.artistId.in_(following_ids))
-#         .order_by(func.random())
-#         .limit(limit)
-#         .all()
-#     )
-
-#     # 2️⃣ Preferred tags from liked artworks
-#     liked_tags = (
-#         db.query(models.Artwork.tags)
-#         .join(models.ArtworkLike, models.ArtworkLike.artworkId == models.Artwork.id)
-#         .filter(models.ArtworkLike.userId == current_user.id)
-#         .all()
-#     )
-
-#     preferred_tags = set()
-#     for tags_tuple in liked_tags:
-#         if isinstance(tags_tuple[0], list):
-#             preferred_tags.update(tags_tuple[0])
-#         elif isinstance(tags_tuple[0], str):
-#             preferred_tags.update([t.strip() for t in tags_tuple[0].split(",") if t.strip()])
-
-#     # 3️⃣ Recommended artworks (not from self or following)
-#     recommended_query = (
-#         db.query(models.Artwork)
-#         .options(joinedload(models.Artwork.artist), 
-#                  joinedload(models.Artwork.likes),
-#                  joinedload(models.Artwork.images))
-#         .filter(
-#             models.Artwork.artistId != current_user.id,
-#             ~models.Artwork.artistId.in_(following_ids)
-#         )
-#         .order_by(func.random())
-#     )
-
-#     if preferred_tags:
-#         tag_conditions = [
-#             func.json_contains(models.Artwork.tags, f'"{tag}"') for tag in preferred_tags
-#         ]
-#         recommended_query = recommended_query.filter(or_(*tag_conditions))
-
-#     recommended_artworks = recommended_query.limit(limit).all()
-
-#     # 4️⃣ Combine and slice to final limit if needed
-#     combined_feed = feed_artworks + recommended_artworks
-#     combined_feed = combined_feed[:limit]
-
-#     return combined_feed
 
 def get_home_feed(db: Session, current_user, limit: int = 20):
     following_ids = [u.id for u in current_user.following]
