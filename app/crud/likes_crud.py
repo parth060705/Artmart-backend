@@ -15,7 +15,7 @@ import cloudinary.uploader
 import random, string
 import re
 from sqlalchemy.exc import SQLAlchemyError
-from app.schemas.schemas import (likeArt) 
+from app.schemas.likes_schemas import (likeArt) 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
