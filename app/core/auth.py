@@ -70,3 +70,21 @@ def get_current_admin(token: str = Depends(oauth2_scheme), db: Session = Depends
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
 
+
+# HELPER CLASS FOR AUTHENTICATION BY TOKEN     USED IN (SPECIFIC ARTWORKS ROUTES, LIST ARTWORK)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login", auto_error=False)
+
+def get_current_user_optional(
+    token: Optional[str] = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    if not token:
+        return None
+    
+    try:
+        return get_current_user(token=token, db=db)
+    except HTTPException as e:
+        if e.status_code == 401:
+            return None
+        raise e
+
