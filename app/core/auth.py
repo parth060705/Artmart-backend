@@ -7,8 +7,10 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.models import User
-from app.crud import crud
 from app.models.models import RoleEnum
+
+# from app.crud import crud
+from app.crud import user_crud
 
 # JWT config (use environment vars in prod)
 SECRET_KEY = "your-secret-key"
@@ -48,7 +50,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    user = crud.get_user_by_username(db, username)
+    user = user_crud.get_user_by_username(db, username)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
@@ -61,7 +63,7 @@ def get_current_admin(token: str = Depends(oauth2_scheme), db: Session = Depends
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    user = crud.get_user_by_username(db, username)
+    user = user_crud.get_user_by_username(db, username)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     if user.role != RoleEnum.admin:

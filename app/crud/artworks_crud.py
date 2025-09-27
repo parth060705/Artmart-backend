@@ -1,22 +1,22 @@
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from fastapi import HTTPException, UploadFile
-from uuid import UUID
-from uuid import uuid4
+from uuid import UUID, uuid4
+# from uuid import uuid4
 from app.models import models
 from app.models.models import RoleEnum
-from app.schemas import schemas
+from app.schemas import artworks_schemas
 from passlib.context import CryptContext
 import cloudinary.uploader
 import cloudinary
 from typing import List, Optional, Dict
 from fastapi import UploadFile, HTTPException
 import cloudinary.uploader
-import random, string
-import re
+# import random, string
+# import re
 from sqlalchemy.exc import SQLAlchemyError
-from app.schemas.schemas import (likeArt) 
-from crud.user_crud import(calculate_completion)
+from app.schemas.artworks_schemas import (likeArt) 
+from app.crud.user_crud import(calculate_completion)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -36,7 +36,7 @@ MAX_FILE_SIZE_MB = 20
 
 def create_artwork(
     db: Session,
-    artwork_data: schemas.ArtworkCreate,
+    artwork_data: artworks_schemas.ArtworkCreate,
     user_id: UUID,
     files: List[UploadFile],
 ):
@@ -121,7 +121,7 @@ def update_artwork(
     db: Session,
     artwork_id: str,
     user_id: str,
-    artwork_update: schemas.ArtworkUpdate,
+    artwork_update: artworks_schemas.ArtworkUpdate,
      files: Optional[List[UploadFile]] = None  
 ):
     db_artwork = db.query(models.Artwork).filter(models.Artwork.id == artwork_id).first()

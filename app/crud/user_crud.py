@@ -1,21 +1,21 @@
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_ , and_, func, text
 from fastapi import HTTPException, UploadFile, File, status
-from uuid import UUID
-from uuid import uuid4
+from uuid import UUID, uuid4
+# from uuid import uuid4
 from app.models import models
 from app.models.models import RoleEnum
-from app.schemas import schemas
+from app.schemas import user_schema
 from passlib.context import CryptContext
 import cloudinary.uploader
 import cloudinary
-from typing import List, Optional, Dict
+# from typing import List, Optional, Dict
 from fastapi import UploadFile, HTTPException
 import cloudinary.uploader
 import random, string
 import re
-from sqlalchemy.exc import SQLAlchemyError
-from app.schemas.schemas import (likeArt) 
+# from sqlalchemy.exc import SQLAlchemyError
+# from app.schemas.likes_schemas import (likeArt) 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -175,7 +175,7 @@ def calculate_completion(user: models.User, db: Session) -> int:
 #---------------------
 
 # Create User (progressive registration)
-def create_user(db: Session, user: schemas.UserCreate):
+def create_user(db: Session, user: user_schema.UserCreate):
     hashed_password = pwd_context.hash(user.password)
 
     db_user = models.User(
@@ -203,7 +203,7 @@ def create_user(db: Session, user: schemas.UserCreate):
     return db_user
 
 # Update User (progressive registration)
-def update_user_details(db: Session, user_id: int, user_update: schemas.UserUpdate):
+def update_user_details(db: Session, user_id: int, user_update: user_schema.UserUpdate):
     db_user = db.query(models.User).filter(models.User.id == user_id).first()
     if not db_user:
         raise ValueError("User not found")

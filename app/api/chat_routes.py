@@ -1,6 +1,6 @@
 from fastapi import WebSocket, WebSocketDisconnect, APIRouter
 from typing import Dict
-from app.crud.crud import get_user_by_username
+from app.crud.user_crud import get_user_by_username
 from app.crud.chat_crud import create_message
 from app.database import get_db
 from app.schemas.chat_schemas import MessageCreate

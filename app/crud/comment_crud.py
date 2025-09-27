@@ -1,21 +1,21 @@
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_ , and_, func, text
-from fastapi import HTTPException, UploadFile, File, status
-from uuid import UUID
-from uuid import uuid4
+# from sqlalchemy import or_ , and_, func, text
+# from fastapi import HTTPException, UploadFile, File, status
+from uuid import UUID, uuid4
+# from uuid import uuid4
 from app.models import models
 from app.models.models import RoleEnum
-from app.schemas import schemas
+from app.schemas import comment_schemas
 from passlib.context import CryptContext
-import cloudinary.uploader
-import cloudinary
-from typing import List, Optional, Dict
-from fastapi import UploadFile, HTTPException
-import cloudinary.uploader
-import random, string
-import re
-from sqlalchemy.exc import SQLAlchemyError
-from app.schemas.schemas import (likeArt) 
+# import cloudinary.uploader
+# import cloudinary
+# from typing import List, Optional, Dict
+# from fastapi import UploadFile, HTTPException
+# import cloudinary.uploader
+# import random, string
+# import re
+# from sqlalchemy.exc import SQLAlchemyError
+# from app.schemas.schemas import (likeArt) 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

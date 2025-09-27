@@ -1,22 +1,22 @@
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_ , and_, func, text
-from fastapi import HTTPException, UploadFile, File, status
-from uuid import UUID
-from uuid import uuid4
+# from sqlalchemy import or_ , and_, func, text
+# from fastapi import HTTPException, UploadFile, File, status
+from uuid import UUID, uuid4
+# from uuid import uuid4
 from app.models import models
 from app.models.models import RoleEnum
-from app.schemas import schemas
+from app.schemas import order_schemas
 from passlib.context import CryptContext
-import cloudinary.uploader
-import cloudinary
-from typing import List, Optional, Dict
-from fastapi import UploadFile, HTTPException
-import cloudinary.uploader
-import random, string
-import re
+# import cloudinary.uploader
+# import cloudinary
+# from typing import List, Optional, Dict
+# from fastapi import UploadFile, HTTPException
+# import cloudinary.uploader
+# import random, string
+# import re
 from sqlalchemy.exc import SQLAlchemyError
-from app.schemas.likes_schemas import (likeArt)
-from crud.user_crud import(calculate_completion)
+# from app.schemas.likes_schemas import (likeArt)
+# from crud.user_crud import(calculate_completion)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -24,7 +24,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # ORDER OPERATIONS
 # -------------------------
 
-def create_order(db: Session, order_data: schemas.OrderCreate, user_id: UUID):
+def create_order(db: Session, order_data: order_schemas.OrderCreate, user_id: UUID):
     db_order = models.Order(
         artworkId=str(order_data.artworkId),
         totalAmount=order_data.totalAmount,

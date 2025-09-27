@@ -1,22 +1,22 @@
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_ , and_, func, text
-from fastapi import HTTPException, UploadFile, File, status
-from uuid import UUID
-from uuid import uuid4
+# from fastapi import HTTPException, UploadFile, File, status
+from uuid import UUID, uuid4
+# from uuid import uuid4
 from app.models import models
 from app.models.models import RoleEnum
-from app.schemas import schemas
+from app.schemas import artworks_schemas
 from passlib.context import CryptContext
-import cloudinary.uploader
-import cloudinary
+# import cloudinary.uploader
+# import cloudinary
 from typing import List, Optional, Dict
-from fastapi import UploadFile, HTTPException
-import cloudinary.uploader
-import random, string
-import re
-from sqlalchemy.exc import SQLAlchemyError
-from app.schemas.schemas import (likeArt)
-from crud.user_crud import(calculate_completion)
+# from fastapi import UploadFile, HTTPException
+# import cloudinary.uploader
+# import random, string
+# import re
+# from sqlalchemy.exc import SQLAlchemyError
+# from app.schemas.likes_schemas import (likeArt)
+# from crud.user_crud import(calculate_completion)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -25,7 +25,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 #  RECOMMENDATION ENDPOINTS
 # -------------------------
 
-def get_recommendation(db: Session, artwork_id: UUID, limit: int = 10) -> List[schemas.ArtworkRead]:
+def get_recommendation(db: Session, artwork_id: UUID, limit: int = 10) -> List[artworks_schemas.ArtworkRead]:
     target_artwork = db.query(models.Artwork)\
     .options(joinedload(models.Artwork.artist),
              joinedload(models.Artwork.likes),
@@ -71,6 +71,6 @@ def get_recommendation(db: Session, artwork_id: UUID, limit: int = 10) -> List[s
     results = query.order_by(func.random()).limit(limit).all()
 
     # Convert to Pydantic schemas
-    return [schemas.ArtworkRead.model_validate(art) for art in results]
+    return [artworks_schemas.ArtworkRead.model_validate(art) for art in results]
 
 
