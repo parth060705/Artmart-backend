@@ -7,7 +7,7 @@ from app.database import get_db
 from app.core.auth import get_current_admin
 from app.models.models import User
 from app.schemas.user_schema import UserCreate, UserBaseAdmin, UserUpdateAdmin, DeleteMessageUser
-from app.schemas.artworks_schemas import ArtworkAdmin, ArtworkRead, ArtworkDelete
+from app.schemas.artworks_schemas import ArtworkAdmin, ArtworkRead, ArtworkDelete, ArtworkUpdate
 from app.schemas.order_schemas import OrderRead, OrderDelete
 from app.schemas.follow_schemas import FollowFollowers
 
@@ -98,7 +98,7 @@ def update_artwork(
         if isinstance(f, UploadFile) and f.filename and f.content_type != "application/octet-stream"
     ]
 
-    artwork_update = admin_crud.ArtworkUpdate(
+    artwork_update = ArtworkUpdate(
         title=title,
         description=description,
         category=category,
