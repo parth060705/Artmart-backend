@@ -37,7 +37,7 @@ class MessageOut(BaseModel):
     sender_id: str
     receiver_id: str
     content: Optional[str] = None
-    timestamp: datetime
+    timestamp: Optional[datetime]
     is_read: bool = False
     action: ChatAction = "message"
     message_type: str = "text"

@@ -4,12 +4,22 @@ from app.models.models import Message
 from app.schemas.chat_schemas import MessageCreate
 from datetime import datetime
 
+
+# -------------------------
+# CHAT HELPERS
+# -------------------------
+
 def create_message(db: Session, sender_id: str, msg: MessageCreate) -> Message:
+    if isinstance(msg.timestamp, str):
+        timestamp = datetime.fromisoformat(msg.timestamp)
+    else:
+        timestamp = msg.timestamp or datetime.utcnow()  # fallback if not provided
+
     message = Message(
         sender_id=sender_id,
         receiver_id=msg.receiver_id,
         content=msg.content,
-        timestamp=datetime.utcnow(),
+        timestamp=timestamp,
         message_type="text",
     )
     db.add(message)

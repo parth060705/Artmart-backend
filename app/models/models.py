@@ -267,7 +267,8 @@ class Message(Base):
     sender_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     receiver_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     content = Column(Text, nullable=True)  # Can be empty for typing
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    # timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, nullable=False)
     is_read = Column(Boolean, default=False)
     message_type = Column(String(20), default="text")  # "text", "typing", etc.
 
