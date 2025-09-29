@@ -93,7 +93,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 
-
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -129,7 +128,7 @@ def prepare_tag_matrix(db: Session):
 
 
 # -------------------------
-# Get Recommended Artwork IDs
+# Get Recommended Artwork IDs (Content-Based)
 # -------------------------
 def get_tag_recommendations(db: Session, current_user, n=20):
     df_artworks, tag_matrix = prepare_tag_matrix(db)
@@ -145,7 +144,6 @@ def get_tag_recommendations(db: Session, current_user, n=20):
     liked_indices = df_artworks[
         df_artworks["artwork_id"].isin(liked_artworks)
     ].index.tolist()
-
     if not liked_indices:
         return []
 
@@ -167,12 +165,12 @@ def get_tag_recommendations(db: Session, current_user, n=20):
 
 
 # -------------------------
-# Home Feed with Recommendations (No Duplicates)
+# Home Feed with Recommendations (No Duplicates, Exclude Self)
 # -------------------------
 def get_home_feed(db: Session, current_user, limit: int = 10):
     following_ids = [u.id for u in current_user.following]
 
-    # 1️⃣ Feed from followed artists
+    # 1️⃣ Feed from followed artists (exclude self)
     feed_artworks = (
         db.query(models.Artwork)
         .options(
@@ -180,7 +178,10 @@ def get_home_feed(db: Session, current_user, limit: int = 10):
             joinedload(models.Artwork.likes),
             joinedload(models.Artwork.images),
         )
-        .filter(models.Artwork.artistId.in_(following_ids))
+        .filter(
+            models.Artwork.artistId.in_(following_ids),
+            models.Artwork.artistId != current_user.id
+        )
         .order_by(func.random())
         .limit(limit)
         .all()
@@ -188,7 +189,7 @@ def get_home_feed(db: Session, current_user, limit: int = 10):
 
     seen_ids = {art.id for art in feed_artworks}
 
-    # 2️⃣ Content-based recommendations (fetch more for deduplication)
+    # 2️⃣ Content-based recommendations (exclude self)
     rec_ids = get_tag_recommendations(db, current_user, n=limit * 2)
     recommended_artworks = []
     if rec_ids:
@@ -199,7 +200,10 @@ def get_home_feed(db: Session, current_user, limit: int = 10):
                 joinedload(models.Artwork.likes),
                 joinedload(models.Artwork.images),
             )
-            .filter(models.Artwork.id.in_(rec_ids))
+            .filter(
+                models.Artwork.id.in_(rec_ids),
+                models.Artwork.artistId != current_user.id
+            )
             .all()
         )
 
@@ -209,7 +213,6 @@ def get_home_feed(db: Session, current_user, limit: int = 10):
         if art.id not in seen_ids:
             combined_feed.append(art)
             seen_ids.add(art.id)
-
         if len(combined_feed) >= limit:
             break
 
