@@ -15,7 +15,7 @@ from app.schemas.artworks_schemas import ArtworkRead, ArtworkCategory, ArtworkAr
 from app.schemas.review_schemas import ReviewRead
 from app.schemas.likes_schemas import LikeCountResponse
 from app.schemas.comment_schemas import CommentRead
-from app.core.smtp import send_otp_email
+from app.core.smtp_otp import send_otp_email
 from fastapi import BackgroundTasks
 from app.crud import user_crud, search_crud, artworks_crud, recmmendation_crud,review_crud, likes_crud, comment_crud
 from passlib.context import CryptContext
