@@ -102,10 +102,9 @@ from app.models import models
 from app.schemas.artworks_schemas import likeArt
 
 # -------------------------
-# Train / Prepare Tag Matrix
+# Prepare Tag Matrix
 # -------------------------
 def prepare_tag_matrix(db: Session):
-    # Get all artworks and tags
     artworks_data = (
         db.query(models.Artwork.id, models.Artwork.tags)
         .filter(models.Artwork.isDeleted == False)
@@ -115,111 +114,104 @@ def prepare_tag_matrix(db: Session):
         return None, None
 
     df_artworks = pd.DataFrame(artworks_data, columns=["artwork_id", "tags"])
-    # Convert tags to comma-separated string
     df_artworks["tags"] = df_artworks["tags"].apply(
         lambda x: ",".join(x) if isinstance(x, list) else ""
     )
 
-    # TF-IDF vectorization of tags
     tfidf = TfidfVectorizer(token_pattern=r"(?u)\b\w+\b")
     tag_matrix = tfidf.fit_transform(df_artworks["tags"])
 
     return df_artworks, tag_matrix
 
-
 # -------------------------
-# Get Recommended Artwork IDs (Content-Based)
+# Get Recommended Artwork IDs (tags-based)
 # -------------------------
-def get_tag_recommendations(db: Session, current_user, n=20):
+def get_tag_recommendations(db: Session, current_user, n=10):
     df_artworks, tag_matrix = prepare_tag_matrix(db)
     if df_artworks is None:
         return []
 
-    # Get artworks liked by user
     liked_artworks = [like.artworkId for like in current_user.liked_artworks]
     if not liked_artworks:
-        return []  # no likes yet
+        return []
 
-    # Get indices of liked artworks
-    liked_indices = df_artworks[
-        df_artworks["artwork_id"].isin(liked_artworks)
-    ].index.tolist()
+    liked_indices = df_artworks[df_artworks["artwork_id"].isin(liked_artworks)].index.tolist()
     if not liked_indices:
         return []
 
-    # Compute similarity between liked artworks and all artworks
     similarity = cosine_similarity(tag_matrix[liked_indices], tag_matrix)
-    # Average similarity across liked artworks
     mean_similarity = similarity.mean(axis=0)
 
-    # Sort and pick top N most similar (excluding already liked artworks)
     df_artworks["score"] = mean_similarity
-    recommendations = df_artworks[
-        ~df_artworks["artwork_id"].isin(liked_artworks)
-    ]
-    recommendations = recommendations.sort_values(
-        by="score", ascending=False
-    ).head(n)
+    recommendations = df_artworks[~df_artworks["artwork_id"].isin(liked_artworks)]
+    recommendations = recommendations.sort_values(by="score", ascending=False).head(n)
 
     return recommendations["artwork_id"].tolist()
 
+# -------------------------
+# Home Feed (6 followings + 4 tag-based)
+# -------------------------
+def get_home_feed(db: Session, current_user):
+    LIMIT_FOLLOWING = 6
+    LIMIT_TAGS = 4
 
-# -------------------------
-# Home Feed with Recommendations (No Duplicates, Exclude Self)
-# -------------------------
-def get_home_feed(db: Session, current_user, limit: int = 10):
     following_ids = [u.id for u in current_user.following]
 
-    # 1️⃣ Feed from followed artists (exclude self)
+    # 1️⃣ Fetch from followed artists (exclude self)
     feed_artworks = (
         db.query(models.Artwork)
-        .options(
-            joinedload(models.Artwork.artist),
-            joinedload(models.Artwork.likes),
-            joinedload(models.Artwork.images),
-        )
-        .filter(
-            models.Artwork.artistId.in_(following_ids),
-            models.Artwork.artistId != current_user.id
-        )
+        .options(joinedload(models.Artwork.artist),
+                 joinedload(models.Artwork.likes),
+                 joinedload(models.Artwork.images))
+        .filter(models.Artwork.artistId.in_(following_ids),
+                models.Artwork.artistId != current_user.id)
         .order_by(func.random())
-        .limit(limit)
+        .limit(LIMIT_FOLLOWING)
         .all()
     )
 
     seen_ids = {art.id for art in feed_artworks}
 
-    # 2️⃣ Content-based recommendations (exclude self)
-    rec_ids = get_tag_recommendations(db, current_user, n=limit * 2)
+    # 2️⃣ Fetch tag-based recommendations (exclude already seen and self)
+    rec_ids = get_tag_recommendations(db, current_user, n=LIMIT_TAGS * 2)
     recommended_artworks = []
     if rec_ids:
         recommended_artworks = (
             db.query(models.Artwork)
-            .options(
-                joinedload(models.Artwork.artist),
-                joinedload(models.Artwork.likes),
-                joinedload(models.Artwork.images),
-            )
-            .filter(
-                models.Artwork.id.in_(rec_ids),
-                models.Artwork.artistId != current_user.id
-            )
+            .options(joinedload(models.Artwork.artist),
+                     joinedload(models.Artwork.likes),
+                     joinedload(models.Artwork.images))
+            .filter(models.Artwork.id.in_(rec_ids),
+                    models.Artwork.artistId != current_user.id,
+                    ~models.Artwork.id.in_(seen_ids))
+            .limit(LIMIT_TAGS)
             .all()
         )
 
-    # 3️⃣ Combine feed without duplicates
-    combined_feed = []
-    for art in feed_artworks + recommended_artworks:
-        if art.id not in seen_ids:
-            combined_feed.append(art)
-            seen_ids.add(art.id)
-        if len(combined_feed) >= limit:
-            break
+    # 3️⃣ Combine feed
+    combined_feed = feed_artworks + recommended_artworks
+    seen_ids.update({art.id for art in combined_feed})
 
-    # 4️⃣ Add like count and cart info
+    # 4️⃣ Fill remaining slots with random artworks (if still less than 10)
+    remaining_slots = 10 - len(combined_feed)
+    if remaining_slots > 0:
+        additional_artworks = (
+            db.query(models.Artwork)
+            .options(joinedload(models.Artwork.artist),
+                     joinedload(models.Artwork.likes),
+                     joinedload(models.Artwork.images))
+            .filter(models.Artwork.artistId != current_user.id,
+                    ~models.Artwork.id.in_(seen_ids))
+            .order_by(func.random())
+            .limit(remaining_slots)
+            .all()
+        )
+        combined_feed += additional_artworks
+
+    # 5️⃣ Add like count and cart info
     cart_artwork_ids = {item.artworkId for item in current_user.cart_items}
     for artwork in combined_feed:
         artwork.how_many_like = likeArt(like_count=len(artwork.likes))
         artwork.isInCart = artwork.id in cart_artwork_ids
 
-    return combined_feed
+    return combined_feed[:10]
