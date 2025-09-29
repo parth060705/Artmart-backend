@@ -6,7 +6,7 @@ from uuid import UUID
 from app.database import get_db
 from app.core.auth import get_current_user
 from app.models.models import User
-from app.schemas.user_schema import UserRead, UserUpdate, ProfileImageResponse
+from app.schemas.user_schema import UserRead, UserUpdate, ProfileImageResponse, ChangePasswordSchema
 from app.schemas.artworks_schemas import ArtworkMe, ArtworkCreateResponse, ArtworkRead, ArtworkDelete, ArtworkCreate, ArtworkUpdate
 from app.schemas.likes_schemas import LikeCountResponse, HasLikedResponse
 from app.schemas.comment_schemas import CommentCreate
@@ -28,13 +28,12 @@ user_router = APIRouter(
 )
 
 # -------------------------
-# USER PROFILE
+# USER 
 # -------------------------
 
 @user_router.get("/me", response_model=UserRead)
 def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
-
 
 @user_router.patch("/update/users/me", response_model=UserRead)
 def update_current_user(
@@ -78,6 +77,19 @@ def update_profile_image(
 @user_router.get("/artworks/me", response_model=List[ArtworkMe])
 def read_my_artworks(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return artworks_crud.get_artworks_by_user(db, user_id=current_user.id)
+
+@user_router.post("/change-password")
+def change_password(
+    data: ChangePasswordSchema,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    result = user_crud.change_user_password(db, current_user, data.old_password, data.new_password)
+    
+    if not result["success"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=result["detail"])
+    
+    return {"message": result["detail"]}
 
 # -------------------------
 # ARTWORKS

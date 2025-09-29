@@ -3,20 +3,24 @@ from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.orm import Session, subqueryload
 from typing import List, Optional
 from uuid import UUID
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from app.database import get_db
 from app.core import auth
 from app.core.auth import get_current_user_optional
 from app.models import models
 from app.models.models import User
-from app.schemas.user_schema import UserCreate, UserRead, UserSearch, Token
+from app.schemas.user_schema import UserCreate, UserRead, UserSearch, Token, ResetPasswordWithOTPSchema
 from app.schemas.artworks_schemas import ArtworkRead, ArtworkCategory, ArtworkArtist
 from app.schemas.review_schemas import ReviewRead
 from app.schemas.likes_schemas import LikeCountResponse
 from app.schemas.comment_schemas import CommentRead
+from app.core.smtp import send_otp_email
+from fastapi import BackgroundTasks
+from app.crud import user_crud, search_crud, artworks_crud, recmmendation_crud,review_crud, likes_crud, comment_crud
+from passlib.context import CryptContext
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-from app.crud import user_crud, search_crud, artworks_crud, recmmendation_crud, review_crud, likes_crud, comment_crud
 
 router = APIRouter(
     tags=["public"]
@@ -95,6 +99,76 @@ def read_user(user_id: UUID, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+# @router.post("/forgot-password")
+# def forgot_password(email: str, db: Session = Depends(get_db), background_tasks: BackgroundTasks = None ):
+
+#     user = db.query(User).filter(User.email == email).first()
+#     if not user:
+#         return {"message": "If this email exists, an OTP has been sent"}
+
+#     otp = user_crud.generate_otp()
+#     expires_at = datetime.utcnow() + timedelta(minutes=10)  # OTP valid for 10 min
+#     user_crud.otp_store[email] = {"otp": otp, "expires_at": expires_at}
+
+#     # TODO: Send OTP via email (SMTP/SendGrid/etc.)
+#     print(f"[DEBUG] OTP for {email}: {otp}")
+#     # Send OTP in background
+#     background_tasks.add_task(send_otp_email, email, otp)
+
+#     return {"message": "If this email exists, an OTP has been sent"}
+
+# @router.post("/reset-password")
+# def reset_password_with_otp(data: ResetPasswordWithOTPSchema, db: Session = Depends(get_db)):
+
+#     # Check OTP existence and validity
+#     record = user_crud.otp_store.get(data.email)
+#     if not record:
+#         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+#     if record["otp"] != data.otp:
+#         raise HTTPException(status_code=400, detail="Invalid OTP")
+#     if record["expires_at"] < datetime.utcnow():
+#         del user_crud.otp_store[data.email]
+#         raise HTTPException(status_code=400, detail="OTP expired")
+
+#     # Find user
+#     user = db.query(User).filter(User.email == data.email).first()
+#     if not user:
+#         raise HTTPException(status_code=404, detail="User not found")
+
+#     # Validate password strength
+#     user_crud.validate_password_strength(data.new_password)
+
+#     # Update password
+#     user.passwordHash = pwd_context.hash(data.new_password)
+#     db.commit()
+#     db.refresh(user)
+
+#     # Remove OTP after successful use
+#     del user_crud.otp_store[data.email]
+
+#     return {"message": "Password updated successfully"}
+
+@router.post("/forgot-password")
+def forgot_password(
+    email: str,
+    db: Session = Depends(get_db),
+    background_tasks: BackgroundTasks = None
+):
+    otp = user_crud.forgot_password(db, email)
+    if otp:
+        # Print OTP for debug/testing
+        print(f"[DEBUG] OTP for {email}: {otp}")
+        if background_tasks:
+            background_tasks.add_task(send_otp_email, email, otp)
+
+    return {"message": "If this email exists, an OTP has been sent"}
+
+
+@router.post("/reset-password")
+def reset_password(data: ResetPasswordWithOTPSchema, db: Session = Depends(get_db)):
+    user_crud.reset_password(db, email=data.email, otp=data.otp, new_password=data.new_password)
+    return {"message": "Password updated successfully"}
 
 # -------------------------
 # ARTWORK (Public)

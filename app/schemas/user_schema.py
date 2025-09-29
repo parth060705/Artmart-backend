@@ -127,3 +127,12 @@ class UserSearch(BaseModel):
    
     class Config:
         from_attributes = True
+
+class ResetPasswordWithOTPSchema(BaseModel): # for password reset
+    email: str
+    otp: str
+    new_password: str        
+
+class ChangePasswordSchema(BaseModel):
+    old_password: str
+    new_password: str    

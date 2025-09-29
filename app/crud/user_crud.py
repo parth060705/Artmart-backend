@@ -16,21 +16,16 @@ import random, string
 import re
 # from sqlalchemy.exc import SQLAlchemyError
 # from app.schemas.likes_schemas import (likeArt) 
+from datetime import datetime, timedelta
+import random
+from app.models.models import User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 
 # -------------------------
 # USER OPERATIONS
 # -------------------------
-
-def get_user_by_email(db: Session, email: str):
-    return db.query(models.User).filter(models.User.email == email).first()
-
-def get_user(db: Session, user_id: UUID):
-    return db.query(models.User).filter(models.User.id == str(user_id)).first()
-
-def get_user_by_username(db: Session, username: str):
-    return db.query(models.User).filter(models.User.username == username).first()
 
 #-------------HELPER CLASS FOR USER REGISTER------------------
 
@@ -76,25 +71,7 @@ def suggest_usernames(db: Session, base_username: str, max_suggestions: int = 5)
             suggestions.append(candidate)
     return suggestions
 
-# # 3)HELPER CLASS FOR FLOW REGISTER
-# def calculate_completion(user) -> int:
-#     completion = 0
-
-#     # Part 1 (40%) → Basic Info
-#     if user.name and user.username and user.passwordHash:
-#         completion += 40
-
-#     # Part 2 (30%) → Bio details
-#     if user.bio and user.gender and user.age:
-#         completion += 30
-
-#     # Part 3 (30%) → Contact info
-#     if user.location and user.pincode and user.phone:
-#         completion += 30
-
-#     return completion
-
-
+# 3)HELPER CLASS FOR REGISTERATION FLOW
 def calculate_completion(user: models.User, db: Session) -> int:
     completion = 0
 
@@ -124,55 +101,20 @@ def calculate_completion(user: models.User, db: Session) -> int:
 
     return min(completion, 100)
 
-#---------------------------------------------------------------------------------------------
+# 3)HELPER CLASS FOR EMAIL OTP RESET PASSWORD
+otp_store = {} # Temporary in-memory OTP store in production store it in redis # {email: {"otp": "123456", "expires_at": datetime}}
 
-# def create_user(db: Session, user: schemas.UserCreate):
-#     hashed_password = pwd_context.hash(user.password)
+def generate_otp(length: int = 6):
+    return ''.join(random.choices("0123456789", k=length))
 
-#     db_user = models.User(
-#         name=user.name,
-#         email=user.email,
-#         username=user.username,
-#         passwordHash=hashed_password,
-#         role=models.RoleEnum.user,
-#         profileImage=str(user.profileImage) if user.profileImage else None,
-#         location=user.location,
-#         gender=user.gender,
-#         bio=user.bio,
-#         age=user.age,
-#         phone=str(user.phone) if user.phone else None,
-#         pincode=str(user.pincode) if user.pincode else None,
-#         isAgreedtoTC=user.isAgreedtoTC
-#     )
-#     db.add(db_user)
-#     db.commit()
-#     db.refresh(db_user)
-#     return db_user
+def get_user_by_email(db: Session, email: str):
+    return db.query(models.User).filter(models.User.email == email).first()
 
+def get_user(db: Session, user_id: UUID):
+    return db.query(models.User).filter(models.User.id == str(user_id)).first()
 
-# def update_user_details(db: Session, user_id: int, user_update: schemas.UserUpdate):
-#     db_user = db.query(models.User).filter(models.User.id == user_id).first()
-#     if not db_user:
-#         raise ValueError("User not found")
-#     if user_update.name is not None:
-#         db_user.name = user_update.name
-#     if user_update.location is not None:
-#         db_user.location = user_update.location
-#     if user_update.gender is not None:
-#         db_user.gender = user_update.gender
-#     if user_update.age is not None:
-#         db_user.age = user_update.age
-#     if user_update.bio is not None:
-#         db_user.bio = user_update.bio    
-#     if user_update.pincode is not None:
-#         db_user.pincode = str(user_update.pincode)
-#     if user_update.phone is not None:
-#         db_user.phone = str(user_update.phone)
-#     db.commit()
-#     db.refresh(db_user)
-#     return db_user
-
-#---------------------
+def get_user_by_username(db: Session, username: str):
+    return db.query(models.User).filter(models.User.username == username).first()
 
 # Create User (progressive registration)
 def create_user(db: Session, user: user_schema.UserCreate):
@@ -230,9 +172,6 @@ def update_user_details(db: Session, user_id: int, user_update: user_schema.User
     db.commit()
     db.refresh(db_user)
     return db_user
-#---------------------
-
-#----------------------------------------------------------------------------------
 
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/svg+xml"}
 def upload_image_to_cloudinary(file: UploadFile):
@@ -312,3 +251,58 @@ def update_user_profile_image(db: Session, user_id: UUID, file: UploadFile):
         "message": "Profile image uploaded successfully",
         "profileImage": user.profileImage
     }
+
+# for forgot password
+def forgot_password(db: Session, email: str):
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        return  # Do not reveal if email exists
+
+    otp = generate_otp()
+    expires_at = datetime.utcnow() + timedelta(minutes=10)
+    otp_store[email] = {"otp": otp, "expires_at": expires_at}
+    return otp  # Routes will handle sending email
+
+def reset_password(db: Session, email: str, otp: str, new_password: str):
+    # Check OTP
+    record = otp_store.get(email)
+    if not record:
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+    if record["otp"] != otp:
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+    if record["expires_at"] < datetime.utcnow():
+        del otp_store[email]
+        raise HTTPException(status_code=400, detail="OTP expired")
+
+    # Get user
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Validate new password
+    validate_password_strength(new_password)
+
+    # Update password
+    user.passwordHash = pwd_context.hash(new_password)
+    db.commit()
+    db.refresh(user)
+
+    # Remove OTP
+    del otp_store[email]
+    return user
+
+# for change password
+def change_user_password(db: Session, user: User, old_password: str, new_password: str):
+    # Verify old password
+    if not pwd_context.verify(old_password, user.passwordHash):
+        return {"success": False, "detail": "Old password is incorrect"}
+
+    # Validate new password strength
+    validate_password_strength(new_password)
+
+    # Update password
+    user.passwordHash = pwd_context.hash(new_password)
+    db.commit()
+    db.refresh(user)
+
+    return {"success": True, "detail": "Password changed successfully"}
