@@ -171,6 +171,35 @@ def reset_password(data: ResetPasswordWithOTPSchema, db: Session = Depends(get_d
     return {"message": "Password updated successfully"}
 
 # -------------------------
+# SEARCH
+# -------------------------
+
+@router.get("/search/artworks", response_model=List[ArtworkRead])
+def search_artworks(query: str = Query(..., min_length=2), db: Session = Depends(get_db)):
+    return search_crud.search_artworks(db, query)
+
+
+@router.get("/search/user", response_model=List[UserSearch])
+def search_users(query: str = Query(..., min_length=2), db: Session = Depends(get_db)):
+    return search_crud.search_users(db, query)
+
+
+@router.get("/artworks/category/{category}", response_model=List[ArtworkCategory])
+def read_artworks_by_category(category: str, db: Session = Depends(get_db)):
+    return search_crud.get_artworks_by_category(db, category)
+
+
+@router.get("/artworks/filter", response_model=List[ArtworkRead])
+def get_artworks_with_filters(
+    title: Optional[str] = None, price: Optional[float] = None, category: Optional[str] = None,
+    artist_name: Optional[str] = None, location: Optional[str] = None, tags: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    return search_crud.get_artworks_with_artist_filters(db, title=title, price=price,
+                                                        category=category, artist_name=artist_name,
+                                                        location=location, tags=tags)
+
+# -------------------------
 # ARTWORK (Public)
 # -------------------------
 
@@ -234,35 +263,6 @@ def get_user_artworks(user_id: UUID, db: Session = Depends(get_db)):
     return artworks_crud.get_artworks_by_user(db, user_id=user_id)
 
 # -------------------------
-# SEARCH
-# -------------------------
-
-@router.get("/search/artworks", response_model=List[ArtworkRead])
-def search_artworks(query: str = Query(..., min_length=2), db: Session = Depends(get_db)):
-    return search_crud.search_artworks(db, query)
-
-
-@router.get("/search/user", response_model=List[UserSearch])
-def search_users(query: str = Query(..., min_length=2), db: Session = Depends(get_db)):
-    return search_crud.search_users(db, query)
-
-
-@router.get("/artworks/category/{category}", response_model=List[ArtworkCategory])
-def read_artworks_by_category(category: str, db: Session = Depends(get_db)):
-    return search_crud.get_artworks_by_category(db, category)
-
-
-@router.get("/artworks/filter", response_model=List[ArtworkRead])
-def get_artworks_with_filters(
-    title: Optional[str] = None, price: Optional[float] = None, category: Optional[str] = None,
-    artist_name: Optional[str] = None, location: Optional[str] = None, tags: Optional[str] = None,
-    db: Session = Depends(get_db)
-):
-    return search_crud.get_artworks_with_artist_filters(db, title=title, price=price,
-                                                        category=category, artist_name=artist_name,
-                                                        location=location, tags=tags)
-
-# -------------------------
 # REVIEWS (Public)
 # -------------------------
 
@@ -275,7 +275,7 @@ def get_reviews_for_artwork(artwork_id: UUID, db: Session = Depends(get_db)):
 # -------------------------
 
 @router.get("/recommend/{artwork_id}", response_model=List[ArtworkRead])
-def recommendation_engine(artwork_id: UUID, db: Session = Depends(get_db)):
+def recommendation_engine(artwork_id: str, db: Session = Depends(get_db)):
     return recmmendation_crud.get_recommendation(db, artwork_id=artwork_id)
 
 # -------------------------

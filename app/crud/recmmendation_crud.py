@@ -25,32 +25,47 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 #  RECOMMENDATION ENDPOINTS
 # -------------------------
 
-def get_recommendation(db: Session, artwork_id: UUID, limit: int = 10) -> List[artworks_schemas.ArtworkRead]:
-    target_artwork = db.query(models.Artwork)\
-    .options(joinedload(models.Artwork.artist),
-             joinedload(models.Artwork.likes),
-             joinedload(models.Artwork.images))\
-    .filter(models.Artwork.id == artwork_id, models.Artwork.isDeleted == False)\
-    .first()
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import or_, func
+from uuid import UUID
+from typing import List
+from app.models import models
+from app.schemas.artworks_schemas import ArtworkRead
 
+def get_recommendation(db: Session, artwork_id: UUID, limit: int = 10) -> List[ArtworkRead]:
+    """
+    Get recommended artworks based on title, category, and tags of the target artwork.
+    Excludes the target artwork itself.
+    """
+    # Convert UUID to string since DB column is String(36)
+    artwork_id_str = str(artwork_id)
+
+    # Fetch target artwork
+    target_artwork = db.query(models.Artwork)\
+        .options(joinedload(models.Artwork.artist),
+                 joinedload(models.Artwork.likes),
+                 joinedload(models.Artwork.images))\
+        .filter(models.Artwork.id == artwork_id_str,
+                models.Artwork.isDeleted == False)\
+        .first()
 
     if not target_artwork:
-        print("❌ No target artwork found")
+        print(f"❌ No target artwork found for ID: {artwork_id_str}")
         return []
 
     filters = []
 
-    # Title filter
+    # 1️⃣ Title filter: match words in title
     if target_artwork.title:
         words = [w.strip() for w in target_artwork.title.split() if w.strip()]
         if words:
             filters.append(or_(*[models.Artwork.title.ilike(f"%{w}%") for w in words]))
 
-    # Category filter
+    # 2️⃣ Category filter
     if target_artwork.category:
         filters.append(models.Artwork.category.ilike(target_artwork.category))
 
-    # Tags filter
+    # 3️⃣ Tags filter
     preferred_tags = set()
     if target_artwork.tags:
         if isinstance(target_artwork.tags, list):
@@ -63,14 +78,19 @@ def get_recommendation(db: Session, artwork_id: UUID, limit: int = 10) -> List[a
         tag_filters = [models.Artwork.tags.ilike(f"%{tag}%") for tag in preferred_tags]
         filters.append(or_(*tag_filters))
 
-    # Query other artworks excluding the target
-    query = db.query(models.Artwork).filter(models.Artwork.id != artwork_id)
+    # 4️⃣ Query other artworks excluding the target
+    query = db.query(models.Artwork)\
+        .options(joinedload(models.Artwork.artist),
+                 joinedload(models.Artwork.likes),
+                 joinedload(models.Artwork.images))\
+        .filter(models.Artwork.id != artwork_id_str,
+                models.Artwork.isDeleted == False)
+
     if filters:
         query = query.filter(or_(*filters))
 
+    # 5️⃣ Randomize results and limit
     results = query.order_by(func.random()).limit(limit).all()
 
-    # Convert to Pydantic schemas
-    return [artworks_schemas.ArtworkRead.model_validate(art) for art in results]
-
-
+    # 6️⃣ Convert to Pydantic schema
+    return [ArtworkRead.model_validate(art) for art in results]
