@@ -24,7 +24,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # HOME FEED OPERATIONS
 # -------------------------
 
-def get_home_feed(db: Session, current_user, limit: int = 20):
+def get_home_feed(db: Session, current_user, limit: int = 10):
     following_ids = [u.id for u in current_user.following]
 
     # Query artworks from following
