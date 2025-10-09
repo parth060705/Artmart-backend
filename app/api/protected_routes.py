@@ -5,7 +5,7 @@ from uuid import UUID
 
 from app.database import get_db
 from app.core.auth import get_current_user
-from app.models.models import User
+from app.models.models import User, ArtistReview
 from app.schemas.user_schema import UserRead, UserUpdate, ProfileImageResponse, ChangePasswordSchema
 from app.schemas.artworks_schemas import ArtworkMe, ArtworkCreateResponse, ArtworkRead, ArtworkDelete, ArtworkCreate, ArtworkUpdate
 from app.schemas.likes_schemas import LikeCountResponse, HasLikedResponse
@@ -15,11 +15,12 @@ from app.schemas.saved_schemas import SavedCreatePublic, SavedRead, SavedCreate
 from app.schemas.cart_schemas import CartCreatePublic, CartRead, CartCreate
 from app.schemas.review_schemas import ReviewCreate, ReviewRead
 from app.schemas.follow_schemas import FollowList, FollowStatus
+from app.schemas.artistreview_schemas import ArtistReviewRead, ArtistReviewCreate
 
 from app.crud import (
     user_crud, artworks_crud, likes_crud, comment_crud,
     orders_crud, saved_crud, cart_crud, homefeed_crud,
-    follow_crud, review_crud
+    follow_crud, review_crud, artistreview_crud
 )
 
 user_router = APIRouter(
@@ -206,6 +207,27 @@ def get_my_orders(current_user: User = Depends(get_current_user), db: Session = 
 @user_router.post("/reviews", response_model=ReviewRead)
 def create_review(review: ReviewCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return review_crud.create_review(db, review, user_id=current_user.id)
+
+# -------------------------
+# ARTIST REVIEWS
+# -------------------------
+
+@user_router.post("/artistreview", response_model=ArtistReviewRead, status_code=status.HTTP_201_CREATED)
+def post_artist_review(
+    item: ArtistReviewCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Prevent users from reviewing themselves
+    if current_user.id == str(item.artistId):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot review yourself."
+        )
+
+    # Use CRUD function
+    db_review = artistreview_crud.create_artist_review(db, item, current_user.id)
+    return db_review
 
 # -------------------------
 # SAVED

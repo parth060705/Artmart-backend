@@ -10,14 +10,17 @@ from app.core import auth
 from app.core.auth import get_current_user_optional
 from app.models import models
 from app.models.models import User
+
 from app.schemas.user_schema import UserCreate, UserRead, UserSearch, Token, ResetPasswordWithOTPSchema
 from app.schemas.artworks_schemas import ArtworkRead, ArtworkCategory, ArtworkArtist
 from app.schemas.review_schemas import ReviewRead
 from app.schemas.likes_schemas import LikeCountResponse
 from app.schemas.comment_schemas import CommentRead
+from app.schemas.artistreview_schemas import ArtistReviewRead, ArtistRatingSummary
+
 from app.core.smtp_otp import send_otp_email
 from fastapi import BackgroundTasks
-from app.crud import user_crud, search_crud, artworks_crud, recmmendation_crud,review_crud, likes_crud, comment_crud
+from app.crud import user_crud, search_crud, artworks_crud, recmmendation_crud,review_crud, likes_crud, comment_crud, artistreview_crud
 from passlib.context import CryptContext
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -269,6 +272,27 @@ def get_user_artworks(user_id: UUID, db: Session = Depends(get_db)):
 @router.get("/reviews/artwork/{artwork_id}", response_model=List[ReviewRead])
 def get_reviews_for_artwork(artwork_id: UUID, db: Session = Depends(get_db)):
     return review_crud.list_reviews_for_artwork(db, artwork_id)
+
+# -------------------------
+# ARTIST REVIEWS
+# -------------------------
+
+@router.get("/artists/top", response_model=list[ArtistRatingSummary])
+def get_top_artists(db: Session = Depends(get_db)):
+    """
+    Get all reviews for a specific artist,
+    sorted from highest rating to lowest.
+    """
+    return artistreview_crud.list_artists_by_rating(db)
+
+
+@router.get("/artistreview/{artist_id}", response_model=list[ArtistReviewRead])
+def get_artist_reviews(
+    artist_id: UUID,
+    db: Session = Depends(get_db)
+):
+    reviews = artistreview_crud.reviews_for_artist(db, artist_id)
+    return reviews
 
 # -------------------------
 # RECOMMENDATION

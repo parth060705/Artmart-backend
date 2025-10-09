@@ -224,6 +224,24 @@ class Review(Base):
     artist = relationship("User", foreign_keys=[artistId])
 
 # -------------------------
+# REVIEW MODEL
+# -------------------------
+
+class ArtistReview(Base):
+    __tablename__ = "artist_reviews"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    reviewer_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    artist_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    rating = Column(Integer, nullable=False)
+    comment = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    reviewer = relationship("User", foreign_keys=[reviewer_id], backref="artist_reviews_made")
+    artist = relationship("User", foreign_keys=[artist_id], backref="artist_reviews_received")
+
+# -------------------------
 # SAVED MODEL
 # -------------------------
 
