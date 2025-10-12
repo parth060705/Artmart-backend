@@ -32,9 +32,17 @@ user_router = APIRouter(
 # USER 
 # -------------------------
 
+# @user_router.get("/me", response_model=UserRead)
+# def read_users_me(current_user: User = Depends(get_current_user)):
+#     return current_user
+
 @user_router.get("/me", response_model=UserRead)
-def read_users_me(current_user: User = Depends(get_current_user)):
-    return current_user
+def read_users_me(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user_with_rating = user_crud.get_user_with_rating(db, current_user.id)
+    return user_with_rating
 
 @user_router.patch("/update/users/me", response_model=UserRead)
 def update_current_user(

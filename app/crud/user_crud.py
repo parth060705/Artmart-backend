@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_ , and_, func, text
+from sqlalchemy import or_ , and_, func, text, desc
 from fastapi import HTTPException, UploadFile, File, status
 from uuid import UUID, uuid4
 # from uuid import uuid4
@@ -110,8 +110,101 @@ def generate_otp(length: int = 6):
 def get_user_by_email(db: Session, email: str):
     return db.query(models.User).filter(models.User.email == email).first()
 
+# def get_user(db: Session, user_id: UUID):
+#     return db.query(models.User).filter(models.User.id == str(user_id)).first()
+
 def get_user(db: Session, user_id: UUID):
-    return db.query(models.User).filter(models.User.id == str(user_id)).first()
+    """
+    Return user info including optional avgRating, reviewCount, and rank among all artists.
+    """
+
+    # Calculate avgRating and reviewCount for this user
+    rating_data = (
+        db.query(
+            func.avg(models.ArtistReview.rating).label("avgRating"),
+            func.count(models.ArtistReview.id).label("reviewCount")
+        )
+        .filter(models.ArtistReview.artist_id == str(user_id))
+        .first()
+    )
+
+    avg_rating = float(rating_data.avgRating) if rating_data and rating_data.avgRating is not None else None
+    review_count = int(rating_data.reviewCount) if rating_data and rating_data.reviewCount is not None else None
+
+    # Calculate the user's rank among all artists (by avgRating descending)
+    ranked_artists = (
+        db.query(
+            models.User.id.label("artist_id"),
+            func.avg(models.ArtistReview.rating).label("avgRating")
+        )
+        .outerjoin(models.ArtistReview, models.User.id == models.ArtistReview.artist_id)
+        .group_by(models.User.id)
+        .order_by(desc("avgRating"))
+        .all()
+    )
+
+    rank = None
+    for idx, artist in enumerate(ranked_artists, start=1):
+        if str(artist.artist_id) == str(user_id):
+            rank = idx
+            break
+
+    # Fetch basic user info
+    user = db.query(models.User).filter(models.User.id == str(user_id)).first()
+    if not user:
+        return None
+
+    # Combine everything into a single dictionary
+    return {
+        "id": str(user.id),
+        "name": user.name,
+        "username": user.username,
+        "email": user.email,
+        "profileImage": user.profileImage,
+        "location": user.location,
+        "gender": user.gender,
+        "age": user.age,
+        "bio": user.bio,
+        "avgRating": avg_rating,
+        "reviewCount": review_count,
+        "rank": rank,
+    }
+
+def get_user_with_rating(db: Session, user_id: UUID):
+    """
+    Return user info including optional avgRating, reviewCount, and rank among all artists.
+    """
+
+    # Subquery: compute avgRating, reviewCount, and rank for all artists
+    ranked_artists = (
+        db.query(
+            models.User.id.label("artist_id"),
+            func.coalesce(func.avg(models.ArtistReview.rating), 0).label("avgRating"),
+            func.count(models.ArtistReview.id).label("reviewCount"),
+            func.rank()
+            .over(order_by=desc(func.coalesce(func.avg(models.ArtistReview.rating), 0)))
+            .label("rank")
+        )
+        .outerjoin(models.ArtistReview, models.User.id == models.ArtistReview.artist_id)
+        .group_by(models.User.id)
+        .subquery()
+    )
+
+    # Fetch the requested user's ranking info
+    result = db.query(ranked_artists).filter(ranked_artists.c.artist_id == str(user_id)).first()
+
+    # Fetch the basic user info
+    user = db.query(models.User).filter(models.User.id == str(user_id)).first()
+    if not user:
+        return None
+
+    user_dict = user.__dict__.copy()
+    user_dict["avgRating"] = float(result.avgRating) if result and result.avgRating is not None else None
+    user_dict["reviewCount"] = int(result.reviewCount) if result and result.reviewCount is not None else None
+    user_dict["rank"] = int(result.rank) if result and result.rank is not None else None
+
+    return user_dict
+
 
 def get_user_by_username(db: Session, username: str):
     return db.query(models.User).filter(models.User.username == username).first()
@@ -125,7 +218,6 @@ def create_user(db: Session, user: user_schema.UserCreate):
         email=user.email,
         username=user.username,
         passwordHash=hashed_password,
-        role=models.RoleEnum.user,
         profileImage=str(user.profileImage) if user.profileImage else None,
         location=user.location,
         gender=user.gender,

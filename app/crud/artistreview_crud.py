@@ -14,7 +14,38 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # ARTIST REVIEW OPERATIONS
 # -------------------------
 
+# def create_artist_review(db: Session, item: artistreview_schemas.ArtistReviewCreate, user_id: UUID):
+#     db_review = models.ArtistReview(
+#         reviewer_id=str(user_id),
+#         artist_id=str(item.artistId),
+#         rating=item.rating,
+#         comment=item.comment
+#     )
+#     db.add(db_review)
+#     db.commit()
+#     db.refresh(db_review)
+#     return db_review
+
 def create_artist_review(db: Session, item: artistreview_schemas.ArtistReviewCreate, user_id: UUID):
+    # Check if the user already reviewed this artist
+    existing_review = (
+        db.query(models.ArtistReview)
+        .filter(
+            models.ArtistReview.reviewer_id == str(user_id),
+            models.ArtistReview.artist_id == str(item.artistId)
+        )
+        .first()
+    )
+
+    if existing_review:
+        # Update existing review
+        existing_review.rating = item.rating
+        existing_review.comment = item.comment
+        db.commit()
+        db.refresh(existing_review)
+        return existing_review
+
+    # Otherwise, create a new review
     db_review = models.ArtistReview(
         reviewer_id=str(user_id),
         artist_id=str(item.artistId),

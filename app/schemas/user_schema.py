@@ -104,6 +104,9 @@ class UserRead(UserBase):
     createdAt: datetime
     updatedAt: Optional[datetime] = None
     profile_completion: Optional[int] = None      #
+    avgRating: Optional[float] = None
+    reviewCount: Optional[int] = None
+    rank: Optional[int] = None
 
     class Config:
         from_attributes = True  
@@ -126,6 +129,7 @@ class UserSearch(BaseModel):
     bio: Optional[str] = None
     avgRating: Optional[float] = None
     reviewCount: Optional[int] = None
+    rank: Optional[int] = None
    
     class Config:
         from_attributes = True

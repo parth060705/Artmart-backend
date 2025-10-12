@@ -286,13 +286,13 @@ def get_top_artists(db: Session = Depends(get_db)):
     return artistreview_crud.list_artists_by_rating(db)
 
 
-@router.get("/artistreview/{artist_id}", response_model=list[ArtistReviewRead])
-def get_artist_reviews(
-    artist_id: UUID,
-    db: Session = Depends(get_db)
-):
-    reviews = artistreview_crud.reviews_for_artist(db, artist_id)
-    return reviews
+# @router.get("/artistreview/{artist_id}", response_model=list[ArtistReviewRead])
+# def get_artist_reviews(
+#     artist_id: UUID,
+#     db: Session = Depends(get_db)
+# ):
+#     reviews = artistreview_crud.reviews_for_artist(db, artist_id)
+#     return reviews
 
 # -------------------------
 # RECOMMENDATION
