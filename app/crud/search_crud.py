@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_ , and_, func, text
+from sqlalchemy import or_ , and_, func, text, desc
 # from fastapi import HTTPException, UploadFile, File, status
 # from uuid import UUID
 # from uuid import UUID, uuid4
@@ -44,23 +44,8 @@ def search_artworks(db: Session, query: str):  # ilike is use for searh in MYSQL
 #         )
 #     ).all()
 
-from sqlalchemy import func, or_
-from sqlalchemy.orm import Session
-from app.models import models
-
 def search_users(db: Session, query: str):
-    # Subquery to calculate both average rating and review count per artist
-    avg_rating_subquery = (
-        db.query(
-            models.ArtistReview.artist_id.label("artist_id"),
-            func.avg(models.ArtistReview.rating).label("avg_rating"),
-            func.count(models.ArtistReview.id).label("review_count")
-        )
-        .group_by(models.ArtistReview.artist_id)
-        .subquery()
-    )
-
-    # Search users by name or username, and left join their average rating + review count
+    # Fetch users matching the query
     users = (
         db.query(
             models.User.id,
@@ -71,10 +56,7 @@ def search_users(db: Session, query: str):
             models.User.gender,
             models.User.age,
             models.User.bio,
-            avg_rating_subquery.c.avg_rating.label("avgRating"),
-            avg_rating_subquery.c.review_count.label("reviewCount"),
         )
-        .outerjoin(avg_rating_subquery, models.User.id == avg_rating_subquery.c.artist_id)
         .filter(
             or_(
                 models.User.username.ilike(f"%{query}%"),
@@ -84,9 +66,33 @@ def search_users(db: Session, query: str):
         .all()
     )
 
-    # Convert SQLAlchemy results to list of dicts for Pydantic
-    return [
-        {
+    # Fetch avgRating & reviewCount for all artists to calculate rank
+    ranked_artists = (
+        db.query(
+            models.User.id.label("artist_id"),
+            func.coalesce(func.avg(models.ArtistReview.rating), 0).label("avgRating"),
+            func.count(models.ArtistReview.id).label("reviewCount")
+        )
+        .outerjoin(models.ArtistReview, models.User.id == models.ArtistReview.artist_id)
+        .group_by(models.User.id)
+        .order_by(desc("avgRating"))
+        .all()
+    )
+
+    # Create a dictionary of ranks
+    artist_ranks = {}
+    for idx, artist in enumerate(ranked_artists, start=1):
+        artist_ranks[str(artist.artist_id)] = {
+            "avgRating": float(artist.avgRating),
+            "reviewCount": int(artist.reviewCount),
+            "rank": idx
+        }
+
+    # Build final search result
+    result = []
+    for u in users:
+        rank_info = artist_ranks.get(str(u.id), {"avgRating": 0.0, "reviewCount": 0, "rank": None})
+        result.append({
             "id": str(u.id),
             "name": u.name,
             "username": u.username,
@@ -95,13 +101,12 @@ def search_users(db: Session, query: str):
             "gender": u.gender,
             "age": u.age,
             "bio": u.bio,
-            "avgRating": float(u.avgRating) if u.avgRating is not None else 0.0,
-            "reviewCount": int(u.reviewCount) if u.reviewCount is not None else 0,
-        }
-        for u in users
-    ]
+            "avgRating": rank_info["avgRating"],
+            "reviewCount": rank_info["reviewCount"],
+            "rank": rank_info["rank"]
+        })
 
-
+    return result
 
 
 def get_artworks_by_category(db: Session, category: str):
