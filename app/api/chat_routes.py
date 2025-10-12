@@ -150,3 +150,16 @@ def get_chat_history(
 ):
     messages = get_messages_between(db, current_user.id, other_user_id, limit)
     return messages        
+
+# -------------------------
+# CHAT LIST ENDPOINT
+# ------------------------
+
+@chat_router.get("/chatslist")
+def get_user_chat_list(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    from app.crud.chat_crud import get_chat_users
+    chat_users = get_chat_users(db, current_user.id)
+    return chat_users
