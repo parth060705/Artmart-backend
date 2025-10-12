@@ -29,7 +29,7 @@ class ArtistReviewRead(ArtistReviewBase):
         "from_attributes": True  # ORM parsing
     }
 
-class ArtistRatingSummary(BaseModel): # for cakculating average rating
+class ArtistRatingSummary(BaseModel): # for calculating average rating
     artistId: UUID
     avgRating: float
     reviewCount: int

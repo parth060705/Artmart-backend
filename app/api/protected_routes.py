@@ -229,6 +229,14 @@ def post_artist_review(
     db_review = artistreview_crud.create_artist_review(db, item, current_user.id)
     return db_review
 
+@user_router.get("/me/artistreview", response_model=list[ArtistReviewRead])
+def get_my_reviews(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    reviews = artistreview_crud.reviews_for_artist(db, current_user.id)
+    return reviews
+
 # -------------------------
 # SAVED
 # -------------------------

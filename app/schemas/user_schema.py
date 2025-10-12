@@ -124,6 +124,8 @@ class UserSearch(BaseModel):
     gender: Optional[str] = None
     age: Optional[int] = None
     bio: Optional[str] = None
+    avgRating: Optional[float] = None
+    reviewCount: Optional[int] = None
    
     class Config:
         from_attributes = True

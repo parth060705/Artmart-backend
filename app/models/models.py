@@ -60,7 +60,9 @@ class User(Base):
     passwordHash = Column(String(255), nullable=False)
     role = Column(SqlEnum(RoleEnum, native_enum=False), nullable=False, default=RoleEnum.user)
     profileImage = Column(String(255), nullable=True)
-    profileImagePublicId = Column(String(255), nullable=True)       
+    profileImagePublicId = Column(String(255), nullable=True)  
+    # createdAt = Column(DateTime, nullable=False)     
+    # updatedAt = Column(DateTime, nullable=True)
     createdAt = Column(DateTime, default=datetime.utcnow)
     updatedAt = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow) 
     location = Column(String(100), nullable=True)
@@ -127,6 +129,7 @@ class Artwork(Base):
     category = Column(String(100), nullable=False)
     artistId = Column(String(36), ForeignKey("users.id"))
     createdAt = Column(DateTime, default=datetime.utcnow)
+    # createdAt = Column(DateTime, nullable=False)
     isSold = Column(Boolean, default=False)
     isDeleted = Column(Boolean, default=False)    
     forSale = Column(Boolean, default=False)     
@@ -163,6 +166,7 @@ class ArtworkLike(Base):
     userId = Column(String(36), ForeignKey("users.id"), primary_key=True)
     artworkId = Column(String(36), ForeignKey("artworks.id"), primary_key=True)
     createdAt = Column(DateTime, default=datetime.utcnow)
+    # createdAt = Column(DateTime, nullable=False)
 
     # Relationships
     artwork = relationship("Artwork", back_populates="likes")
@@ -180,6 +184,7 @@ class Comment(Base):
     artwork_id = Column(String(36), ForeignKey("artworks.id"), nullable=False)
     content = Column(String(500), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    # createdAt = Column(DateTime, nullable=False)
 
     # Relationships
     user = relationship("User", back_populates="comments")
@@ -198,6 +203,7 @@ class Order(Base):
     totalAmount = Column(Float, nullable=False)
     paymentStatus = Column(SqlEnum(PaymentStatusEnum, native_enum=False), nullable=False)
     createdAt = Column(DateTime, default=datetime.utcnow)
+    # createdAt = Column(DateTime, nullable=False)
 
     # Relationships
     buyer = relationship("User", back_populates="orders")
@@ -217,6 +223,7 @@ class Review(Base):
     rating = Column(Integer, nullable=False)
     comment = Column(Text)
     createdAt = Column(DateTime, default=datetime.utcnow)
+    # createdAt = Column(DateTime, nullable=False)
 
     # Relationships
     reviewer = relationship("User", back_populates="reviews", foreign_keys=[reviewerId])
@@ -236,6 +243,7 @@ class ArtistReview(Base):
     rating = Column(Integer, nullable=False)
     comment = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    # createdAt = Column(DateTime, nullable=False)
 
     # Relationships
     reviewer = relationship("User", foreign_keys=[reviewer_id], backref="artist_reviews_made")
@@ -252,6 +260,7 @@ class Saved(Base):
     userId = Column(String(36), ForeignKey("users.id"))
     artworkId = Column(String(36), ForeignKey("artworks.id"))
     createdAt = Column(DateTime, default=datetime.utcnow)
+    # createdAt = Column(DateTime, nullable=False)
 
     # Relationships
     user = relationship("User", back_populates="Saved_items")
@@ -269,6 +278,7 @@ class Cart(Base):
     artworkId = Column(String(36), ForeignKey("artworks.id"))
     purchase_quantity = Column(Integer, nullable=False, default=1)
     createdAt = Column(DateTime, default=datetime.utcnow)
+    # createdAt = Column(DateTime, nullable=False)
 
     # Relationships
     user = relationship("User", back_populates="cart_items")
@@ -310,6 +320,7 @@ class Payment(Base):
     method = Column(SqlEnum(PaymentMethodEnum, native_enum=False), nullable=False)
     paid_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    # createdAt = Column(DateTime, nullable=False)
 
     # Relationships
     user = relationship("User", backref="payments")
