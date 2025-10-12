@@ -95,16 +95,41 @@ def register_user(
     )
     return user_crud.create_user(db=db, user=user_data)
 
+# @router.get("/user/{user_id}", response_model=UserSearch)
+# def read_user(
+#     user_id: UUID,
+#     db: Session = Depends(get_db),
+#     current_user: Optional[models.User] = Depends(get_current_user_optional)
+# ):
+#     user = user_crud.get_user(db, user_id, current_user)
+#     if not user:
+#         raise HTTPException(status_code=404, detail="User not found")
+#     return user
+
 @router.get("/user/{user_id}", response_model=UserSearch)
 def read_user(
-    user_id: UUID,
+    user_id: str,  # can be UUID or username
     db: Session = Depends(get_db),
     current_user: Optional[models.User] = Depends(get_current_user_optional)
 ):
-    user = user_crud.get_user(db, user_id, current_user)
+    # Try to interpret `user_id` as UUID
+    from uuid import UUID
+
+    user = None
+    try:
+        user_uuid = UUID(user_id)
+        user = user_crud.get_user(db, user_uuid, current_user)
+    except ValueError:
+        # If not a UUID, search by username
+        user_obj = db.query(models.User).filter(models.User.username == user_id).first()
+        if user_obj:
+            user = user_crud.get_user(db, user_obj.id, current_user)
+
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
     return user
+
 
 # @router.post("/forgot-password")
 # def forgot_password(email: str, db: Session = Depends(get_db), background_tasks: BackgroundTasks = None ):
