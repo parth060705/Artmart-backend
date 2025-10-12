@@ -107,7 +107,7 @@ class UserRead(UserBase):
     avgRating: Optional[float] = None
     reviewCount: Optional[int] = None
     rank: Optional[int] = None
-    is_reviewed: Optional[bool] = None
+    # is_reviewed: Optional[bool] = None
 
 
     class Config:
@@ -132,7 +132,8 @@ class UserSearch(BaseModel):
     avgRating: Optional[float] = None
     reviewCount: Optional[int] = None
     rank: Optional[int] = None
-   
+    is_reviewed: Optional[bool] = None
+
     class Config:
         from_attributes = True
 

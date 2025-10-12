@@ -95,15 +95,7 @@ def register_user(
     )
     return user_crud.create_user(db=db, user=user_data)
 
-# @router.get("/user/{user_id}", response_model=UserRead)
-# def read_user(
-#     user_id: UUID,
-#     db: Session = Depends(get_db),
-#     current_user: Optional[models.User] = Depends(get_current_user_optional)
-# ):
-#     return user_crud.get_user(db, user_id, current_user)
-
-@router.get("/user/{user_id}", response_model=UserRead)
+@router.get("/user/{user_id}", response_model=UserSearch)
 def read_user(
     user_id: UUID,
     db: Session = Depends(get_db),
@@ -113,8 +105,6 @@ def read_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
-
-
 
 # @router.post("/forgot-password")
 # def forgot_password(email: str, db: Session = Depends(get_db), background_tasks: BackgroundTasks = None ):
