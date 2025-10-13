@@ -130,56 +130,6 @@ def read_user(
 
     return user
 
-
-# @router.post("/forgot-password")
-# def forgot_password(email: str, db: Session = Depends(get_db), background_tasks: BackgroundTasks = None ):
-
-#     user = db.query(User).filter(User.email == email).first()
-#     if not user:
-#         return {"message": "If this email exists, an OTP has been sent"}
-
-#     otp = user_crud.generate_otp()
-#     expires_at = datetime.utcnow() + timedelta(minutes=10)  # OTP valid for 10 min
-#     user_crud.otp_store[email] = {"otp": otp, "expires_at": expires_at}
-
-#     # TODO: Send OTP via email (SMTP/SendGrid/etc.)
-#     print(f"[DEBUG] OTP for {email}: {otp}")
-#     # Send OTP in background
-#     background_tasks.add_task(send_otp_email, email, otp)
-
-#     return {"message": "If this email exists, an OTP has been sent"}
-
-# @router.post("/reset-password")
-# def reset_password_with_otp(data: ResetPasswordWithOTPSchema, db: Session = Depends(get_db)):
-
-#     # Check OTP existence and validity
-#     record = user_crud.otp_store.get(data.email)
-#     if not record:
-#         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
-#     if record["otp"] != data.otp:
-#         raise HTTPException(status_code=400, detail="Invalid OTP")
-#     if record["expires_at"] < datetime.utcnow():
-#         del user_crud.otp_store[data.email]
-#         raise HTTPException(status_code=400, detail="OTP expired")
-
-#     # Find user
-#     user = db.query(User).filter(User.email == data.email).first()
-#     if not user:
-#         raise HTTPException(status_code=404, detail="User not found")
-
-#     # Validate password strength
-#     user_crud.validate_password_strength(data.new_password)
-
-#     # Update password
-#     user.passwordHash = pwd_context.hash(data.new_password)
-#     db.commit()
-#     db.refresh(user)
-
-#     # Remove OTP after successful use
-#     del user_crud.otp_store[data.email]
-
-#     return {"message": "Password updated successfully"}
-
 @router.post("/forgot-password")
 def forgot_password(
     email: str,
@@ -312,15 +262,6 @@ def get_top_artists(db: Session = Depends(get_db)):
     sorted from highest rating to lowest.
     """
     return artistreview_crud.list_artists_by_rating(db)
-
-
-# @router.get("/artistreview/{artist_id}", response_model=list[ArtistReviewRead])
-# def get_artist_reviews(
-#     artist_id: UUID,
-#     db: Session = Depends(get_db)
-# ):
-#     reviews = artistreview_crud.reviews_for_artist(db, artist_id)
-#     return reviews
 
 # -------------------------
 # RECOMMENDATION

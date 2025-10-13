@@ -33,16 +33,53 @@ user_router = APIRouter(
 # -------------------------
 
 # @user_router.get("/me", response_model=UserRead)
-# def read_users_me(current_user: User = Depends(get_current_user)):
-#     return current_user
+# def read_users_me(
+#     current_user: User = Depends(get_current_user),
+#     db: Session = Depends(get_db)
+# ):
+#     user_with_rating = user_crud.get_user_with_rating(db, current_user.id)
+#     return user_with_rating
 
 @user_router.get("/me", response_model=UserRead)
 def read_users_me(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    user_with_rating = user_crud.get_user_with_rating(db, current_user.id)
-    return user_with_rating
+    if not current_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    rating_info = user_crud.get_user_rating_info(db, current_user.id)
+
+    # Build complete response
+    response_data = {
+        "id": current_user.id,
+        "name": current_user.name,
+        "email": current_user.email,
+        "username": current_user.username,
+        "profileImage": current_user.profileImage,
+        "location": current_user.location,
+        "gender": current_user.gender,
+        "age": current_user.age,
+        "bio": current_user.bio,
+        "pincode": current_user.pincode,
+        "phone": current_user.phone,
+        "createdAt": current_user.createdAt,
+        "updatedAt": current_user.updatedAt,
+        "profile_completion": current_user.profile_completion,
+        "avgRating": rating_info["avgRating"],
+        "reviewCount": rating_info["reviewCount"],
+        "rank": rating_info["rank"],
+    }
+
+    return response_data
+
+@user_router.get("/me", response_model=UserRead)
+def read_users_me(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return user_crud.get_user_with_rating(db, current_user.id)
+
 
 @user_router.patch("/update/users/me", response_model=UserRead)
 def update_current_user(

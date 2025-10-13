@@ -108,16 +108,9 @@ otp_store = {} # Temporary in-memory OTP store in production store it in redis #
 def generate_otp(length: int = 6):
     return ''.join(random.choices("0123456789", k=length))
 
-def get_user_by_email(db: Session, email: str):
-    return db.query(models.User).filter(models.User.email == email).first()
-
-def get_user(db: Session, user_id: UUID, current_user: Optional[models.User] = None):
-    """
-    Return user info including avgRating, reviewCount, rank, createdAt, and
-    whether current_user has reviewed this artist (is_reviewed).
-    """
-
-    # Calculate avgRating and reviewCount for this user
+# 4)HELPER CLASS FOR AVGRATING, REVIEW COUNT AND CALCULATING RANK
+def get_user_rating_info(db, user_id):
+    # Average rating and review count
     rating_data = (
         db.query(
             func.avg(models.ArtistReview.rating).label("avgRating"),
@@ -127,10 +120,10 @@ def get_user(db: Session, user_id: UUID, current_user: Optional[models.User] = N
         .first()
     )
 
-    avg_rating = float(rating_data.avgRating) if rating_data and rating_data.avgRating is not None else 0.0
-    review_count = int(rating_data.reviewCount) if rating_data and rating_data.reviewCount is not None else 0
+    avg_rating = float(rating_data.avgRating or 0.0)
+    review_count = int(rating_data.reviewCount or 0)
 
-    # Calculate rank among all artists
+    # Rank calculation
     ranked_artists = (
         db.query(
             models.User.id.label("artist_id"),
@@ -142,11 +135,92 @@ def get_user(db: Session, user_id: UUID, current_user: Optional[models.User] = N
         .all()
     )
 
-    rank = None
-    for idx, artist in enumerate(ranked_artists, start=1):
-        if str(artist.artist_id) == str(user_id):
-            rank = idx
-            break
+    rank = next((idx for idx, a in enumerate(ranked_artists, start=1) if str(a.artist_id) == str(user_id)), None)
+
+    return {
+        "avgRating": avg_rating,
+        "reviewCount": review_count,
+        "rank": rank
+    }
+#--------------------------------------------------------------------------------------------------------
+
+def get_user_by_email(db: Session, email: str):
+    return db.query(models.User).filter(models.User.email == email).first()
+
+# def get_user(db: Session, user_id: UUID, current_user: Optional[models.User] = None):
+#     """
+#     Return user info including avgRating, reviewCount, rank, createdAt, and
+#     whether current_user has reviewed this artist (is_reviewed).
+#     """
+
+#     # Calculate avgRating and reviewCount for this user
+#     rating_data = (
+#         db.query(
+#             func.avg(models.ArtistReview.rating).label("avgRating"),
+#             func.count(models.ArtistReview.id).label("reviewCount")
+#         )
+#         .filter(models.ArtistReview.artist_id == str(user_id))
+#         .first()
+#     )
+
+#     avg_rating = float(rating_data.avgRating) if rating_data and rating_data.avgRating is not None else 0.0
+#     review_count = int(rating_data.reviewCount) if rating_data and rating_data.reviewCount is not None else 0
+
+#     # Calculate rank among all artists
+#     ranked_artists = (
+#         db.query(
+#             models.User.id.label("artist_id"),
+#             func.avg(models.ArtistReview.rating).label("avgRating")
+#         )
+#         .outerjoin(models.ArtistReview, models.User.id == models.ArtistReview.artist_id)
+#         .group_by(models.User.id)
+#         .order_by(desc("avgRating"))
+#         .all()
+#     )
+
+#     rank = None
+#     for idx, artist in enumerate(ranked_artists, start=1):
+#         if str(artist.artist_id) == str(user_id):
+#             rank = idx
+#             break
+
+#     # Determine if current_user has reviewed this user
+#     is_reviewed = False
+#     if current_user:
+#         review_exists = db.query(models.ArtistReview).filter(
+#             models.ArtistReview.artist_id == str(user_id),
+#             models.ArtistReview.reviewer_id == str(current_user.id)
+#         ).first()
+#         is_reviewed = review_exists is not None
+
+#     # Fetch user info
+#     user = db.query(models.User).filter(models.User.id == str(user_id)).first()
+#     if not user:
+#         return None
+
+#     return {
+#         "id": str(user.id),
+#         "name": user.name,
+#         "username": user.username,
+#         "email": user.email,
+#         "profileImage": user.profileImage,
+#         "location": user.location,
+#         "gender": user.gender,
+#         "age": user.age,
+#         "bio": user.bio,
+#         "createdAt": user.createdAt,
+#         "avgRating": avg_rating,
+#         "reviewCount": review_count,
+#         "rank": rank,
+#         "is_reviewed": is_reviewed
+#     }
+
+def get_user(db: Session, user_id: str, current_user=None):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return None
+
+    rating_info = get_user_rating_info(db, str(user.id))
 
     # Determine if current_user has reviewed this user
     is_reviewed = False
@@ -157,62 +231,70 @@ def get_user(db: Session, user_id: UUID, current_user: Optional[models.User] = N
         ).first()
         is_reviewed = review_exists is not None
 
-    # Fetch user info
-    user = db.query(models.User).filter(models.User.id == str(user_id)).first()
-    if not user:
-        return None
-
     return {
         "id": str(user.id),
         "name": user.name,
         "username": user.username,
-        "email": user.email,
+        "profileImage": user.profileImage,
+        "gender": user.gender,
+        "age": user.age,
+        "bio": user.bio,
+        "createdAt": user.createdAt,
+        "avgRating": rating_info["avgRating"],
+        "reviewCount": rating_info["reviewCount"],
+        "rank": rating_info["rank"],
+        "is_reviewed": is_reviewed
+    }
+
+# def get_user_with_rating(db: Session, user_id: UUID):
+#     """
+#     Return user info including optional avgRating, reviewCount, and rank among all artists.
+#     """
+
+#     # Subquery: compute avgRating, reviewCount, and rank for all artists
+#     ranked_artists = (
+#         db.query(
+#             models.User.id.label("artist_id"),
+#             func.coalesce(func.avg(models.ArtistReview.rating), 0).label("avgRating"),
+#             func.count(models.ArtistReview.id).label("reviewCount"),
+#             func.rank()
+#             .over(order_by=desc(func.coalesce(func.avg(models.ArtistReview.rating), 0)))
+#             .label("rank")
+#         )
+#         .outerjoin(models.ArtistReview, models.User.id == models.ArtistReview.artist_id)
+#         .group_by(models.User.id)
+#         .subquery()
+#     )
+
+#     # Fetch the requested user's ranking info
+#     result = db.query(ranked_artists).filter(ranked_artists.c.artist_id == str(user_id)).first()
+
+#     # Fetch the basic user info
+#     user = db.query(models.User).filter(models.User.id == str(user_id)).first()
+#     if not user:
+#         return None
+
+#     user_dict = user.__dict__.copy()
+#     user_dict["avgRating"] = float(result.avgRating) if result and result.avgRating is not None else None
+#     user_dict["reviewCount"] = int(result.reviewCount) if result and result.reviewCount is not None else None
+#     user_dict["rank"] = int(result.rank) if result and result.rank is not None else None
+
+#     return user_dict
+
+def get_user_with_rating(db: Session, user_id: int):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    rating_info = get_user_rating_info(db, user_id)
+    user_dict = {
+        "id": user.id,
+        "name": user.name,
+        "username": user.username,
         "profileImage": user.profileImage,
         "location": user.location,
         "gender": user.gender,
         "age": user.age,
         "bio": user.bio,
-        "createdAt": user.createdAt,
-        "avgRating": avg_rating,
-        "reviewCount": review_count,
-        "rank": rank,
-        "is_reviewed": is_reviewed
     }
-
-def get_user_with_rating(db: Session, user_id: UUID):
-    """
-    Return user info including optional avgRating, reviewCount, and rank among all artists.
-    """
-
-    # Subquery: compute avgRating, reviewCount, and rank for all artists
-    ranked_artists = (
-        db.query(
-            models.User.id.label("artist_id"),
-            func.coalesce(func.avg(models.ArtistReview.rating), 0).label("avgRating"),
-            func.count(models.ArtistReview.id).label("reviewCount"),
-            func.rank()
-            .over(order_by=desc(func.coalesce(func.avg(models.ArtistReview.rating), 0)))
-            .label("rank")
-        )
-        .outerjoin(models.ArtistReview, models.User.id == models.ArtistReview.artist_id)
-        .group_by(models.User.id)
-        .subquery()
-    )
-
-    # Fetch the requested user's ranking info
-    result = db.query(ranked_artists).filter(ranked_artists.c.artist_id == str(user_id)).first()
-
-    # Fetch the basic user info
-    user = db.query(models.User).filter(models.User.id == str(user_id)).first()
-    if not user:
-        return None
-
-    user_dict = user.__dict__.copy()
-    user_dict["avgRating"] = float(result.avgRating) if result and result.avgRating is not None else None
-    user_dict["reviewCount"] = int(result.reviewCount) if result and result.reviewCount is not None else None
-    user_dict["rank"] = int(result.rank) if result and result.rank is not None else None
-
-    return user_dict
+    return {**user_dict, **rating_info}
 
 
 def get_user_by_username(db: Session, username: str):
