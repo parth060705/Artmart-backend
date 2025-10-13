@@ -67,28 +67,39 @@ def reviews_for_artist(db: Session, artist_id: UUID):
     )
 
 def list_artists_by_rating(db: Session):
+    """
+    List all artists with their average rating, review count, and rank.
+    """
+
+    # Subquery with window function for rank
     result = (
         db.query(
             models.User.id.label("artistId"),
+            models.User.name,
             models.User.username,
             models.User.profileImage,
-            func.avg(models.ArtistReview.rating).label("avgRating"),
-            func.count(models.ArtistReview.id).label("reviewCount")
+            func.coalesce(func.avg(models.ArtistReview.rating), 0).label("avgRating"),
+            func.count(models.ArtistReview.id).label("reviewCount"),
+            func.rank()
+            .over(order_by=desc(func.coalesce(func.avg(models.ArtistReview.rating), 0)))
+            .label("rank")
         )
-        .join(models.ArtistReview, models.User.id == models.ArtistReview.artist_id)
+        .outerjoin(models.ArtistReview, models.User.id == models.ArtistReview.artist_id)
         .group_by(models.User.id)
         .order_by(desc("avgRating"))
         .all()
     )
 
-    # Convert tuples to list of dicts for Pydantic
+    # Convert query results to list of dicts for Pydantic response
     return [
         {
             "artistId": r.artistId,
+            "name": r.name,
             "username": r.username,
             "profileImage": r.profileImage,
-            "avgRating": float(r.avgRating),
-            "reviewCount": r.reviewCount
+            "avgRating": float(r.avgRating) if r.avgRating is not None else 0.0,
+            "reviewCount": int(r.reviewCount) if r.reviewCount is not None else 0,
+            "rank": int(r.rank)
         }
         for r in result
     ]
