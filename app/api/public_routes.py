@@ -82,6 +82,24 @@ def register_user(
     isAgreedtoTC: bool = Form(False),
     db: Session = Depends(get_db),
 ):
+    
+     # Validate required fields
+    missing_fields = []
+    if not name:
+        missing_fields.append("name")
+    if not username:
+        missing_fields.append("username")
+    if not password:
+        missing_fields.append("password")
+    if not email:
+        missing_fields.append("email")
+
+    if missing_fields:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Missing required fields: {', '.join(missing_fields)}"
+        )
+
     if email and user_crud.get_user_by_email(db, email):
         raise HTTPException(status_code=400, detail="Email already registered")
     if username and user_crud.get_user_by_username(db, username):
@@ -358,9 +376,19 @@ def get_top_artists(db: Session = Depends(get_db)):
 # RECOMMENDATION
 # -------------------------
 
-@router.get("/recommend/{artwork_id}", response_model=List[ArtworkRead])
-def recommendation_engine(artwork_id: str, db: Session = Depends(get_db)):
-    return recmmendation_crud.get_recommendation(db, artwork_id=artwork_id)
+@router.get("/{artwork_id}/recommendations", response_model=List[ArtworkRead])
+def get_artwork_recommendations(
+    artwork_id: UUID,
+    limit: int = 10,
+    db: Session = Depends(get_db)
+):
+    """
+    Get recommended artworks based on the title, category, and tags of the given artwork ID.
+    Always returns up to 'limit' artworks.
+    """
+    recommended = recmmendation_crud.recommend_artworks(db, artwork_id, limit=limit)
+    # Convert to Pydantic models
+    return [ArtworkRead.model_validate(art) for art in recommended]
 
 # -------------------------
 # LIKES ENDPOINTS
