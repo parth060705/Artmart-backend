@@ -236,6 +236,7 @@ def list_artworks_route(db: Session = Depends(get_db), current_user=Depends(get_
 
     cart_ids = None
     saved_ids = None
+    liked_ids = None
 
     if current_user:
         cart_items = db.query(models.Cart.artworkId).filter_by(userId=str(current_user.id)).all()
@@ -244,12 +245,16 @@ def list_artworks_route(db: Session = Depends(get_db), current_user=Depends(get_
         saved_items = db.query(models.Saved.artworkId).filter_by(userId=str(current_user.id)).all()
         saved_ids = {item.artworkId for item in saved_items}
 
+        liked_items = db.query(models.ArtworkLike.artworkId).filter_by(userId=str(current_user.id)).all()
+        liked_ids = {item.artworkId for item in liked_items}
+
     result = []
     # for art in artworks_for_sale:
     for art in artworks:
         like_count = len(art.likes) if art.likes else 0
         is_in_cart = str(art.id) in cart_ids if cart_ids else None
         is_saved = str(art.id) in saved_ids if saved_ids else None
+        is_like = art.id in liked_ids if liked_ids else None
 
         result.append(
             ArtworkRead(
@@ -272,34 +277,11 @@ def list_artworks_route(db: Session = Depends(get_db), current_user=Depends(get_
                     profileImage=art.artist.profileImage
                 ),
                 isInCart=is_in_cart,
-                isSaved=is_saved
+                isSaved=is_saved,
+                isLike=is_like
             )
         )
     return result
-
-
-# @router.get("/artworks/{artwork_id}", response_model=ArtworkRead)
-# def get_artwork_route(artwork_id: UUID, db: Session = Depends(get_db), user=Depends(get_current_user_optional)):
-#     db_artwork = artworks_crud.get_artwork(db, artwork_id)
-#     if not db_artwork:
-#         raise HTTPException(status_code=404, detail="Artwork not found")
-
-#     like_count = len(db_artwork.likes) if db_artwork.likes else 0
-#     is_in_cart: Optional[bool] = None
-#     if user:
-#         cart_item = db.query(models.Cart).filter(
-#             models.Cart.userId == user.id, models.Cart.artworkId == db_artwork.id
-#         ).first()
-#         is_in_cart = bool(cart_item)
-
-#     return ArtworkRead(
-#         id=db_artwork.id, title=db_artwork.title, description=db_artwork.description,
-#         category=db_artwork.category, price=db_artwork.price, tags=db_artwork.tags,
-#         quantity=db_artwork.quantity, isSold=db_artwork.isSold, images=db_artwork.images,
-#         createdAt=db_artwork.createdAt, artistId=db_artwork.artistId,
-#         artist=ArtworkArtist(id=db_artwork.artist.id, username=db_artwork.artist.username, profileImage=db_artwork.artist.profileImage),
-#         how_many_like={"like_count": like_count}, isInCart=is_in_cart, forSale=db_artwork.forSale
-#     )
 
 @router.get("/artworks/{artwork_id}", response_model=ArtworkRead)
 def get_artwork_route(artwork_id: UUID, db: Session = Depends(get_db), user=Depends(get_current_user_optional)):
@@ -310,6 +292,7 @@ def get_artwork_route(artwork_id: UUID, db: Session = Depends(get_db), user=Depe
     like_count = len(db_artwork.likes) if db_artwork.likes else 0
     is_in_cart: Optional[bool] = None
     is_saved: Optional[bool] = None
+    is_like: Optional[bool] = None
 
     if user:
         # Check if in cart
@@ -323,6 +306,12 @@ def get_artwork_route(artwork_id: UUID, db: Session = Depends(get_db), user=Depe
             models.Saved.userId == user.id, models.Saved.artworkId == db_artwork.id
         ).first()
         is_saved = bool(saved_item)
+
+        # ✅ Check if liked
+        liked_item = db.query(models.ArtworkLike).filter(
+            models.ArtworkLike.userId == user.id, models.ArtworkLike.artworkId == db_artwork.id
+        ).first()
+        is_like = bool(liked_item)
 
     return ArtworkRead(
         id=db_artwork.id,
@@ -344,6 +333,7 @@ def get_artwork_route(artwork_id: UUID, db: Session = Depends(get_db), user=Depe
         how_many_like={"like_count": like_count},
         isInCart=is_in_cart,
         isSaved=is_saved,
+        isLike=is_like,
         forSale=db_artwork.forSale
     )
 

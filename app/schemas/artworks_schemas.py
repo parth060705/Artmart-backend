@@ -49,6 +49,7 @@ class ArtworkBase(BaseModel):
     quantity: Optional[int] = None
     isInCart: Optional[bool] = None
     isSaved: Optional[bool] = None
+    isLike: Optional[bool] = None
     category: str
     artist: ArtworkArtist
     how_many_like: Optional[likeArt] = None
