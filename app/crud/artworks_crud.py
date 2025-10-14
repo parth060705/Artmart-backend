@@ -2,7 +2,6 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from fastapi import HTTPException, UploadFile
 from uuid import UUID, uuid4
-# from uuid import uuid4
 from app.models import models
 from app.models.models import RoleEnum
 from app.schemas import artworks_schemas
@@ -12,8 +11,6 @@ import cloudinary
 from typing import List, Optional, Dict
 from fastapi import UploadFile, HTTPException
 import cloudinary.uploader
-# import random, string
-# import re
 from sqlalchemy.exc import SQLAlchemyError
 from app.schemas.artworks_schemas import (likeArt) 
 from app.crud.user_crud import(calculate_completion)
@@ -272,7 +269,7 @@ def delete_artwork(db: Session, artwork_id: UUID, user_id: UUID):
     db.commit()
     return {"message": "Artwork deleted successfully", "artwork_id": artwork_id}
 
-                                        # GET ARTWORK                                  
+                                        # GET ARTWORK LIST                                 
 def list_artworks(db: Session) -> List[models.Artwork]:
     artworks = (
         db.query(models.Artwork)
