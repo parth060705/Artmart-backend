@@ -2,12 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
+from app.models import models
+
 
 from app.database import get_db
 from app.core.auth import get_current_user
 from app.models.models import User, ArtistReview
 from app.schemas.user_schema import UserRead, UserUpdate, ProfileImageResponse, ChangePasswordSchema
-from app.schemas.artworks_schemas import ArtworkMe, ArtworkCreateResponse, ArtworkRead, ArtworkDelete, ArtworkCreate, ArtworkUpdate
+from app.schemas.artworks_schemas import ArtworkMe, ArtworkCreateResponse, ArtworkRead, ArtworkDelete, ArtworkCreate, ArtworkUpdate, ArtworkArtist
 from app.schemas.likes_schemas import LikeCountResponse, HasLikedResponse
 from app.schemas.comment_schemas import CommentCreate
 from app.schemas.order_schemas import OrderCreate, OrderRead
@@ -31,14 +33,6 @@ user_router = APIRouter(
 # -------------------------
 # USER 
 # -------------------------
-
-# @user_router.get("/me", response_model=UserRead)
-# def read_users_me(
-#     current_user: User = Depends(get_current_user),
-#     db: Session = Depends(get_db)
-# ):
-#     user_with_rating = user_crud.get_user_with_rating(db, current_user.id)
-#     return user_with_rating
 
 @user_router.get("/me", response_model=UserRead)
 def read_users_me(
@@ -365,6 +359,59 @@ def is_following_check(user_id: str, current_user: User = Depends(get_current_us
 # HOMEFEED
 # -------------------------
 
+# @user_router.get("/homefeed", response_model=List[ArtworkRead])
+# def home_feed(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+#     return homefeed_crud.get_home_feed(db, current_user)
+
 @user_router.get("/homefeed", response_model=List[ArtworkRead])
 def home_feed(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return homefeed_crud.get_home_feed(db, current_user)
+
+    cart_ids = None
+    saved_ids = None
+    liked_ids = None
+
+    if current_user:
+        cart_items = db.query(models.Cart.artworkId).filter_by(userId=str(current_user.id)).all()
+        cart_ids = {str(item.artworkId) for item in cart_items}
+
+        saved_items = db.query(models.Saved.artworkId).filter_by(userId=str(current_user.id)).all()
+        saved_ids = {str(item.artworkId) for item in saved_items}
+
+        liked_items = db.query(models.ArtworkLike.artworkId).filter_by(userId=str(current_user.id)).all()
+        liked_ids = {str(item.artworkId) for item in liked_items}
+
+    artworks = homefeed_crud.get_home_feed(db, current_user)
+
+    result = []
+    for art in artworks:
+        like_count = len(art.likes) if art.likes else 0
+        is_in_cart = str(art.id) in cart_ids if cart_ids else None
+        is_saved = str(art.id) in saved_ids if saved_ids else None
+        is_like = str(art.id) in liked_ids if liked_ids else None
+
+        result.append(
+            ArtworkRead(
+                id=art.id,
+                title=art.title,
+                description=art.description,
+                category=art.category,
+                price=art.price,
+                tags=art.tags,
+                quantity=art.quantity,
+                isSold=art.isSold,
+                images=art.images,
+                createdAt=art.createdAt,
+                artistId=art.artistId,
+                how_many_like={"like_count": like_count},
+                forSale=art.forSale,
+                artist=ArtworkArtist(
+                    id=art.artist.id,
+                    username=art.artist.username,
+                    profileImage=art.artist.profileImage
+                ),
+                isInCart=is_in_cart,
+                isSaved=is_saved,
+                isLike=is_like
+            )
+        )
+    return result
