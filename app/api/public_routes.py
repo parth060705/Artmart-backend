@@ -92,7 +92,7 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 # -------------------------
 
 # GOOGLE REGISTER
-@router.post("/google-register", response_model=Token)
+@router.post("/googleregister", response_model=Token)
 def google_register(id_token_str: str, db: Session = Depends(get_db)):
     try:
         id_info = id_token.verify_oauth2_token(id_token_str, requests.Request(), GOOGLE_CLIENT_ID)
@@ -143,7 +143,7 @@ def google_register(id_token_str: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid Google token")
 
 # GOOGLE LOGIN
-@router.post("/google-login", response_model=Token)
+@router.post("/googlelogin", response_model=Token)
 def google_login(id_token_str: str, db: Session = Depends(get_db)):
     try:
         id_info = id_token.verify_oauth2_token(id_token_str, requests.Request(), GOOGLE_CLIENT_ID)
@@ -247,7 +247,7 @@ def read_user(
 
     return user
 
-@router.post("/forgot-password")
+@router.post("/forgotpassword")
 def forgot_password(
     email: str,
     db: Session = Depends(get_db),
@@ -263,7 +263,7 @@ def forgot_password(
     return {"message": "If this email exists, an OTP has been sent"}
 
 
-@router.post("/reset-password")
+@router.post("/resetpassword")
 def reset_password(data: ResetPasswordWithOTPSchema, db: Session = Depends(get_db)):
     user_crud.reset_password(db, email=data.email, otp=data.otp, new_password=data.new_password)
     return {"message": "Password updated successfully"}
