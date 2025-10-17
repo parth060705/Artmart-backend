@@ -67,12 +67,12 @@ def read_users_me(
 
     return response_data
 
-@user_router.get("/me", response_model=UserRead)
-def read_users_me(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    return user_crud.get_user_with_rating(db, current_user.id)
+# @user_router.get("/me", response_model=UserRead)
+# def read_users_me(
+#     current_user: User = Depends(get_current_user),
+#     db: Session = Depends(get_db)
+# ):
+#     return user_crud.get_user_with_rating(db, current_user.id)
 
 
 @user_router.patch("/update/users/me", response_model=UserRead)
