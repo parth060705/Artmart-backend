@@ -79,8 +79,13 @@ from app.database import get_db
 from app.crud.user_crud import calculate_completion
 import uuid
 
+from dotenv import load_dotenv
+import os
 
-GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+# Load .env file
+load_dotenv()
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 
 # -------------------------
 # GOOGLE REGISTER & LOGIN
