@@ -55,56 +55,15 @@ def reviews_for_artist(db: Session, artist_id: UUID):
         .all()
     )
 
-# def list_artists_by_rating(db: Session):
-#     """
-#     List all artists with their average rating, review count, and rank.
-#     """
-
-#     # Subquery with window function for rank
-#     result = (
-#         db.query(
-#             models.User.id.label("artistId"),
-#             models.User.name,
-#             models.User.username,
-#             models.User.profileImage,
-#             func.coalesce(func.avg(models.ArtistReview.rating), 0).label("avgRating"),
-#             func.count(models.ArtistReview.id).label("reviewCount"),
-#             func.rank()
-#             .over(order_by=desc(func.coalesce(func.avg(models.ArtistReview.rating), 0)))
-#             .label("rank")
-#         )
-#         .outerjoin(models.ArtistReview, models.User.id == models.ArtistReview.artist_id)
-#         .group_by(models.User.id)
-#         .order_by(desc("avgRating"))
-#         .all()
-#     )
-
-#     # Convert query results to list of dicts for Pydantic response
-#     return [
-#         {
-#             "artistId": r.artistId,
-#             "name": r.name,
-#             "username": r.username,
-#             "profileImage": r.profileImage,
-#             "avgRating": float(r.avgRating) if r.avgRating is not None else 0.0,
-#             "reviewCount": int(r.reviewCount) if r.reviewCount is not None else 0,
-#             "rank": int(r.rank)
-#         }
-#         for r in result
-#     ]
-
 def list_artists_by_rating(db: Session):
     """
     List all artists with their average rating, review count, and rank
     using the get_user_rating_info() helper.
     """
 
-    # Get all artists (you can filter by role if needed)
     artists = db.query(models.User).all()
-
     results = []
 
-    # Compute rating info for each artist
     for artist in artists:
         rating_info = get_user_rating_info(db, artist.id)
 
@@ -115,10 +74,11 @@ def list_artists_by_rating(db: Session):
             "profileImage": artist.profileImage,
             "avgRating": rating_info["avgRating"],
             "reviewCount": rating_info["reviewCount"],
+            "weightedRating": rating_info["weightedRating"],  # ✅ fixed
             "rank": rating_info["rank"]
         })
 
-    # Sort by avgRating descending
-    results.sort(key=lambda x: x["avgRating"], reverse=True)
+    # Sort by weightedRating instead of avgRating (more fair)
+    results.sort(key=lambda x: x["weightedRating"], reverse=True)
 
     return results
