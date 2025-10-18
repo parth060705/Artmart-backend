@@ -87,7 +87,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     "sender_id": user_id,
                     "receiver_id": msg.receiver_id,
                     "content": saved_msg.content,
-                    "timestamp": saved_msg.timestamp.isoformat()
+                    # "timestamp": saved_msg.timestamp.isoformat()
+                    "timestamp": msg.timestamp 
                 }
 
                 # Send to receiver if online
