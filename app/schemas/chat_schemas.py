@@ -12,9 +12,9 @@ ChatAction = Literal["message", "typing", "read"]
 # -------------------------
 class MessageBase(BaseModel):
     receiver_id: str
-    content: Optional[str] = None
+    content: str
     action: ChatAction
-    timestamp: Optional[datetime] = None 
+    timestamp: datetime
 
     @field_validator("content")
     @classmethod
@@ -37,8 +37,10 @@ class MessageCreate(MessageBase):
 class MessageOut(BaseModel):
     sender_id: str
     receiver_id: str
-    content: Optional[str] = None
-    timestamp: Optional[datetime]
+    # content: Optional[str] = None
+    content: str
+    # timestamp: Optional[datetime]
+    timestamp: datetime
     is_read: bool = False
     action: ChatAction = "message"
     message_type: str = "text"
