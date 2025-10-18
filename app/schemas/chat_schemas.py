@@ -14,6 +14,7 @@ class MessageBase(BaseModel):
     receiver_id: str
     content: Optional[str] = None
     action: ChatAction
+    timestamp: Optional[datetime] = None 
 
     @field_validator("content")
     @classmethod
