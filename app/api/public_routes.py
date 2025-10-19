@@ -77,7 +77,6 @@ def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
 def google_auth(id_token: str = Form(...), db: Session = Depends(get_db)):
     result = googleauth_crud.authenticate_with_google(db, id_token)
     return {
-        "user": result["user"],
         "tokens": {
             "access_token": result["access_token"],
             "refresh_token": result["refresh_token"],

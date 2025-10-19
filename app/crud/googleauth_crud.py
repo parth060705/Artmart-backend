@@ -9,6 +9,9 @@ from app.schemas.user_schema import UserRead
 from app.crud.user_crud import calculate_completion, suggest_usernames
 from dotenv import load_dotenv
 import os
+from datetime import timedelta
+from app.core import auth
+
 
 # Load environment variables
 load_dotenv()
@@ -19,14 +22,17 @@ def verify_google_token(id_token_str: str):
     """Verify the Google ID token and extract user info."""
     try:
         id_info = id_token.verify_oauth2_token(
-            id_token_str, requests.Request(), GOOGLE_CLIENT_ID
+            id_token_str, requests.Request(), GOOGLE_CLIENT_ID,  clock_skew_in_seconds=60 
         )
         return id_info
-    except ValueError:
+    except ValueError as e:
+        print(f"❌ Google token verification failed: {e}")
+        print(f"🔑 GOOGLE_CLIENT_ID used: {GOOGLE_CLIENT_ID}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"message": "Invalid Google token"}
+            detail={"message": f"Invalid Google token: {str(e)}"}
         )
+
 
 
 def authenticate_with_google(db: Session, id_token_str: str):
@@ -53,7 +59,6 @@ def authenticate_with_google(db: Session, id_token_str: str):
         suggestions = suggest_usernames(db, base_username, max_suggestions=1)
         username = suggestions[0] if suggestions else f"{base_username}_{uuid.uuid4().hex[:4]}"
 
-        # Note: passwordHash cannot be NULL, so use a placeholder
         placeholder_password = "GOOGLE_USER_ACCOUNT"
 
         user = models.User(
@@ -65,7 +70,7 @@ def authenticate_with_google(db: Session, id_token_str: str):
             profileImage=picture,
             role=models.RoleEnum.user,
             isActive=True,
-            isAgreedtoTC=True,  # Optional, set False if you want explicit consent
+            isAgreedtoTC=True,
         )
 
         db.add(user)
@@ -77,14 +82,18 @@ def authenticate_with_google(db: Session, id_token_str: str):
     db.commit()
 
     # --- Generate tokens ---
-    access_token = auth.create_token(data={"sub": str(user.id)})
+    access_token = auth.create_token(
+        data={"sub": str(user.id)},
+        expires_delta=timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
     refresh_token = auth.create_token(
-        data={"sub": str(user.id)}, expires_delta=auth.REFRESH_TOKEN_EXPIRE_DAYS
+        data={"sub": str(user.id)},
+        expires_delta=timedelta(days=auth.REFRESH_TOKEN_EXPIRE_DAYS)
     )
 
+    # Return only tokens
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer",
-        "user": UserRead.from_orm(user),
     }

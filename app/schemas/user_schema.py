@@ -163,5 +163,5 @@ class TokenData(BaseModel):
     username: str | None = None
 
 class UserAuthResponse(BaseModel):
-    user: UserRead
+    # user: UserRead
     tokens: Token    
