@@ -1,3 +1,72 @@
+# from pydantic import BaseModel, field_validator
+# from typing import Optional, Literal
+# from datetime import datetime
+
+# # -------------------------
+# # Action types for chat
+# # -------------------------
+# ChatAction = Literal["message", "typing", "read", "presence", "ping"]
+
+# # -------------------------
+# # Base schema for incoming messages
+# # -------------------------
+# class MessageBase(BaseModel):
+#     receiver_id: str
+#     content: str
+#     action: ChatAction
+#     timestamp: datetime
+
+#     @field_validator("content")
+#     @classmethod
+#     def validate_content(cls, v, info):
+#         # content is required only if action is "message"
+#         action = info.data.get("action")
+#         if action == "message" and not v:
+#             raise ValueError("Content is required for 'message' action")
+#         return v
+
+# # -------------------------
+# # Schema for creating a message
+# # -------------------------
+# class MessageCreate(MessageBase):
+#     message_type: Optional[str] = "text"  # default "text"
+
+# # -------------------------
+# # Schema for returning messages
+# # -------------------------
+# class MessageOut(BaseModel):
+#     sender_id: str
+#     receiver_id: str
+#     # content: Optional[str] = None
+#     content: str
+#     # timestamp: Optional[datetime]
+#     timestamp: datetime
+#     is_read: bool = False
+#     action: ChatAction = "message"
+#     message_type: str = "text"
+
+#     class Config:
+#         from_attributes = True
+
+# # -------------------------
+# # Schema for typing indicator
+# # -------------------------
+# class TypingIndicator(BaseModel):
+#     sender_id: str
+#     receiver_id: str
+#     action: Literal["typing"] = "typing"
+#     is_typing: bool = True
+
+# # -------------------------
+# # Schema for read receipts
+# # -------------------------
+# class ReadReceipt(BaseModel):
+#     sender_id: str
+#     receiver_id: str
+#     action: Literal["read"] = "read"
+#     by_user: str
+
+
 from pydantic import BaseModel, field_validator
 from typing import Optional, Literal
 from datetime import datetime
@@ -5,21 +74,20 @@ from datetime import datetime
 # -------------------------
 # Action types for chat
 # -------------------------
-ChatAction = Literal["message", "typing", "read"]
+ChatAction = Literal["message", "typing", "read", "presence", "ping"]
 
 # -------------------------
 # Base schema for incoming messages
 # -------------------------
 class MessageBase(BaseModel):
     receiver_id: str
-    content: str
+    content: Optional[str] = None   # optional now
     action: ChatAction
-    timestamp: datetime
+    timestamp: Optional[datetime] = None  # optional now
 
     @field_validator("content")
     @classmethod
     def validate_content(cls, v, info):
-        # content is required only if action is "message"
         action = info.data.get("action")
         if action == "message" and not v:
             raise ValueError("Content is required for 'message' action")
@@ -29,7 +97,7 @@ class MessageBase(BaseModel):
 # Schema for creating a message
 # -------------------------
 class MessageCreate(MessageBase):
-    message_type: Optional[str] = "text"  # default "text"
+    message_type: Optional[str] = "text"
 
 # -------------------------
 # Schema for returning messages
@@ -37,10 +105,8 @@ class MessageCreate(MessageBase):
 class MessageOut(BaseModel):
     sender_id: str
     receiver_id: str
-    # content: Optional[str] = None
-    content: str
-    # timestamp: Optional[datetime]
-    timestamp: datetime
+    content: Optional[str] = None
+    timestamp: Optional[datetime] = None
     is_read: bool = False
     action: ChatAction = "message"
     message_type: str = "text"
@@ -53,7 +119,7 @@ class MessageOut(BaseModel):
 # -------------------------
 class TypingIndicator(BaseModel):
     sender_id: str
-    receiver_id: str
+    receiver_id: Optional[str] = None
     action: Literal["typing"] = "typing"
     is_typing: bool = True
 
