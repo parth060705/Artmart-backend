@@ -24,14 +24,29 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # -------------------------
 
 def add_to_Saved(db: Session, item: saved_schemas.SavedCreate, user_id: UUID):
+    # Check if already saved
+    existing = db.query(models.Saved).filter(
+        models.Saved.userId == str(user_id),
+        models.Saved.artworkId == str(item.artworkId)
+    ).first()
+
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Artwork already saved"
+        )
+
     db_Saved = models.Saved(
+        id=str(uuid4()),
         userId=str(user_id),
         artworkId=str(item.artworkId)
     )
+
     db.add(db_Saved)
     db.commit()
     db.refresh(db_Saved)
-    return db_Saved
+
+
 
 def get_user_Saved(db: Session, user_id: UUID):
     return (
