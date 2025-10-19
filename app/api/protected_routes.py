@@ -280,29 +280,10 @@ def get_my_reviews(
 # SAVED
 # -------------------------
 
-# @user_router.post("/Saved", response_model=SavedRead)
-# def add_to_Saved(item: SavedCreatePublic, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-#     internal_item = SavedCreate(userId=current_user.id, artworkId=item.artworkId)
-#     return saved_crud.add_to_Saved(db, internal_item, user_id=current_user.id)
-
 @user_router.post("/Saved", response_model=SavedRead)
-def add_to_Saved(
-    item: SavedCreatePublic,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    internal_item = saved_crud.SavedCreate(
-        userId=current_user.id,
-        artworkId=item.artworkId
-    )
-    # Prevent duplicates with exception
-    try:
-        saved_item = saved_crud.add_to_Saved(db, internal_item, user_id=current_user.id)
-    except HTTPException as e:
-        raise e
-
-    return saved_item
-
+def add_to_Saved(item: SavedCreatePublic, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    internal_item = SavedCreate(userId=current_user.id, artworkId=item.artworkId)
+    return saved_crud.add_to_Saved(db, internal_item, user_id=current_user.id)
 
 @user_router.get("/Saved", response_model=List[SavedRead])
 def get_Saved(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
