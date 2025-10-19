@@ -254,7 +254,7 @@ class ArtistReview(Base):
 # -------------------------
 
 class Saved(Base):
-    __tablename__ = "Saved"
+    __tablename__ = "saved"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     userId = Column(String(36), ForeignKey("users.id"))
