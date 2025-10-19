@@ -20,6 +20,8 @@ from datetime import datetime, timedelta
 import random
 from app.models.models import User
 from typing import Optional
+from sqlalchemy import func, desc
+from decimal import Decimal
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -109,43 +111,6 @@ def generate_otp(length: int = 6):
     return ''.join(random.choices("0123456789", k=length))
 
 # 4)HELPER CLASS FOR AVGRATING, REVIEW COUNT AND CALCULATING RANK
-# def get_user_rating_info(db, user_id):
-#     # Average rating and review count
-#     rating_data = (
-#         db.query(
-#             func.avg(models.ArtistReview.rating).label("avgRating"),
-#             func.count(models.ArtistReview.id).label("reviewCount")
-#         )
-#         .filter(models.ArtistReview.artist_id == str(user_id))
-#         .first()
-#     )
-
-#     avg_rating = float(rating_data.avgRating or 0.0)
-#     review_count = int(rating_data.reviewCount or 0)
-
-#     # Rank calculation
-#     ranked_artists = (
-#         db.query(
-#             models.User.id.label("artist_id"),
-#             func.avg(models.ArtistReview.rating).label("avgRating")
-#         )
-#         .outerjoin(models.ArtistReview, models.User.id == models.ArtistReview.artist_id)
-#         .group_by(models.User.id)
-#         .order_by(desc("avgRating"))
-#         .all()
-#     )
-
-#     rank = next((idx for idx, a in enumerate(ranked_artists, start=1) if str(a.artist_id) == str(user_id)), None)
-
-#     return {
-#         "avgRating": avg_rating,
-#         "reviewCount": review_count,
-#         "rank": rank
-#     }
-
-from sqlalchemy import func, desc
-from decimal import Decimal
-
 def get_user_rating_info(db, user_id, m=5):
     # Step 1: Get avg rating and review count for this artist
     rating_data = (

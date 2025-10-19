@@ -6,17 +6,21 @@ from typing import Optional, Literal, List
 # ENUM TYPES
 RoleType = Literal["user", "admin", "store"]
 
-# -------------------------------
-# TOKENS
-# -------------------------------
+# # -------------------------------
+# # TOKENS
+# # -------------------------------
 
-class Token(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str
+# class Token(BaseModel):
+#     access_token: str
+#     refresh_token: str
+#     token_type: str
 
-class TokenData(BaseModel):
-    username: str | None = None
+# class TokenData(BaseModel):
+#     username: str | None = None
+
+# class UserAuthResponse(BaseModel):
+#     user: UserRead
+#     tokens: Token    
 
 # -------------------------------
 # USER SCHEMAS
@@ -145,3 +149,19 @@ class ResetPasswordWithOTPSchema(BaseModel): # for password reset
 class ChangePasswordSchema(BaseModel):
     old_password: str
     new_password: str    
+
+# -------------------------------
+# TOKENS
+# -------------------------------
+
+class Token(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    username: str | None = None
+
+class UserAuthResponse(BaseModel):
+    user: UserRead
+    tokens: Token    

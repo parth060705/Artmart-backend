@@ -11,7 +11,7 @@ from app.core.auth import get_current_user_optional
 from app.models import models
 from app.models.models import User
 
-from app.schemas.user_schema import UserCreate, UserRead, UserSearch, Token, ResetPasswordWithOTPSchema
+from app.schemas.user_schema import UserCreate, UserRead, UserSearch, Token, ResetPasswordWithOTPSchema, UserAuthResponse
 from app.schemas.artworks_schemas import ArtworkRead, ArtworkCategory, ArtworkArtist
 from app.schemas.review_schemas import ReviewRead
 from app.schemas.likes_schemas import LikeCountResponse
@@ -68,14 +68,22 @@ def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
 # -------------------------
 
 # google register and login
-@router.post("/google_register", response_model=Token)
-def google_register(id_token_str: str, db: Session = Depends(get_db)):
-    return googleauth_crud.register_with_google(db, id_token_str)
-
-
-@router.post("/google_login", response_model=Token)
-def google_login(id_token_str: str, db: Session = Depends(get_db)):
-    return googleauth_crud.login_with_google(db, id_token_str)
+@router.post(
+    "/google",
+    response_model=UserAuthResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Sign in or register using Google OAuth",
+)
+def google_auth(id_token: str = Form(...), db: Session = Depends(get_db)):
+    result = googleauth_crud.authenticate_with_google(db, id_token)
+    return {
+        "user": result["user"],
+        "tokens": {
+            "access_token": result["access_token"],
+            "refresh_token": result["refresh_token"],
+            "token_type": result["token_type"],
+        },
+    }
 
     
 #---------------------------------------------------------------------------------------------------------------------
