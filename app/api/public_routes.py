@@ -20,7 +20,7 @@ from app.schemas.artistreview_schemas import ArtistReviewRead, ArtistRatingSumma
 
 from app.core.smtp_otp import send_otp_email
 from fastapi import BackgroundTasks
-from app.crud import user_crud, search_crud, artworks_crud, recmmendation_crud,review_crud, likes_crud, comment_crud, artistreview_crud
+from app.crud import user_crud, search_crud, artworks_crud, recmmendation_crud,review_crud, likes_crud, comment_crud, artistreview_crud, googleauth_crud
 from passlib.context import CryptContext
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -67,112 +67,15 @@ def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
 # USER (Public)
 # -------------------------
 
-# THROUGH GOOGLE REGISTRATION
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from google.oauth2 import id_token
-from google.auth.transport import requests
-from app.models import models
-from app.schemas.user_schema import UserRead, Token
-from app.core import auth
-from app.database import get_db
-from app.crud.user_crud import calculate_completion
-import uuid
-
-from dotenv import load_dotenv
-import os
-
-# Load .env file
-load_dotenv()
-
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-
-# -------------------------
-# GOOGLE REGISTER & LOGIN
-# -------------------------
-
-# GOOGLE REGISTER
-@router.post("/googleregister", response_model=Token)
+# google register and login
+@router.post("/google_register", response_model=Token)
 def google_register(id_token_str: str, db: Session = Depends(get_db)):
-    try:
-        id_info = id_token.verify_oauth2_token(id_token_str, requests.Request(), GOOGLE_CLIENT_ID)
+    return googleauth_crud.register_with_google(db, id_token_str)
 
-        email = id_info.get("email")
-        name = id_info.get("name")
-        picture = id_info.get("picture")
-        google_id = id_info.get("sub")
 
-        if not email:
-            raise HTTPException(status_code=400, detail="Invalid Google account data")
-
-        # Fail if user already exists
-        existing_user = db.query(models.User).filter(models.User.email == email).first()
-        if existing_user:
-            raise HTTPException(status_code=400, detail="User with this email already exists")
-
-        # Create new user
-        user = models.User(
-            id=str(uuid.uuid4()),
-            email=email,
-            name=name,
-            username=email.split("@")[0],
-            profileImage=picture,
-            googleId=google_id,
-            passwordHash=None,
-            isActive=True,
-            isVerified=True,
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-
-        user.profileCompletion = calculate_completion(user, db)
-        db.commit()
-
-        access_token = auth.create_token(data={"sub": str(user.id)})
-        refresh_token = auth.create_token(data={"sub": str(user.id)}, expires_delta=auth.REFRESH_TOKEN_EXPIRE_DAYS)
-
-        return {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "token_type": "bearer",
-            "user": UserRead.from_orm(user)
-        }
-
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid Google token")
-
-# GOOGLE LOGIN
-@router.post("/googlelogin", response_model=Token)
+@router.post("/google_login", response_model=Token)
 def google_login(id_token_str: str, db: Session = Depends(get_db)):
-    try:
-        id_info = id_token.verify_oauth2_token(id_token_str, requests.Request(), GOOGLE_CLIENT_ID)
-
-        email = id_info.get("email")
-        if not email:
-            raise HTTPException(status_code=400, detail="Invalid Google account data")
-
-        # Must exist
-        user = db.query(models.User).filter(models.User.email == email).first()
-        if not user:
-            raise HTTPException(status_code=404, detail="User not registered. Please register first.")
-
-        # Update profile completion (optional)
-        user.profileCompletion = calculate_completion(user, db)
-        db.commit()
-
-        access_token = auth.create_token(data={"sub": str(user.id)})
-        refresh_token = auth.create_token(data={"sub": str(user.id)}, expires_delta=auth.REFRESH_TOKEN_EXPIRE_DAYS)
-
-        return {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "token_type": "bearer",
-            "user": UserRead.from_orm(user)
-        }
-
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid Google token")
+    return googleauth_crud.login_with_google(db, id_token_str)
 
     
 #---------------------------------------------------------------------------------------------------------------------
