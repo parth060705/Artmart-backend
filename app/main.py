@@ -9,6 +9,10 @@ from app.database import engine, Base
 from app.models import models
 from fastapi.middleware.cors import CORSMiddleware
 # from config import settings
+import os
+from dotenv import load_dotenv  
+
+load_dotenv(dotenv_path=r"C:\Users\ghara\OneDrive\Desktop\parth\FastAPI\app\.env")
 
 Base.metadata.create_all(bind=engine)
 
@@ -20,7 +24,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://www.auroraa.in","http://localhost:5173","https://art-mart-sigma.vercel.app","https://*.app.github.dev",],    
+    allow_origins= os.getenv("ALLOWED_ORIGIN"),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
