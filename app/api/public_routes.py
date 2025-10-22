@@ -33,6 +33,36 @@ router = APIRouter(
 # AUTH ROUTES
 # -------------------------
 
+# @router.post("/login", response_model=Token)
+# def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+#     user = user_crud.get_user_by_username(db, form_data.username)
+#     if not user or not auth.verify_password(form_data.password, user.passwordHash):
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect username or password")
+
+#     access_token = auth.create_token(
+#         data={"sub": user.username}, expires_delta=timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+#     )
+#     refresh_token = auth.create_token(
+#         data={"sub": user.username}, expires_delta=timedelta(days=auth.REFRESH_TOKEN_EXPIRE_DAYS)
+#     )
+#     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+
+
+# @router.post("/refresh", response_model=Token)
+# def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
+#     username = auth.decode_access_token(refresh_token)
+#     if username is None:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+
+#     user = user_crud.get_user_by_username(db, username)
+#     if not user:
+#         raise HTTPException(status_code=404, detail="User not found")
+
+#     new_access_token = auth.create_token(
+#         data={"sub": user.username}, expires_delta=timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+#     )
+#     return {"access_token": new_access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+
 @router.post("/login", response_model=Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = user_crud.get_user_by_username(db, form_data.username)
@@ -40,28 +70,50 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect username or password")
 
     access_token = auth.create_token(
-        data={"sub": user.username}, expires_delta=timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+        data={"sub": str(user.id), "username": user.username},
+        expires_delta=timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     refresh_token = auth.create_token(
-        data={"sub": user.username}, expires_delta=timedelta(days=auth.REFRESH_TOKEN_EXPIRE_DAYS)
+        data={"sub": str(user.id), "username": user.username},
+        expires_delta=timedelta(days=auth.REFRESH_TOKEN_EXPIRE_DAYS)
     )
-    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
 
+    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
 
 @router.post("/refresh", response_model=Token)
 def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
-    username = auth.decode_access_token(refresh_token)
-    if username is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+    decoded = auth.decode_access_token(refresh_token)
+    if not decoded or not decoded.get("user_id"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token"
+        )
 
-    user = user_crud.get_user_by_username(db, username)
+    user_id = decoded["user_id"]
+    username = decoded.get("username")
+
+    # Try to find user by ID first
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+
+    # Fallback to username (for backward compatibility)
+    if not user and username:
+        user = user_crud.get_user_by_username(db, username)
+
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    # ✅ Create a fresh access token with both id + username
     new_access_token = auth.create_token(
-        data={"sub": user.username}, expires_delta=timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+        data={"sub": str(user.id), "username": user.username},
+        expires_delta=timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-    return {"access_token": new_access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+
+    return {
+        "access_token": new_access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer"
+    }
+
 
 # -------------------------
 # USER (Public)

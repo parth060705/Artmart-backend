@@ -17,9 +17,9 @@ load_dotenv(dotenv_path=r"C:\Users\ghara\OneDrive\Desktop\parth\FastAPI\app\.env
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="ARTMART API",
-    description="Backend for the ARTMART art marketplace",
-    version="1.0.0"
+    title="Auroraa API",
+    description="Backend for the Auroraa art marketplace",
+    version="1.1.1"
 )
 
 app.add_middleware(
@@ -32,10 +32,12 @@ app.add_middleware(
 
 @app.get("/")
 def root():
-    return {"message": "Welcome to the ARTMART API!"}
+    return {"message": "Welcome to the Auroraa API!"}
 
 # app.include_router(routes.router, prefix="/api", tags=["public"])
 app.include_router(router, prefix="/api", tags=["public"])
 app.include_router(admin_router, prefix="/api/admin", tags=["admin"])
 app.include_router(user_router, prefix="/api/auth", tags=["authorized"])
 app.include_router(chat_router, prefix="/api/auth/chat", tags=["Chat"])
+
+print(os.getenv("ALLOWED_ORIGIN"))
