@@ -19,7 +19,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Auroraa API",
     description="Backend for the Auroraa art marketplace",
-    version="1.1.1"
+    version="1.2.1"
 )
 
 app.add_middleware(
