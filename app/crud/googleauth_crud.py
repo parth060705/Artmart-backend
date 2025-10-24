@@ -15,6 +15,7 @@ from datetime import timedelta
 # Load environment variables
 load_dotenv()
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+print(os.getenv("GOOGLE_CLIENT_ID"))
 
 
 def verify_google_token(id_token_str: str):
