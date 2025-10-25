@@ -14,6 +14,8 @@ import cloudinary.uploader
 from sqlalchemy.exc import SQLAlchemyError
 from app.schemas.artworks_schemas import (likeArt) 
 from app.crud.user_crud import(calculate_completion)
+from sqlalchemy import or_
+
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -348,36 +350,78 @@ def get_artwork(db: Session, artwork_id: UUID):
 
                                           # GET MY ARTWORK
 
+# def get_artworks_by_me(db: Session, user_id: str):
+#     # Only fetch non-deleted artworks
+#     artworksme = (
+#         db.query(models.Artwork)
+#         .options(joinedload(models.Artwork.images), joinedload(models.Artwork.likes))
+#         .filter(
+#             models.Artwork.artistId == user_id,
+#             # models.Artwork.isDeleted.is_(False)  # Exclude deleted
+#             # models.Artwork.isDeleted == False 
+#         )
+#         .all()
+#     )
+
+#     # total_count = len(artworksme)  # total non-deleted artworks
+
+#     return artworksme
+#     # return {
+#     #     "total_count": total_count,
+#     #     "artworks": artworksme
+#     # }
+
 def get_artworks_by_me(db: Session, user_id: str):
-    # Only fetch non-deleted artworks
+    # Only fetch non-deleted artworks (isDeleted False or NULL)
     artworksme = (
         db.query(models.Artwork)
         .options(joinedload(models.Artwork.images), joinedload(models.Artwork.likes))
         .filter(
             models.Artwork.artistId == user_id,
-            # models.Artwork.isDeleted.is_(False)  # Exclude deleted
-            # models.Artwork.isDeleted == False 
+            or_(
+                models.Artwork.isDeleted == False,  # not deleted
+                models.Artwork.isDeleted.is_(None)  # or NULL
+            )
         )
         .all()
     )
 
-    # total_count = len(artworksme)  # total non-deleted artworks
+    for artwork in artworksme:
+        artwork.how_many_like = {"like_count": len(artwork.likes)}  
 
     return artworksme
-    # return {
-    #     "total_count": total_count,
-    #     "artworks": artworksme
-    # }
 
                                           # GET USER ARTWORK
+# def get_artworks_by_user(db: Session, user_id: str):
+#     artworks = (
+#         db.query(models.Artwork)
+#         .options(joinedload(models.Artwork.likes))
+#         .filter(models.Artwork.artistId == str(user_id))
+#         .all()
+#     )
+
+#     for artwork in artworks:
+#         artwork.how_many_like = {"like_count": len(artwork.likes)}  
+
+#     return artworks
+
+
 def get_artworks_by_user(db: Session, user_id: str):
+    # Query artworks for user, excluding deleted (isDeleted=True)
     artworks = (
         db.query(models.Artwork)
         .options(joinedload(models.Artwork.likes))
-        .filter(models.Artwork.artistId == str(user_id))
+        .filter(
+            models.Artwork.artistId == str(user_id),
+            or_(
+                models.Artwork.isDeleted == False,   # not deleted
+                models.Artwork.isDeleted.is_(None)  # or NULL
+            )
+        )
         .all()
     )
 
+    # Add like count to each artwork
     for artwork in artworks:
         artwork.how_many_like = {"like_count": len(artwork.likes)}  
 
