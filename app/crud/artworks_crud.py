@@ -114,52 +114,94 @@ def create_artwork(
 
 #------------------------------------------------------------------------------------------------------
                                             # UPDATE ARTWORK #
+# def update_artwork(
+#     db: Session,
+#     artwork_id: str,
+#     user_id: str,
+#     artwork_update: artworks_schemas.ArtworkUpdate
+# ):
+#     db_artwork = db.query(models.Artwork).filter(models.Artwork.id == artwork_id).first()
+
+#     if not db_artwork:
+#         raise HTTPException(status_code=404, detail="Artwork not found")
+
+#     if db_artwork.artistId != user_id:
+#         raise HTTPException(status_code=403, detail="Not authorized to update this artwork")
+
+#     # Convert update data to dict
+#     update_data = artwork_update.dict(exclude_unset=True)
+
+#     # --- Enforce business rule for price & quantity ---
+#     if "isSold" in update_data:
+#         is_sold = update_data["isSold"]
+#     else:
+#         # If not explicitly updated, use current value
+#         is_sold = db_artwork.isSold
+
+#     if not is_sold:
+#         # If artwork is NOT sold, ignore price and quantity updates
+#         update_data.pop("price", None)
+#         update_data.pop("quantity", None)
+#     else:
+#         # If artwork IS sold, require price and quantity values
+#         if "price" not in update_data or "quantity" not in update_data:
+#             raise HTTPException(
+#                 status_code=400,
+#                 detail="Price and quantity are required when artwork is sold"
+#             )
+
+#     # Apply valid updates
+#     for key, value in update_data.items():
+#         setattr(db_artwork, key, value)
+
+#     db.commit()
+#     db.refresh(db_artwork)
+
+#     return db_artwork
+
 def update_artwork(
     db: Session,
     artwork_id: str,
     user_id: str,
-    artwork_update: artworks_schemas.ArtworkUpdate,
-     files: Optional[List[UploadFile]] = None  
+    artwork_update: artworks_schemas.ArtworkUpdate
 ):
+    # Fetch the artwork
     db_artwork = db.query(models.Artwork).filter(models.Artwork.id == artwork_id).first()
 
     if not db_artwork:
         raise HTTPException(status_code=404, detail="Artwork not found")
 
+    # Check if the user owns the artwork
     if db_artwork.artistId != user_id:
         raise HTTPException(status_code=403, detail="Not authorized to update this artwork")
 
-    # Update provided fields
+    # Get fields to update
     update_data = artwork_update.dict(exclude_unset=True)
+
+    # Determine new or existing isSold state
+    is_sold = update_data.get("isSold", db_artwork.isSold)
+
+    # --- Business logic for price & quantity ---
+    if not is_sold:
+        # If not sold, ignore any updates to price or quantity
+        update_data.pop("price", None)
+        update_data.pop("quantity", None)
+    else:
+        # If sold, ensure price and quantity are not null
+        if update_data.get("price") is None or update_data.get("quantity") is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Price and quantity cannot be null when artwork is sold"
+            )
+
+    # Apply updates to the model
     for key, value in update_data.items():
         setattr(db_artwork, key, value)
 
-    # Upload additional images if provided
-    if files:
-        new_image_urls = []
-
-        for f in files:
-            if f.content_type not in ALLOWED_MIME_TYPES:
-                raise HTTPException(status_code=400, detail=f"Unsupported file type: {f.content_type}")
-
-            contents = f.file.read()
-            if len(contents) > MAX_FILE_SIZE_MB * 1024 * 1024:
-                raise HTTPException(status_code=400, detail=f"File too large (max {MAX_FILE_SIZE_MB}MB)")
-            f.file.seek(0)
-
-            try:
-                result = cloudinary.uploader.upload(f.file, folder="artworks")
-                secure_url = result.get("secure_url")
-                if secure_url:
-                    new_image_urls.append(secure_url)
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Cloudinary error: {str(e)}")
-
-        # Append new images to existing ones
-        db_artwork.images = (db_artwork.images or []) + new_image_urls
-
+    # Commit and refresh
     db.commit()
     db.refresh(db_artwork)
+
     return db_artwork
 
 # --------------------
@@ -259,15 +301,31 @@ def delete_artwork_image(db, artwork_id: str, user_id: str, public_id: str):
 #------------------------------------------------------------------------------------------------------------
 
                                           # DELETE ARTWORK
+# def delete_artwork(db: Session, artwork_id: UUID, user_id: UUID):
+#     artwork = db.query(models.Artwork).filter(
+#         models.Artwork.id == str(artwork_id),
+#         models.Artwork.artistId == str(user_id)).first()
+#     if not artwork:
+#         raise HTTPException(status_code=404, detail="Artwork not found or unauthorized")
+#     db.delete(artwork)
+#     db.commit()
+#     return {"message": "Artwork deleted successfully", "artwork_id": artwork_id}
+
 def delete_artwork(db: Session, artwork_id: UUID, user_id: UUID):
+    # Find artwork that belongs to the user
     artwork = db.query(models.Artwork).filter(
         models.Artwork.id == str(artwork_id),
-        models.Artwork.artistId == str(user_id)).first()
+        models.Artwork.artistId == str(user_id)
+    ).first()
     if not artwork:
         raise HTTPException(status_code=404, detail="Artwork not found or unauthorized")
-    db.delete(artwork)
+
+    # Soft delete — set isDeleted flag to True
+    artwork.isDeleted = True
+
     db.commit()
-    return {"message": "Artwork deleted successfully", "artwork_id": artwork_id}
+    db.refresh(artwork)
+    return {"message": "Artwork marked as deleted successfully", "artwork_id": artwork_id}
 
                                         # GET ARTWORK LIST                                 
 def list_artworks(db: Session) -> List[models.Artwork]:
@@ -290,18 +348,26 @@ def get_artwork(db: Session, artwork_id: UUID):
 
                                           # GET MY ARTWORK
 
-def get_artworks_by_user(db: Session, user_id: str):
-    artworks = (
+def get_artworks_by_me(db: Session, user_id: str):
+    # Only fetch non-deleted artworks
+    artworksme = (
         db.query(models.Artwork)
         .options(joinedload(models.Artwork.images), joinedload(models.Artwork.likes))
-        .filter(models.Artwork.artistId == user_id)
+        .filter(
+            models.Artwork.artistId == user_id,
+            # models.Artwork.isDeleted.is_(False)  # Exclude deleted
+            # models.Artwork.isDeleted == False 
+        )
         .all()
     )
-    for artwork in artworks:
-        artwork.how_many_like = likeArt(like_count=len(artwork.likes))
 
-    return artworks
+    # total_count = len(artworksme)  # total non-deleted artworks
 
+    return artworksme
+    # return {
+    #     "total_count": total_count,
+    #     "artworks": artworksme
+    # }
 
                                           # GET USER ARTWORK
 def get_artworks_by_user(db: Session, user_id: str):

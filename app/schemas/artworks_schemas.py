@@ -128,3 +128,7 @@ class ArtworkMe(BaseModel):
 
     class Config:
         from_attributes = True 
+
+class ArtworkMeResponse(BaseModel):
+    total_count: int
+    artworks: List[ArtworkMe]
