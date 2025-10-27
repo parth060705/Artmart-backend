@@ -7,7 +7,8 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from uuid import UUID
 from sqlalchemy import desc, func
-from app.crud.user_crud import get_user_rating_info
+# from app.crud.user_crud import get_user_rating_info
+from app.util import util_artistrank
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -65,7 +66,7 @@ def list_artists_by_rating(db: Session):
     results = []
 
     for artist in artists:
-        rating_info = get_user_rating_info(db, artist.id)
+        rating_info = util_artistrank.get_user_rating_info(db, artist.id)
 
         results.append({
             "artistId": artist.id,

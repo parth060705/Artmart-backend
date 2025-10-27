@@ -22,7 +22,8 @@ from typing import List, Optional, Dict
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.models import models
-from app.crud.user_crud import get_user_rating_info
+# from app.crud.user_crud import get_user_rating_info
+from app.util import util_artistrank
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -135,7 +136,7 @@ def search_users(db: Session, query: str):
 
     for u in users:
         # ✅ Fetch rating info per user
-        rating_info = get_user_rating_info(db, u.id)  
+        rating_info = util_artistrank.get_user_rating_info(db, u.id)  
 
         result.append({
             "id": str(u.id),
