@@ -16,7 +16,8 @@ from passlib.context import CryptContext
 # import re
 # from sqlalchemy.exc import SQLAlchemyError
 # from app.schemas.schemas import (likeArt)
-from app.crud.user_crud import(calculate_completion)
+# from app.crud.user_crud import(calculate_completion)
+from app.util import util
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -71,7 +72,7 @@ def follow_user(db: Session, follower_id: str, followed_id: str):
         db.refresh(follower)
 
         # Recalculate profile completion after follow
-        follower.profile_completion = calculate_completion(follower, db)
+        follower.profile_completion = util.calculate_completion(follower, db)
         db.commit()
         db.refresh(follower)
 

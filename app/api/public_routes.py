@@ -22,6 +22,8 @@ from app.core.smtp_otp import send_otp_email
 from fastapi import BackgroundTasks
 from app.crud import user_crud, search_crud, artworks_crud, recmmendation_crud,review_crud, likes_crud, comment_crud, artistreview_crud, googleauth_crud
 from passlib.context import CryptContext
+from app.util import util
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
@@ -175,7 +177,7 @@ def register_user(
     if email and user_crud.get_user_by_email(db, email):
         raise HTTPException(status_code=400, detail="Email already registered")
     if username and user_crud.get_user_by_username(db, username):
-        suggestions = user_crud.suggest_usernames(db, username)
+        suggestions = util.suggest_usernames(db, username)
         raise HTTPException(status_code=400, detail={"message": "Username taken", "suggestions": suggestions})
 
     user_data = UserCreate(

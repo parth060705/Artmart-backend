@@ -18,6 +18,7 @@ from app.schemas.cart_schemas import CartCreatePublic, CartRead, CartCreate
 from app.schemas.review_schemas import ReviewCreate, ReviewRead
 from app.schemas.follow_schemas import FollowList, FollowStatus
 from app.schemas.artistreview_schemas import ArtistReviewRead, ArtistReviewCreate
+from app.util import util_artistrank
 
 from app.crud import (
     user_crud, artworks_crud, likes_crud, comment_crud,
@@ -42,7 +43,7 @@ def read_users_me(
     if not current_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    rating_info = user_crud.get_user_rating_info(db, current_user.id)
+    rating_info = util_artistrank.get_user_rating_info(db, current_user.id)
 
     # Build complete response
     response_data = {

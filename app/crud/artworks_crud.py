@@ -13,7 +13,7 @@ from fastapi import UploadFile, HTTPException
 import cloudinary.uploader
 from sqlalchemy.exc import SQLAlchemyError
 from app.schemas.artworks_schemas import (likeArt) 
-from app.crud.user_crud import(calculate_completion)
+from app.util import util
 from sqlalchemy import or_
 
 
@@ -95,7 +95,7 @@ def create_artwork(
         db.commit()
         db.refresh(db_artwork)
 
-        user.profile_completion = calculate_completion(user, db)
+        user.profile_completion = util.calculate_completion(user, db)
         db.commit()
         db.refresh(user)
 

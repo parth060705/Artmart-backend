@@ -24,3 +24,5 @@ def get_db():
         yield db
     finally:
         db.close()
+
+print(os.getenv("DATABASE_URL"))
