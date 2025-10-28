@@ -23,6 +23,7 @@ from fastapi import BackgroundTasks
 from app.crud import user_crud, search_crud, artworks_crud, recmmendation_crud,review_crud, likes_crud, comment_crud, artistreview_crud, googleauth_crud
 from passlib.context import CryptContext
 from app.util import util
+from app.core.redis_client import get_redis_client
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -428,14 +429,51 @@ def get_reviews_for_artwork(artwork_id: UUID, db: Session = Depends(get_db)):
 # ARTIST REVIEWS
 # -------------------------
 
-@router.get("/artists/top", response_model=list[ArtistRatingSummary])
-def get_top_artists(db: Session = Depends(get_db)):
-    """
-    Get all reviews for a specific artist,
-    sorted from highest rating to lowest.
-    """
-    return artistreview_crud.list_artists_by_rating(db)
+# @router.get("/artists/top", response_model=list[ArtistRatingSummary])
+# def get_top_artists(db: Session = Depends(get_db)):
+#     """
+#     Get all reviews for a specific artist,
+#     sorted from highest rating to lowest.
+#     """
+#     return artistreview_crud.list_artists_by_rating(db)
 
+import json
+from app.util import util_cache
+
+@router.get("/artists/top", response_model=list[ArtistRatingSummary])
+async def get_top_artists(db: Session = Depends(get_db)):
+    """
+    Get all artists sorted by rating.
+    Cached in Redis for 5 minutes.
+    """
+    cache_key = "artists:top"
+
+    # 1️⃣ Try Redis cache first
+    cached_data = await util_cache.get_cache(cache_key)
+    if cached_data:
+        print("🎯 Cache hit for artists:top")
+        return cached_data
+
+    # 2️⃣ Cache miss — query database
+    print("💾 Cache miss for artists:top — querying DB")
+    try:
+        data = artistreview_crud.list_artists_by_rating(db)
+    except Exception as e:
+        print(f"DB error: {e}")
+        raise
+
+    # 3️⃣ Serialize and store in cache
+    serialized = []
+    for d in data:
+        if hasattr(d, "__dict__"):
+            serialized.append(d.__dict__)
+        else:
+            serialized.append(dict(d))
+
+    await util_cache.set_cache(cache_key, serialized, ttl=300)
+    print("✅ Cached artists:top for 300 seconds")
+
+    return data
 # -------------------------
 # RECOMMENDATION
 # -------------------------

@@ -9,6 +9,8 @@ from app.database import engine, Base
 from app.models import models
 from fastapi.middleware.cors import CORSMiddleware
 # from config import settings
+from app.core.redis_client import get_redis_client
+from contextlib import asynccontextmanager
 import os
 from dotenv import load_dotenv  
 
@@ -16,15 +18,27 @@ load_dotenv(dotenv_path=r"C:\Users\ghara\OneDrive\Desktop\parth\FastAPI\app\.env
 
 Base.metadata.create_all(bind=engine)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    redis_client = get_redis_client()
+    await redis_client.connect()
+    print("✅ Redis connected successfully")
+
+    yield
+
+    await redis_client.close()
+    print("🛑 Redis connection closed")
+
 app = FastAPI(
     title="Auroraa API",
     description="Backend for the Auroraa art marketplace",
-    version="1.2.1"
+    version="1.2.1",
+    lifespan=lifespan
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins= os.getenv("ALLOWED_ORIGIN"),
+    allow_origins= os.getenv("ALLOWED_ORIGIN").split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
