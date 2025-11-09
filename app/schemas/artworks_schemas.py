@@ -61,7 +61,8 @@ class ArtworkWithLikes(ArtworkBase):
 
 class ArtworkRead(ArtworkBase):
     id: UUID
-    isSold: bool
+    # isSold: bool
+    isSold: Optional[bool] = None
     createdAt: datetime
     artistId: UUID
 
