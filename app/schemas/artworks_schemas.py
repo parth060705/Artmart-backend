@@ -34,7 +34,8 @@ class ArtworkAdmin(BaseModel):
     createdAt: datetime
     category: str
     artist: ArtworkArtist
-    isSold: bool  
+    # isSold: bool 
+    isSold: Optional[bool] = None
 
     class Config:
         from_attributes = True 
@@ -125,7 +126,8 @@ class ArtworkMe(BaseModel):
     artistId: str
     how_many_like: Optional[likeArt] = None
     createdAt: datetime
-    isSold: bool
+    # isSold: bool
+    isSold: Optional[bool] = None
 
     class Config:
         from_attributes = True 
