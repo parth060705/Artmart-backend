@@ -26,7 +26,7 @@ async def set_cache(key: str, value, ttl: int = 300):
 
     await redis_client.redis.setex(key, ttl, json.dumps(value))
 
-
+# helper function for se time for refresh at 12
 def seconds_until_midnight() -> int:
     """Calculate seconds remaining until next midnight (local time)."""
     now = datetime.now()
