@@ -1,4 +1,4 @@
-# app/utils/cache.py
+from datetime import datetime, timedelta
 import json
 from app.core.redis_client import get_redis_client
 
@@ -15,7 +15,7 @@ async def get_cache(key: str):
         try:
             return json.loads(data)
         except json.JSONDecodeError:
-            return data  # return raw string if not JSON
+            return data
     return None
 
 
@@ -25,3 +25,16 @@ async def set_cache(key: str, value, ttl: int = 300):
         await redis_client.connect()
 
     await redis_client.redis.setex(key, ttl, json.dumps(value))
+
+
+def seconds_until_midnight() -> int:
+    """Calculate seconds remaining until next midnight (local time)."""
+    now = datetime.now()
+    tomorrow = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    return int((tomorrow - now).total_seconds())
+
+
+async def set_cache_until_midnight(key: str, value):
+    """Store cache that automatically expires at midnight."""
+    ttl = seconds_until_midnight()
+    await set_cache(key, value, ttl)
