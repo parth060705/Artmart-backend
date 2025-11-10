@@ -18,6 +18,9 @@ load_dotenv(dotenv_path=r"C:\Users\ghara\OneDrive\Desktop\parth\FastAPI\app\.env
 
 Base.metadata.create_all(bind=engine)
 
+# ✅ Create a global Redis client instance
+redis_client = get_redis_client()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     redis_client = get_redis_client()
@@ -47,6 +50,18 @@ app.add_middleware(
 @app.get("/")
 def root():
     return {"message": "Welcome to the Auroraa API!"}
+
+@app.get("/health/redis")
+async def redis_health():
+    try:
+        if not redis_client.redis:
+            await redis_client.connect()  # Ensure connection before pinging
+
+        pong = await redis_client.redis.ping()
+        return {"status": "ok", "ping": pong}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 
 # app.include_router(routes.router, prefix="/api", tags=["public"])
 app.include_router(router, prefix="/api", tags=["public"])
