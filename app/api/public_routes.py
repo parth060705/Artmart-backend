@@ -444,7 +444,7 @@ def get_reviews_for_artwork(artwork_id: UUID, db: Session = Depends(get_db)):
 async def get_top_artists(db: Session = Depends(get_db)):
     """
     Get all artists sorted by rating.
-    Cached in Redis for 5 minutes.
+    Cached in Redis until midnight.
     """
     cache_key = "artists:top"
 
@@ -465,9 +465,9 @@ async def get_top_artists(db: Session = Depends(get_db)):
         for d in data
     ]
 
-    # 4️⃣ Save serialized data in Redis for 5 min
-    await util_cache.set_cache(cache_key, serialized, ttl=300)
-    print("✅ Cached artists:top for 300 seconds")
+    # 4️⃣ Cache until midnight
+    await util_cache.set_cache_until_midnight(cache_key, serialized)
+    print("✅ Cached artists:top until midnight")
 
     return serialized
 
