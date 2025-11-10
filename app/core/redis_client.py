@@ -1,50 +1,51 @@
+# app/core/redis_client.py
 import os
-import redis.asyncio as redis
+from redis import asyncio as aioredis
 from dotenv import load_dotenv
 
-# Load env variables
-load_dotenv(dotenv_path=r"C:\Users\ghara\OneDrive\Desktop\parth\FastAPI\app\.env")
+load_dotenv()
 
-REDIS_HOST = os.getenv("REDIS_HOST")
-REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-REDIS_USERNAME = os.getenv("REDIS_USERNAME")
-REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
-REDIS_SSL = os.getenv("REDIS_SSL", "false").lower() == "true"
+class RedisClient:
+    """Async Redis client wrapper for Auroraa app"""
 
-# --- Function to create Redis client ---
-def get_redis_client():
-    class RedisClient:
-        def __init__(self):
-            self.client = None
+    def __init__(self):
+        self.redis = None
+        self.redis_url = os.getenv(
+            "REDIS_URL",
+            "redis://default:TRqf42UVocHo9q6GkRRaQ9Rp64JMSzTU@redis-11051.c264.ap-south-1-1.ec2.redns.redis-cloud.com:11051"
+        )
 
-        async def connect(self):
+    async def connect(self):
+        """Establish async Redis connection"""
+        if not self.redis:
+            self.redis = aioredis.from_url(
+                self.redis_url,
+                encoding="utf-8",
+                decode_responses=True
+            )
+            # test connection
             try:
-                # Use SSL=True if REDIS_SSL=true
-                self.client = redis.Redis(
-                    host=REDIS_HOST,
-                    port=REDIS_PORT,
-                    username=REDIS_USERNAME,
-                    password=REDIS_PASSWORD,
-                    ssl=REDIS_SSL,
-                    decode_responses=True
-                )
-                # Test connection
-                pong = await self.client.ping()
-                print("✅ Redis convvnected successfully:", pong)
+                await self.redis.ping()
+                print("✅ Connected to Redis Cloud (Auroraa Staging)")
             except Exception as e:
                 print("❌ Redis connection failed:", e)
 
-        async def close(self):
-            if self.client:
-                await self.client.close()
+    async def close(self):
+        """Close the Redis connection"""
+        if self.redis:
+            await self.redis.close()
+            print("🔌 Redis connection closed")
 
-        async def get(self, key):
-            return await self.client.get(key)
+    async def get(self, key: str):
+        return await self.redis.get(key)
 
-        async def set(self, key, value, ttl=None):
-            if ttl:
-                await self.client.setex(key, ttl, value)
-            else:
-                await self.client.set(key, value)
+    async def set(self, key: str, value: str, expire: int = None):
+        await self.redis.set(key, value, ex=expire)
 
+    async def delete(self, key: str):
+        await self.redis.delete(key)
+
+
+# Factory function for FastAPI lifespan or DI
+def get_redis_client() -> RedisClient:
     return RedisClient()

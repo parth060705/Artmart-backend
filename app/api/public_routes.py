@@ -17,13 +17,16 @@ from app.schemas.review_schemas import ReviewRead
 from app.schemas.likes_schemas import LikeCountResponse
 from app.schemas.comment_schemas import CommentRead
 from app.schemas.artistreview_schemas import ArtistReviewRead, ArtistRatingSummary
+from app.schemas.saved_schemas import SavedRead
 
 from app.core.smtp_otp import send_otp_email
 from fastapi import BackgroundTasks
-from app.crud import user_crud, search_crud, artworks_crud, recmmendation_crud,review_crud, likes_crud, comment_crud, artistreview_crud, googleauth_crud
+from app.crud import user_crud, search_crud, artworks_crud, recmmendation_crud,review_crud, likes_crud, comment_crud, artistreview_crud, googleauth_crud, saved_crud
 from passlib.context import CryptContext
 from app.util import util
 from app.core.redis_client import get_redis_client
+import json
+from app.util import util_cache
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -437,9 +440,6 @@ def get_reviews_for_artwork(artwork_id: UUID, db: Session = Depends(get_db)):
 #     """
 #     return artistreview_crud.list_artists_by_rating(db)
 
-import json
-from app.util import util_cache
-
 @router.get("/artists/top", response_model=list[ArtistRatingSummary])
 async def get_top_artists(db: Session = Depends(get_db)):
     """
@@ -456,24 +456,21 @@ async def get_top_artists(db: Session = Depends(get_db)):
 
     # 2️⃣ Cache miss — query database
     print("💾 Cache miss for artists:top — querying DB")
-    try:
-        data = artistreview_crud.list_artists_by_rating(db)
-    except Exception as e:
-        print(f"DB error: {e}")
-        raise
+    data = artistreview_crud.list_artists_by_rating(db)
 
-    # 3️⃣ Serialize and store in cache
-    serialized = []
-    for d in data:
-        if hasattr(d, "__dict__"):
-            serialized.append(d.__dict__)
-        else:
-            serialized.append(dict(d))
+    # 3️⃣ Convert ORM objects → dicts (for JSON serialization)
+    serialized = [
+        d.dict() if hasattr(d, "dict") else
+        d.__dict__ if hasattr(d, "__dict__") else dict(d)
+        for d in data
+    ]
 
+    # 4️⃣ Save serialized data in Redis for 5 min
     await util_cache.set_cache(cache_key, serialized, ttl=300)
     print("✅ Cached artists:top for 300 seconds")
 
-    return data
+    return serialized
+
 # -------------------------
 # RECOMMENDATION
 # -------------------------
@@ -508,3 +505,11 @@ def get_like_count(artwork_id: UUID, db: Session = Depends(get_db)):
 @router.get("/artworks/{artwork_id}/comments", response_model=List[CommentRead])
 def get_comments(artwork_id: str, db: Session = Depends(get_db)):
     return comment_crud.get_comments_by_artwork(db, artwork_id)
+
+# -------------------------
+# COMMENTS ENDPOINTS
+# -------------------------
+
+@router.get("/Saved/{user_id}", response_model=List[SavedRead])
+def get_saved_public(user_id: UUID, db: Session = Depends(get_db)):
+    return saved_crud.get_user_Saved(db, user_id=user_id)
