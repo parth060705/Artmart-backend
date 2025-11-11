@@ -376,6 +376,7 @@ def list_artworks_route(
 
 
 #______________________________________________________________________________________
+
 @router.get("/artworks/{artwork_id}", response_model=ArtworkRead)
 def get_artwork_route(artwork_id: UUID, db: Session = Depends(get_db), user=Depends(get_current_user_optional)):
     db_artwork = artworks_crud.get_artwork(db, artwork_id)

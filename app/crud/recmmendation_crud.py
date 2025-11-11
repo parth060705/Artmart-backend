@@ -99,99 +99,6 @@ def recommend_artworks(db: Session, artwork_id: UUID, limit: int = 10) -> List[A
     return [ArtworkRead.model_validate(art, from_attributes=True) for art in top_artworks]
 
 # RECOMMENDATION BY USERS INTERRACTION FOR PERSONALIZED DISCOVER FEED
-# def list_recommendations(db: Session, current_user, limit: int = 10) -> List[models.Artwork]:
-#     """
-#     Return personalized artwork recommendations if user is logged in.
-#     Otherwise, return random artworks.
-#     """
-#     # 🔹 If user not logged in → random artworks
-#     if not current_user:
-#         return (
-#             db.query(models.Artwork)
-#             .filter(models.Artwork.isDeleted == False)
-#             .order_by(func.random())
-#             .limit(limit)
-#             .options(joinedload(models.Artwork.artist),
-#                      joinedload(models.Artwork.likes),
-#                      joinedload(models.Artwork.images))
-#             .all()
-#         )
-
-#     user_id = str(current_user.id)
-
-#     # 1️⃣ Get user’s interacted artworks (liked, saved, commented)
-#     liked_ids = [x.artworkId for x in db.query(models.ArtworkLike.artworkId).filter_by(userId=user_id).all()]
-#     saved_ids = [x.artworkId for x in db.query(models.Saved.artworkId).filter_by(userId=user_id).all()]
-#     commented_ids = []
-#     if hasattr(models, "ArtworkComment"):
-#         commented_ids = [x.artworkId for x in db.query(models.ArtworkComment.artworkId).filter_by(userId=user_id).all()]
-
-#     interacted_ids = set(liked_ids + saved_ids + commented_ids)
-#     if not interacted_ids:
-#         # no interactions yet → random
-#         return (
-#             db.query(models.Artwork)
-#             .filter(models.Artwork.isDeleted == False)
-#             .order_by(func.random())
-#             .limit(limit)
-#             .options(joinedload(models.Artwork.artist),
-#                      joinedload(models.Artwork.likes),
-#                      joinedload(models.Artwork.images))
-#             .all()
-#         )
-
-#     # 2️⃣ Extract tags & categories from interacted artworks
-#     interacted_artworks = (
-#         db.query(models.Artwork)
-#         .filter(models.Artwork.id.in_(list(interacted_ids)))
-#         .all()
-#     )
-
-#     user_tags = set()
-#     user_categories = set()
-#     for art in interacted_artworks:
-#         user_tags |= parse_tags(art.tags)
-#         if art.category:
-#             user_categories.add(art.category.lower())
-
-#     # 3️⃣ Find matching artworks
-#     candidates = (
-#         db.query(models.Artwork)
-#         .filter(models.Artwork.id.notin_(list(interacted_ids)),
-#                 models.Artwork.isDeleted == False)
-#         .options(joinedload(models.Artwork.artist),
-#                  joinedload(models.Artwork.likes),
-#                  joinedload(models.Artwork.images))
-#         .all()
-#     )
-
-#     scored = {}
-#     for art in candidates:
-#         score = 0
-
-#         if art.category and art.category.lower() in user_categories:
-#             score += 3  # category has higher weight
-
-#         art_tags = parse_tags(art.tags)
-#         score += len(user_tags & art_tags) * 2
-
-#         if score > 0:
-#             scored[art] = score
-
-#     sorted_artworks = sorted(scored.keys(), key=lambda a: scored[a], reverse=True)
-
-#     if not sorted_artworks:
-#         # fallback to random
-#         return (
-#             db.query(models.Artwork)
-#             .filter(models.Artwork.isDeleted == False)
-#             .order_by(func.random())
-#             .limit(limit)
-#             .all()
-#         )
-
-#     return sorted_artworks[:limit]
-
 def list_recommendations(db: Session, current_user, limit: int | None = None) -> List[models.Artwork]:
     """
     Personalized recommendations:
@@ -199,7 +106,7 @@ def list_recommendations(db: Session, current_user, limit: int | None = None) ->
       - If no user: random artworks
       - If no interactions yet: random artworks
     """
-    # 🧑‍🤝‍🧑 Guest user → random artworks
+    # Guest user → random artworks
     if not current_user:
         query = (
             db.query(models.Artwork)
