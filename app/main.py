@@ -12,7 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.redis_client import get_redis_client
 from contextlib import asynccontextmanager
 import os
-from dotenv import load_dotenv  
+from dotenv import load_dotenv
+import json
 
 load_dotenv(dotenv_path=r"C:\Users\ghara\OneDrive\Desktop\parth\FastAPI\app\.env")
 
@@ -39,10 +40,12 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+allowed_origins = json.loads(os.getenv("ALLOWED_ORIGIN", "[]"))
+
 app.add_middleware(
     CORSMiddleware,
     # allow_origins= os.getenv("ALLOWED_ORIGIN"),
-    allow_origins=[os.getenv("ALLOWED_ORIGIN")],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
