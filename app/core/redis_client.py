@@ -10,10 +10,7 @@ class RedisClient:
 
     def __init__(self):
         self.redis = None
-        self.redis_url = os.getenv(
-            "REDIS_URL",
-            "redis://default:TRqf42UVocHo9q6GkRRaQ9Rp64JMSzTU@redis-11051.c264.ap-south-1-1.ec2.redns.redis-cloud.com:11051"
-        )
+        self.redis_url = os.getenv("REDIS_URL")
 
     async def connect(self):
         """Establish async Redis connection"""
@@ -49,3 +46,6 @@ class RedisClient:
 # Factory function for FastAPI lifespan or DI
 def get_redis_client() -> RedisClient:
     return RedisClient()
+
+# print the redis url
+print(os.getenv("REDIS_URL"))
