@@ -69,6 +69,17 @@ class ArtworkRead(ArtworkBase):
 
     class Config:
         from_attributes = True
+
+class ArtworkOnly(BaseModel):
+    id: str
+    title: str
+    description: Optional[str] = None
+    images: List[ArtworkImageRead] = Field(default_factory=list)
+    tags: Optional[list[str]] = None
+    category: str
+
+    class Config:
+        from_attributes = True        
    
 class ArtworkCreate(BaseModel):
     title: str

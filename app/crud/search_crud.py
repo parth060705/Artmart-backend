@@ -35,7 +35,9 @@ def search_artworks(db: Session, query: str):  # ilike is use for searh in MYSQL
     return db.query(models.Artwork).filter(
         or_(
             models.Artwork.title.ilike(f"%{query}%"),
-            models.Artwork.category.ilike(f"%{query}%")
+            models.Artwork.description.ilike(f"%{query}%"),
+            models.Artwork.category.ilike(f"%{query}%"),
+            models.Artwork.tags.ilike(f"%{query}%")
             )).all()
 
 def search_users(db: Session, query: str):
