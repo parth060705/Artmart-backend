@@ -18,6 +18,7 @@ from app.schemas.likes_schemas import LikeCountResponse
 from app.schemas.comment_schemas import CommentRead
 from app.schemas.artistreview_schemas import ArtistReviewRead, ArtistRatingSummary
 from app.schemas.saved_schemas import SavedRead
+from app.schemas.error_response_schemas import standard_responses
 
 from app.core.smtp_otp import send_otp_email
 from fastapi import BackgroundTasks
@@ -145,7 +146,7 @@ def google_auth(id_token: str = Form(...), db: Session = Depends(get_db)):
     
 #---------------------------------------------------------------------------------------------------------------------
 
-@router.post("/register", response_model=UserRead)
+@router.post("/register", response_model=UserRead,  responses=standard_responses)
 def register_user(
     name: str = Form(None),
     email: str = Form(None),
@@ -191,7 +192,7 @@ def register_user(
     )
     return user_crud.create_user(db=db, user=user_data)
 
-@router.get("/user/{user_id}", response_model=UserSearch)
+@router.get("/user/{user_id}", response_model=UserSearch, responses=standard_responses)
 def read_user(
     user_id: str,  # can be UUID or username
     db: Session = Depends(get_db),

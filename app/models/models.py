@@ -326,3 +326,21 @@ class Payment(Base):
     user = relationship("User", backref="payments")
     order = relationship("Order", backref="payment")
 
+# -------------------------
+# ADMIN AUDIT LOG MODEL
+# -------------------------
+
+class AdminAuditLog(Base):
+    __tablename__ = "admin_audit_logs"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    admin_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    method = Column(String(10), nullable=False)  # e.g., GET, POST, DELETE
+    path = Column(String(255), nullable=False)   # e.g., /admin/delete-user/5
+    action = Column(String(100), nullable=False)
+    description = Column(Text, nullable=True)
+    ip_address = Column(String(50), nullable=True)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
+    # Relationship
+    admin = relationship("User", backref="admin_logs")

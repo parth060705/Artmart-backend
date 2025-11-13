@@ -14,6 +14,7 @@ from contextlib import asynccontextmanager
 import os
 from dotenv import load_dotenv
 import json
+from app.core.admin_logger import AdminLoggerMiddleware
 
 load_dotenv(dotenv_path=r"C:\Users\ghara\OneDrive\Desktop\parth\FastAPI\app\.env")
 
@@ -50,6 +51,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add the admin logger middleware
+app.add_middleware(AdminLoggerMiddleware)
 
 @app.get("/")
 def root():

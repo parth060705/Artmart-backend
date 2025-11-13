@@ -194,3 +194,7 @@ def list_follow_followers(db: Session):
         .join(models.User, models.User.id == models.followers_association.c.follower_id)
         .all()
     )
+
+                                         #  ADMIN AUDIT LOGS
+def list_admin_logs(db: Session):
+    return db.query(models.AdminAuditLog).all()
