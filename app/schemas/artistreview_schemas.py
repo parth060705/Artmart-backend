@@ -32,6 +32,7 @@ class ArtistReviewRead(ArtistReviewBase):
 class ArtistRatingSummary(BaseModel): # for calculating average rating
     artistId: UUID
     avgRating: float
+    weightedRating: float
     reviewCount: int
     username: Optional[str] = None
     profileImage: Optional[str] = None

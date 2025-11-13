@@ -192,7 +192,7 @@ def register_user(
     )
     return user_crud.create_user(db=db, user=user_data)
 
-@router.get("/user/{user_id}", response_model=UserSearch, responses=standard_responses)
+@router.get("/user/{user_id}", response_model=UserSearch)
 def read_user(
     user_id: str,  # can be UUID or username
     db: Session = Depends(get_db),
