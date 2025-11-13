@@ -1,8 +1,6 @@
 from sqlalchemy import or_ , and_, func, text, desc
 from app.models import models
 
-
-
 # 4)HELPER CLASS FOR AVGRATING, REVIEW COUNT AND CALCULATING RANK
 
 # def get_user_rating_info(db, user_id, m=5):

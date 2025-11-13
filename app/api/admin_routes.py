@@ -6,10 +6,12 @@ from uuid import UUID
 from app.database import get_db
 from app.core.auth import get_current_admin
 from app.models.models import User
+
 from app.schemas.user_schema import UserCreate, UserBaseAdmin, UserUpdateAdmin, DeleteMessageUser
 from app.schemas.artworks_schemas import ArtworkAdmin, ArtworkRead, ArtworkDelete, ArtworkUpdate
 from app.schemas.order_schemas import OrderRead, OrderDelete
 from app.schemas.follow_schemas import FollowFollowers
+from app.schemas.admin_schemas import AdminAuditLogResponse
 
 from app.crud import admin_crud, search_crud
 
@@ -157,3 +159,11 @@ def list_follow_followers(db: Session = Depends(get_db)):
         }
         for row in followers
     ]
+
+# -------------------------
+# ADMIN AUDIT LOGS
+# -------------------------
+
+@admin_router.get("/auditlogs", response_model=List[AdminAuditLogResponse])
+def get_admin_audit_logs(db: Session = Depends(get_db)):
+    return admin_crud.list_admin_logs(db)

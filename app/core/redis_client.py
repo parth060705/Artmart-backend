@@ -23,7 +23,7 @@ class RedisClient:
             # test connection
             try:
                 await self.redis.ping()
-                print("✅ Connected to Redis Cloud (Auroraa Staging)")
+                print("✅ Connected to Redis Cloud")
             except Exception as e:
                 print("❌ Redis connection failed:", e)
 
