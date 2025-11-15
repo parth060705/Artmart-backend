@@ -524,9 +524,9 @@ def get_comments(artwork_id: str, db: Session = Depends(get_db)):
     return comment_crud.get_comments_by_artwork(db, artwork_id)
 
 # -------------------------
-# COMMENTS ENDPOINTS
+# SAVED ENDPOINTS
 # -------------------------
 
-@router.get("/Saved/{user_id}", response_model=List[SavedRead])
+@router.get("/saved/{user_id}", response_model=List[SavedRead])
 def get_saved_public(user_id: UUID, db: Session = Depends(get_db)):
     return saved_crud.get_user_Saved(db, user_id=user_id)
