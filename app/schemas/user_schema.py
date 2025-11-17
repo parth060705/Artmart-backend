@@ -109,8 +109,10 @@ class UserRead(UserBase):
     updatedAt: Optional[datetime] = None
     profile_completion: Optional[int] = None      #
     avgRating: Optional[float] = None
+    weightedRating: Optional[float] = None
     reviewCount: Optional[int] = None
     rank: Optional[int] = None
+    role: Optional[str] = None
     # is_reviewed: Optional[bool] = None
 
 
@@ -129,11 +131,12 @@ class UserSearch(BaseModel):
     name: str
     username: str
     profileImage: Optional[HttpUrl] = None
-    location: Optional[str] = None
+    # location: Optional[str] = None
     gender: Optional[str] = None
     age: Optional[int] = None
     bio: Optional[str] = None
     avgRating: Optional[float] = None
+    weightedRating: Optional[float] = None
     reviewCount: Optional[int] = None
     rank: Optional[int] = None
     is_reviewed: Optional[bool] = None

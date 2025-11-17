@@ -62,8 +62,11 @@ def read_users_me(
         "updatedAt": current_user.updatedAt,
         "profile_completion": current_user.profile_completion,
         "avgRating": rating_info["avgRating"],
+        "weightedRating": rating_info["weightedRating"],
         "reviewCount": rating_info["reviewCount"],
         "rank": rating_info["rank"],
+        "role": current_user.role,
+
     }
 
     return response_data

@@ -60,6 +60,7 @@ def get_user(db: Session, user_id: str, current_user=None):
         "bio": user.bio,
         "createdAt": user.createdAt,
         "avgRating": rating_info["avgRating"],
+        "weightedRating": rating_info["weightedRating"],
         "reviewCount": rating_info["reviewCount"],
         "rank": rating_info["rank"],
         "is_reviewed": is_reviewed
