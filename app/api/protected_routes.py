@@ -35,6 +35,42 @@ user_router = APIRouter(
 # USER 
 # -------------------------
 
+# @user_router.get("/me", response_model=UserRead)
+# def read_users_me(
+#     current_user: User = Depends(get_current_user),
+#     db: Session = Depends(get_db)
+# ):
+#     if not current_user:
+#         raise HTTPException(status_code=404, detail="User not found")
+
+#     rating_info = util_artistrank.get_user_rating_info(db, current_user.id)
+
+#     # Build complete response
+#     response_data = {
+#         "id": current_user.id,
+#         "name": current_user.name,
+#         "email": current_user.email,
+#         "username": current_user.username,
+#         "profileImage": current_user.profileImage,
+#         "location": current_user.location,
+#         "gender": current_user.gender,
+#         "age": current_user.age,
+#         "bio": current_user.bio,
+#         "pincode": current_user.pincode,
+#         "phone": current_user.phone,
+#         "createdAt": current_user.createdAt,
+#         "updatedAt": current_user.updatedAt,
+#         "profile_completion": current_user.profile_completion,
+#         "avgRating": rating_info["avgRating"],
+#         "weightedRating": rating_info["weightedRating"],
+#         "reviewCount": rating_info["reviewCount"],
+#         "rank": rating_info["rank"],
+#         "role": current_user.role,
+
+#     }
+
+#     return response_data
+
 @user_router.get("/me", response_model=UserRead)
 def read_users_me(
     current_user: User = Depends(get_current_user),
@@ -44,6 +80,20 @@ def read_users_me(
         raise HTTPException(status_code=404, detail="User not found")
 
     rating_info = util_artistrank.get_user_rating_info(db, current_user.id)
+
+    # Followers & Following
+    followers = follow_crud.get_followers(db, current_user.id)
+    following = follow_crud.get_following(db, current_user.id)
+
+    followers_data = {
+        "users": [follow_crud.serialize_user(u) for u in followers],
+        "count": len(followers)
+    }
+
+    following_data = {
+        "users": [follow_crud.serialize_user(u) for u in following],
+        "count": len(following)
+    }
 
     # Build complete response
     response_data = {
@@ -62,8 +112,12 @@ def read_users_me(
         "updatedAt": current_user.updatedAt,
         "profile_completion": current_user.profile_completion,
         "avgRating": rating_info["avgRating"],
+        "weightedRating": rating_info["weightedRating"],
         "reviewCount": rating_info["reviewCount"],
         "rank": rating_info["rank"],
+        "role": current_user.role,
+        "followers": followers_data,
+        "following": following_data
     }
 
     return response_data

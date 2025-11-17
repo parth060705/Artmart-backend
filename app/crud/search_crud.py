@@ -78,6 +78,7 @@ def search_users(db: Session, query: str):
             "age": u.age,
             "bio": u.bio,
             "avgRating": rating_info.get("avgRating"),
+            "weightedRating": rating_info.get("weightedRating"),
             "reviewCount": rating_info.get("reviewCount"),
             "rank": rating_info.get("rank"),
         })
