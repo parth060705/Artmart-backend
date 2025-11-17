@@ -2,6 +2,7 @@ from pydantic import BaseModel, EmailStr, HttpUrl, Field, field_validator, model
 from uuid import UUID
 from datetime import datetime
 from typing import Optional, Literal, List
+from app.schemas.follow_schemas import FollowList
 
 # ENUM TYPES
 RoleType = Literal["user", "admin", "store"]
@@ -113,6 +114,8 @@ class UserRead(UserBase):
     reviewCount: Optional[int] = None
     rank: Optional[int] = None
     role: Optional[str] = None
+    followers: Optional[FollowList] = None     
+    following: Optional[FollowList] = None
     # is_reviewed: Optional[bool] = None
 
 
@@ -139,6 +142,8 @@ class UserSearch(BaseModel):
     weightedRating: Optional[float] = None
     reviewCount: Optional[int] = None
     rank: Optional[int] = None
+    followers: Optional[FollowList] = None     
+    following: Optional[FollowList] = None
     is_reviewed: Optional[bool] = None
 
     class Config:
