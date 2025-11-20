@@ -16,7 +16,7 @@ from app.crud import user_crud
 # JWT config (use environment vars in prod)
 SECRET_KEY = "your-secret-key"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 1080
+ACCESS_TOKEN_EXPIRE_MINUTES = 10080
 REFRESH_TOKEN_EXPIRE_DAYS = 30
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")  # ***
