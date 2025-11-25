@@ -24,12 +24,13 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # ARTWORK OPERATIONS
 # -------------------------
                                               # CREATE ARTWORK #
-ALLOWED_EXTENSIONS = {"jpeg", "jpg", "png", "svg"}
+ALLOWED_EXTENSIONS = {"jpeg", "jpg", "png", "svg", "webp"}
 ALLOWED_MIME_TYPES = {
     "image/jpeg",
     "image/pjpeg",     
     "image/png",
-    "image/svg+xml"
+    "image/svg+xml",
+    "image/webp"
 }
 MAX_FILE_SIZE_MB = 20
 
