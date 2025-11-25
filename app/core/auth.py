@@ -115,7 +115,7 @@ def get_current_admin(token: str = Depends(oauth2_scheme), db: Session = Depends
 
 
 # HELPER CLASS FOR AUTHENTICATION BY TOKEN     USED IN (SPECIFIC ARTWORKS ROUTES, LIST ARTWORK)
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login", auto_error=False)
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login", auto_error=False)
 
 def get_current_user_optional(
     token: Optional[str] = Depends(oauth2_scheme),
