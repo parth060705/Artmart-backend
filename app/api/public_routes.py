@@ -270,81 +270,38 @@ def get_artworks_with_filters(
 # ARTWORK (Public)
 # -------------------------
 
-@router.get("/artworks", response_model=List[ArtworkRead])
-def list_artworks_route(db: Session = Depends(get_db), current_user=Depends(get_current_user_optional)):
-
-    artworks = db.query(models.Artwork).options(
-        subqueryload(models.Artwork.artist),
-        subqueryload(models.Artwork.likes),
-        subqueryload(models.Artwork.images)
-    ).all()
-    # only artworks that is for sale
-    # artworks_for_sale = [a for a in artworks if a.forSale]
-
-    cart_ids = None
-    saved_ids = None
-    liked_ids = None
-
-    if current_user:
-        cart_items = db.query(models.Cart.artworkId).filter_by(userId=str(current_user.id)).all()
-        cart_ids = {item.artworkId for item in cart_items}
-
-        saved_items = db.query(models.Saved.artworkId).filter_by(userId=str(current_user.id)).all()
-        saved_ids = {item.artworkId for item in saved_items}
-
-        liked_items = db.query(models.ArtworkLike.artworkId).filter_by(userId=str(current_user.id)).all()
-        liked_ids = {item.artworkId for item in liked_items}
-
-    result = []
-    # for art in artworks_for_sale:
-    for art in artworks:
-        like_count = len(art.likes) if art.likes else 0
-        is_in_cart = str(art.id) in cart_ids if cart_ids else None
-        is_saved = str(art.id) in saved_ids if saved_ids else None
-        is_like = art.id in liked_ids if liked_ids else None
-
-        result.append(
-            ArtworkRead(
-                id=art.id,
-                title=art.title,
-                description=art.description,
-                category=art.category,
-                price=art.price,
-                tags=art.tags,
-                quantity=art.quantity,
-                isSold=art.isSold,
-                images=art.images,
-                createdAt=art.createdAt,
-                artistId=art.artistId,
-                how_many_like={"like_count": like_count},
-                forSale=art.forSale,
-                artist=ArtworkArtist(
-                    id=art.artist.id,
-                    username=art.artist.username,
-                    profileImage=art.artist.profileImage
-                ),
-                isInCart=is_in_cart,
-                isSaved=is_saved,
-                isLike=is_like
-            )
-        )
-    return result
-
 # @router.get("/artworks", response_model=List[ArtworkRead])
-# def list_artworks_route(
-#     db: Session = Depends(get_db),
-#     current_user=Depends(get_current_user_optional)
-# ):
-#     """
-#     List artworks:
-#     - Personalized for logged-in users (based on tags & category of liked/saved/commented)
-#     - Random for guests
-#     """
-#     artworks = recmmendation_crud.list_recommendations(db, current_user)  # no limit → full feed
+# def list_artworks_route(db: Session = Depends(get_db), current_user=Depends(get_current_user_optional)):
+
+#     artworks = db.query(models.Artwork).options(
+#         subqueryload(models.Artwork.artist),
+#         subqueryload(models.Artwork.likes),
+#         subqueryload(models.Artwork.images)
+#     ).all()
+#     # only artworks that is for sale
+#     # artworks_for_sale = [a for a in artworks if a.forSale]
+
+#     cart_ids = None
+#     saved_ids = None
+#     liked_ids = None
+
+#     if current_user:
+#         cart_items = db.query(models.Cart.artworkId).filter_by(userId=str(current_user.id)).all()
+#         cart_ids = {item.artworkId for item in cart_items}
+
+#         saved_items = db.query(models.Saved.artworkId).filter_by(userId=str(current_user.id)).all()
+#         saved_ids = {item.artworkId for item in saved_items}
+
+#         liked_items = db.query(models.ArtworkLike.artworkId).filter_by(userId=str(current_user.id)).all()
+#         liked_ids = {item.artworkId for item in liked_items}
 
 #     result = []
+#     # for art in artworks_for_sale:
 #     for art in artworks:
 #         like_count = len(art.likes) if art.likes else 0
+#         is_in_cart = str(art.id) in cart_ids if cart_ids else None
+#         is_saved = str(art.id) in saved_ids if saved_ids else None
+#         is_like = art.id in liked_ids if liked_ids else None
 
 #         result.append(
 #             ArtworkRead(
@@ -366,14 +323,88 @@ def list_artworks_route(db: Session = Depends(get_db), current_user=Depends(get_
 #                     username=art.artist.username,
 #                     profileImage=art.artist.profileImage
 #                 ),
-#                 isInCart=False,
-#                 isSaved=False,
-#                 isLike=False
+#                 isInCart=is_in_cart,
+#                 isSaved=is_saved,
+#                 isLike=is_like
+#             )
+#         )
+#     return result
+
+@router.get("/artworks", response_model=List[ArtworkRead])
+def list_artworks_route(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user_optional)
+):
+
+    artworks = (
+        db.query(models.Artwork)
+        .options(
+            subqueryload(models.Artwork.artist),
+            subqueryload(models.Artwork.likes),
+            subqueryload(models.Artwork.images)
+        )
+        .order_by(models.Artwork.createdAt.desc())  # ⬅️ most recent first
+        .all()
+    )
+
+    result = []
+    for art in artworks:
+        result.append(
+            ArtworkRead(
+                id=art.id,
+                title=art.title,
+                description=art.description,
+                category=art.category,
+                price=art.price,
+                tags=art.tags,
+                quantity=art.quantity,
+                isSold=art.isSold,
+                images=art.images,
+                createdAt=art.createdAt,
+                artistId=art.artistId,
+                forSale=art.forSale,
+                artist=ArtworkArtist(
+                    id=art.artist.id,
+                    username=art.artist.username,
+                    profileImage=art.artist.profileImage
+                ),
+            )
+        )
+    return result
+
+
+# @router.get("/artworks", response_model=List[ArtworkRead])
+# def get_recommendations(
+#     db: Session = Depends(get_db),
+#     current_user=Depends(get_current_user_optional)
+# ):
+#     artworks = recmmendation_crud.list_recommendations(db, current_user)
+
+#     result = []
+#     for art in artworks:
+#         result.append(
+#             ArtworkRead(
+#                 id=art.id,
+#                 title=art.title,
+#                 description=art.description,
+#                 category=art.category,
+#                 price=art.price,
+#                 tags=art.tags,
+#                 quantity=art.quantity,
+#                 isSold=art.isSold,
+#                 images=art.images,
+#                 createdAt=art.createdAt,
+#                 artistId=art.artistId,
+#                 forSale=art.forSale,
+#                 artist=ArtworkArtist(
+#                     id=art.artist.id,
+#                     username=art.artist.username,
+#                     profileImage=art.artist.profileImage
+#                 ),
 #             )
 #         )
 
 #     return result
-
 
 
 #______________________________________________________________________________________
