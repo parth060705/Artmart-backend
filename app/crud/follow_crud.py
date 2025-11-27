@@ -121,3 +121,10 @@ def is_user_following(db: Session, follower_id: str, following_id: str) -> bool:
         return False
 
     return following in follower.following
+
+# def is_user_following(db: Session, follower_id: str, following_id: str) -> bool:
+#     return db.query(models.Follow).filter(
+#         models.Follow.follower_id == str(follower_id),
+#         models.Follow.following_id == str(following_id)
+#     ).first() is not None
+
