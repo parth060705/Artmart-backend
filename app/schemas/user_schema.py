@@ -2,7 +2,7 @@ from pydantic import BaseModel, EmailStr, HttpUrl, Field, field_validator, model
 from uuid import UUID
 from datetime import datetime
 from typing import Optional, Literal, List
-from app.schemas.follow_schemas import FollowList
+from app.schemas.follow_schemas import FollowList, FollowStatus
 
 # ENUM TYPES
 RoleType = Literal["user", "admin", "store"]
@@ -145,6 +145,7 @@ class UserSearch(BaseModel):
     followers: Optional[FollowList] = None     
     following: Optional[FollowList] = None
     is_reviewed: Optional[bool] = None
+    is_following: Optional[bool] = None
 
     class Config:
         from_attributes = True

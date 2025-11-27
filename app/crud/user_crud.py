@@ -24,6 +24,8 @@ from sqlalchemy import func, desc
 from decimal import Decimal
 from app.util import util, util_artistrank
 from app.crud import follow_crud
+from uuid import UUID
+
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -51,6 +53,20 @@ def get_user_by_email(db: Session, email: str):
 #         ).first()
 #         is_reviewed = review_exists is not None
 
+#     # Followers & Following
+#     followers = follow_crud.get_followers(db, user.id)
+#     following = follow_crud.get_following(db, user.id)
+
+#     followers_data = {
+#         "users": [follow_crud.serialize_user(u) for u in followers],
+#         "count": len(followers)
+#     }
+
+#     following_data = {
+#         "users": [follow_crud.serialize_user(u) for u in following],
+#         "count": len(following)
+#     }
+    
 #     return {
 #         "id": str(user.id),
 #         "name": user.name,
@@ -64,39 +80,53 @@ def get_user_by_email(db: Session, email: str):
 #         "weightedRating": rating_info["weightedRating"],
 #         "reviewCount": rating_info["reviewCount"],
 #         "rank": rating_info["rank"],
-#         "is_reviewed": is_reviewed
+#         "is_reviewed": is_reviewed,
+#         "followers": followers_data,
+#         "following": following_data
 #     }
 
 def get_user(db: Session, user_id: str, current_user=None):
-    user = db.query(User).filter(User.id == user_id).first()
+    # Convert to UUID if possible
+    try:
+        uid = UUID(str(user_id))
+    except ValueError:
+        return None
+
+    # Detect column type and compare correctly
+    if isinstance(User.id.type.python_type(), type) and User.id.type.python_type() is UUID:
+        # DB stores UUID natively
+        user = db.query(User).filter(User.id == uid).first()
+    else:
+        # DB stores UUID as string
+        user = db.query(User).filter(User.id == str(uid)).first()
+
     if not user:
         return None
 
     rating_info = util_artistrank.get_user_rating_info(db, str(user.id))
 
-    # Determine if current_user has reviewed this user
+    # Reviewed?
     is_reviewed = False
     if current_user:
         review_exists = db.query(models.ArtistReview).filter(
-            models.ArtistReview.artist_id == str(user_id),
+            models.ArtistReview.artist_id == str(user.id),
             models.ArtistReview.reviewer_id == str(current_user.id)
         ).first()
         is_reviewed = review_exists is not None
-
-    # Followers & Following
+        
+    # isFollowing?
+    is_following = False
+    if current_user:
+        is_following = follow_crud.is_user_following(
+            db,
+            follower_id=current_user.id,
+            following_id=user.id
+        )
+    
+    # Follow
     followers = follow_crud.get_followers(db, user.id)
     following = follow_crud.get_following(db, user.id)
 
-    followers_data = {
-        "users": [follow_crud.serialize_user(u) for u in followers],
-        "count": len(followers)
-    }
-
-    following_data = {
-        "users": [follow_crud.serialize_user(u) for u in following],
-        "count": len(following)
-    }
-    
     return {
         "id": str(user.id),
         "name": user.name,
@@ -111,46 +141,16 @@ def get_user(db: Session, user_id: str, current_user=None):
         "reviewCount": rating_info["reviewCount"],
         "rank": rating_info["rank"],
         "is_reviewed": is_reviewed,
-        "followers": followers_data,
-        "following": following_data
+        "is_following": is_following,  
+        "followers": {
+            "users": [follow_crud.serialize_user(u) for u in followers],
+            "count": len(followers),
+        },
+        "following": {
+            "users": [follow_crud.serialize_user(u) for u in following],
+            "count": len(following),
+        },
     }
-
-
-# def get_user_with_rating(db: Session, user_id: UUID):
-#     """
-#     Return user info including optional avgRating, reviewCount, and rank among all artists.
-#     """
-
-#     # Subquery: compute avgRating, reviewCount, and rank for all artists
-#     ranked_artists = (
-#         db.query(
-#             models.User.id.label("artist_id"),
-#             func.coalesce(func.avg(models.ArtistReview.rating), 0).label("avgRating"),
-#             func.count(models.ArtistReview.id).label("reviewCount"),
-#             func.rank()
-#             .over(order_by=desc(func.coalesce(func.avg(models.ArtistReview.rating), 0)))
-#             .label("rank")
-#         )
-#         .outerjoin(models.ArtistReview, models.User.id == models.ArtistReview.artist_id)
-#         .group_by(models.User.id)
-#         .subquery()
-#     )
-
-#     # Fetch the requested user's ranking info
-#     result = db.query(ranked_artists).filter(ranked_artists.c.artist_id == str(user_id)).first()
-
-#     # Fetch the basic user info
-#     user = db.query(models.User).filter(models.User.id == str(user_id)).first()
-#     if not user:
-#         return None
-
-#     user_dict = user.__dict__.copy()
-#     user_dict["avgRating"] = float(result.avgRating) if result and result.avgRating is not None else None
-#     user_dict["reviewCount"] = int(result.reviewCount) if result and result.reviewCount is not None else None
-#     user_dict["rank"] = int(result.rank) if result and result.rank is not None else None
-
-#     return user_dict
-
 
 def get_user_by_username(db: Session, username: str):
     return db.query(models.User).filter(models.User.username == username).first()
