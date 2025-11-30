@@ -142,6 +142,7 @@ class Artwork(Base):
     cart_items = relationship("Cart", back_populates="artwork")
     likes = relationship("ArtworkLike", back_populates="artwork", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="artwork", cascade="all, delete-orphan")
+    status = Column(String(20), default="pending_moderation")  ##
 
 
 class ArtworkImage(Base):
@@ -185,6 +186,7 @@ class Comment(Base):
     content = Column(String(500), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     # createdAt = Column(DateTime, nullable=False)
+    status = Column(String(20), default="pending_moderation")  ##
 
     # Relationships
     user = relationship("User", back_populates="comments")
@@ -224,6 +226,7 @@ class Review(Base):
     comment = Column(Text)
     createdAt = Column(DateTime, default=datetime.utcnow)
     # createdAt = Column(DateTime, nullable=False)
+    status = Column(String(20), default="pending_moderation")  ##
 
     # Relationships
     reviewer = relationship("User", back_populates="reviews", foreign_keys=[reviewerId])
@@ -244,6 +247,7 @@ class ArtistReview(Base):
     comment = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     # createdAt = Column(DateTime, nullable=False)
+    status = Column(String(20), default="pending_moderation")  ##
 
     # Relationships
     reviewer = relationship("User", foreign_keys=[reviewer_id], backref="artist_reviews_made")
@@ -344,3 +348,15 @@ class AdminAuditLog(Base):
 
     # Relationship
     admin = relationship("User", backref="admin_logs")
+
+# -------------------------
+# MODERATION QUEUE LOG MODEL
+# -------------------------
+class ModerationQueue(Base):
+    __tablename__ = "moderation_queue"
+
+    id = Column(Integer, primary_key=True)
+    table_name = Column(String(50))
+    content_id = Column(Integer)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    checked = Column(Boolean, default=False)
