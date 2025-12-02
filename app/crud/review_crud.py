@@ -7,15 +7,7 @@ from app.models import models
 from app.models.models import RoleEnum
 from app.schemas import review_schemas
 from passlib.context import CryptContext
-# import cloudinary.uploader
-# import cloudinary
-# from typing import List, Optional, Dict
-# from fastapi import UploadFile, HTTPException
-# import cloudinary.uploader
-# import random, string
-# import re
-# from sqlalchemy.exc import SQLAlchemyError
-# from app.schemas.schemas import (likeArt) 
+from app.crud import moderation_crud
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -29,11 +21,16 @@ def create_review(db: Session, item: review_schemas.ReviewCreate, user_id: UUID)
         artistId=str(item.artistId) if item.artistId else None,
         artworkId=str(item.artworkId),
         rating=item.rating,
-        comment=item.comment
+        comment=item.comment,
+        status="pending_moderation"  # default, optional
     )
     db.add(db_review)
     db.commit()
     db.refresh(db_review)
+
+    # Add to moderation queue
+    moderation_crud.add_to_moderation(db, table_name="reviews", content_id=db_review.id)
+
     return db_review
 
 def list_reviews_for_artwork(db: Session, artwork_id: UUID):
