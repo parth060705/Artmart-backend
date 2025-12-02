@@ -9,6 +9,7 @@ from uuid import UUID
 from sqlalchemy import desc, func
 # from app.crud.user_crud import get_user_rating_info
 from app.util import util_artistrank
+from app.crud import moderation_crud
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -33,6 +34,10 @@ def create_artist_review(db: Session, item: artistreview_schemas.ArtistReviewCre
         existing_review.comment = item.comment
         db.commit()
         db.refresh(existing_review)
+
+         # Add to moderation queue
+        moderation_crud.add_to_moderation(db, table_name="artist_reviews", content_id=existing_review.id)
+
         return existing_review
 
     # Otherwise, create a new review
@@ -45,6 +50,10 @@ def create_artist_review(db: Session, item: artistreview_schemas.ArtistReviewCre
     db.add(db_review)
     db.commit()
     db.refresh(db_review)
+
+    # Add to moderation queue
+    moderation_crud.add_to_moderation(db, table_name="artist_reviews", content_id=db_review.id)
+
     return db_review
 
 

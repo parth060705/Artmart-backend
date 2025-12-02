@@ -561,3 +561,12 @@ def get_comments(artwork_id: str, db: Session = Depends(get_db)):
 @router.get("/saved/{user_id}", response_model=List[SavedRead])
 def get_saved_public(user_id: UUID, db: Session = Depends(get_db)):
     return saved_crud.get_user_Saved(db, user_id=user_id)
+
+# -------------------------
+# SAVED ENDPOINTS
+# -------------------------
+
+@router.get("/moderation/pending")
+def get_pending_moderation(db: Session = Depends(get_db)):
+    items = db.query(models.ModerationQueue).filter_by(checked=False).all()
+    return items

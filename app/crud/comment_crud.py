@@ -15,7 +15,9 @@ from passlib.context import CryptContext
 # import random, string
 # import re
 # from sqlalchemy.exc import SQLAlchemyError
-# from app.schemas.schemas import (likeArt) 
+# from app.schemas.schemas import (likeArt)
+from app.crud import moderation_crud
+
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -34,11 +36,15 @@ def create_comment(db: Session, user_id: UUID, comment_data: models.Comment):
         id=str(uuid4()),
         user_id=user_id,
         artwork_id=artwork_id,
-        content=comment_data.content
+        content=comment_data.content,
+        status="pending_moderation"  # default, optional
     )
     db.add(new_comment)
     db.commit()
     db.refresh(new_comment)
+
+    # Add to moderation queue
+    moderation_crud.add_to_moderation(db, table_name="comments", content_id=new_comment.id)
 
     return {"message": "Comment added successfully.", "comment": new_comment}
 
