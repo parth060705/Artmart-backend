@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from uuid import UUID
 from datetime import datetime
 from typing import List, Optional
+from app.models.models import StatusENUM
 
 # -------------------------------
 # ARTIST REVIEW SCHEMAS
@@ -24,6 +25,7 @@ class ArtistReviewRead(ArtistReviewBase):
     artistId: UUID = Field(..., alias="artist_id")
     createdAt: datetime = Field(..., alias="created_at")
     reviewer: UserReview
+    status: Optional[StatusENUM] = None
 
     model_config = {
         "from_attributes": True  # ORM parsing
