@@ -363,6 +363,7 @@ def list_artworks_route(
                 createdAt=art.createdAt,
                 artistId=art.artistId,
                 forSale=art.forSale,
+                status=art.status,
                 artist=ArtworkArtist(
                     id=art.artist.id,
                     username=art.artist.username,
@@ -460,7 +461,8 @@ def get_artwork_route(artwork_id: UUID, db: Session = Depends(get_db), user=Depe
         isInCart=is_in_cart,
         isSaved=is_saved,
         isLike=is_like,
-        forSale=db_artwork.forSale
+        forSale=db_artwork.forSale,
+        status=db_artwork.status
     )
 
 

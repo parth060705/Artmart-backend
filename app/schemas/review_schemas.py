@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
 from typing import Optional
+from app.models.models import StatusENUM
 
 # -------------------------------
 # REVIEW SCHEMAS
@@ -24,6 +25,7 @@ class ReviewRead(ReviewBase):
     artworkId: UUID
     createdAt: datetime
     reviewer: UserReview 
-
+    status: Optional[StatusENUM] = None
+    
     class Config:
         from_attributes = True

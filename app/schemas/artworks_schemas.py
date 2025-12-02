@@ -2,6 +2,7 @@ from pydantic import BaseModel, EmailStr, HttpUrl, Field, field_validator, model
 from uuid import UUID
 from datetime import datetime
 from typing import Optional, Literal, List
+from app.models.models import StatusENUM
 
 # -------------------------------
 # ARTWORK SCHEMAS
@@ -66,6 +67,7 @@ class ArtworkRead(ArtworkBase):
     isSold: Optional[bool] = None
     createdAt: datetime
     artistId: UUID
+    status: Optional[StatusENUM] = None
 
     class Config:
         from_attributes = True
