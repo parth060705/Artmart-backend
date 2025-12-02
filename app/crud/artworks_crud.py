@@ -15,7 +15,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.schemas.artworks_schemas import (likeArt) 
 from app.util import util
 from sqlalchemy import or_
-
+from app.crud import moderation_crud
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -61,6 +61,7 @@ def create_artwork(
         db_artwork = models.Artwork(
             **artwork_data.dict(exclude={"images"}),  # exclude images from schema
             artistId=str(user_id),
+            status="pending_moderation",  
         )
         db.add(db_artwork)
         db.flush()  # flush to get artwork ID before images
@@ -95,6 +96,9 @@ def create_artwork(
 
         db.commit()
         db.refresh(db_artwork)
+
+        # Add to moderation queue
+        moderation_crud.add_to_moderation(db, table_name="artworks", content_id=db_artwork.id)
 
         user.profile_completion = util.calculate_completion(user, db)
         db.commit()
