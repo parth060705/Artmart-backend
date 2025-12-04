@@ -38,5 +38,6 @@ def list_reviews_for_artwork(db: Session, artwork_id: UUID):
         db.query(models.Review)
         .options(joinedload(models.Review.reviewer))
         .filter(models.Review.artworkId == str(artwork_id))
+        .order_by(models.Review.created_at.desc())
         .all()
     )
