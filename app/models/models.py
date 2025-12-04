@@ -372,3 +372,78 @@ class ModerationQueue(Base):
     content_id = Column(String(36), nullable=False) 
     created_at = Column(DateTime, default=datetime.utcnow)
     checked = Column(Boolean, default=False)
+
+# ============================================================
+#                COMMUNITY SYSTEM (ONLY THESE TABLES)
+# ============================================================
+
+# -------------------------
+# COMMUNITY MODEL
+# -------------------------
+
+class Community(Base):
+    __tablename__ = "communities"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String(150), nullable=False)
+    description = Column(Text, nullable=True)
+    owner_id = Column(String(36), ForeignKey("users.id"))
+    bannerImage = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updatedAt = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    owner = relationship("User")
+
+    members = relationship("CommunityMember", back_populates="community")
+    artworks = relationship("CommunityArtwork", back_populates="community")
+
+
+# -------------------------
+# COMMUNITY MEMBER
+# -------------------------
+
+class CommunityMember(Base):
+    __tablename__ = "community_members"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    community_id = Column(String(36), ForeignKey("communities.id"))
+    user_id = Column(String(36), ForeignKey("users.id"))
+    joined_at = Column(DateTime, default=datetime.utcnow)
+
+    community = relationship("Community", back_populates="members")
+    user = relationship("User")
+
+
+# -------------------------
+# COMMUNITY ARTWORK / POST MODEL
+# -------------------------
+
+class CommunityArtwork(Base):
+    __tablename__ = "community_artworks"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    community_id = Column(String(36), ForeignKey("communities.id"))
+    user_id = Column(String(36), ForeignKey("users.id"))
+    content = Column(Text, nullable=False)
+    image = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    community = relationship("Community", back_populates="artworks")
+    user = relationship("User")
+    likes = relationship("CommunityLike", back_populates="artwork")
+
+
+# -------------------------
+# COMMUNITY LIKE MODEL
+# -------------------------
+
+class CommunityLike(Base):
+    __tablename__ = "community_likes"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    artwork_id = Column(String(36), ForeignKey("community_artworks.id"))
+    user_id = Column(String(36), ForeignKey("users.id"))
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    artwork = relationship("CommunityArtwork", back_populates="likes")
+    user = relationship("User")

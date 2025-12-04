@@ -53,5 +53,6 @@ def get_comments_by_artwork(db: Session, artwork_id: str):
         db.query(models.Comment)
         .options(joinedload(models.Comment.user))
         .filter(models.Comment.artwork_id == artwork_id)
+        .order_by(models.Comment.created_at.desc())
         .all()
     )
