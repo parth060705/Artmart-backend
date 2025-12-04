@@ -23,7 +23,16 @@ from app.util import util_artistrank
 from app.crud import (
     user_crud, artworks_crud, likes_crud, comment_crud,
     orders_crud, saved_crud, cart_crud, homefeed_crud,
-    follow_crud, review_crud, artistreview_crud
+    follow_crud, review_crud, artistreview_crud, community_crud,
+    community_members_crud
+)
+
+from app.schemas.community_schemas import (
+    CommunityCreate,
+    CommunityResponse,
+    CommunityUpdate,
+    CommunityMemberResponse,
+    CommunitySearchResponse
 )
 
 user_router = APIRouter(
@@ -456,6 +465,7 @@ def home_feed(db: Session = Depends(get_db), current_user: User = Depends(get_cu
                 images=art.images,
                 createdAt=art.createdAt,
                 artistId=art.artistId,
+                status=art.status,
                 how_many_like={"like_count": like_count},
                 forSale=art.forSale,
                 artist=ArtworkArtist(
@@ -469,3 +479,123 @@ def home_feed(db: Session = Depends(get_db), current_user: User = Depends(get_cu
             )
         )
     return result
+
+# -----------------------------
+# COMMUNITY
+# -----------------------------
+# CREATE
+@user_router.post("/community", response_model=CommunitySearchResponse)
+def create_new_community(
+    name: str = Form(...),
+    description: str = Form(None),
+    bannerImage: UploadFile = File(None),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    data = CommunityCreate(
+        name=name,
+        description=description,
+        bannerImage=None  # replaced by cloudinary URL in CRUD
+    )
+
+    community = community_crud.create_community(
+        db=db,
+        owner_id=current_user.id,
+        data=data,
+        banner_file=bannerImage
+    )
+
+    return community
+
+# UPDATE
+# @user_router.patch("/{community_id}", response_model=CommunitySearchResponse)
+# def update_community_route(
+#     community_id: str,
+#     name: Optional[str] = Form(None),
+#     description: Optional[str] = Form(None),
+#     bannerImage: Optional[UploadFile] = File(None),
+#     db: Session = Depends(get_db),
+#     current_user=Depends(get_current_user)
+# ):
+#     data = CommunityUpdate(
+#         name=name,
+#         description=description
+#     )
+
+#     updated = community_crud.update_community(
+#         db=db,
+#         community_id=community_id,
+#         data=data,
+#         banner_file=bannerImage
+#     )
+
+#     return updated
+
+# DELETE COMMUNITY
+@user_router.delete("/delete/community/{community_id}")
+def delete_existing_community(
+    community_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    community = community_crud.get_community(db, community_id)
+    if not community:
+        raise HTTPException(status_code=404, detail="Community not found")
+
+    # Only owner can delete
+    if community.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not allowed")
+
+    community_crud.delete_community(db, community_id)
+    return {"message": "Community deleted successfully"}
+
+# -----------------------------
+# COMMUNITY MEMBERS
+# -----------------------------
+# ADD ME
+@user_router.post("/{community_id}/members", response_model=CommunityMemberResponse)
+def add_me_to_community(
+    community_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    member = community_members_crud.add_member(db, community_id, current_user.id)
+    return member
+
+# REMOVE ME
+@user_router.delete("/{community_id}/members")
+def remove_me_from_community(
+    community_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    community_members_crud.remove_member(db, community_id, current_user.id)
+    return {"message": "Member removed"}
+
+# GET COMMUNITY MEMBERS LIST
+@user_router.get("/{community_id}/members", response_model=list[CommunityMemberResponse])
+def get_community_members(
+    community_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user) 
+):
+    members = community_members_crud.list_members(db, community_id)
+    return members
+
+# REMOVE USER BY OWNER
+@user_router.delete("/{community_id}/members/{user_id}")
+def owner_remove_member(
+    community_id: str,
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    # Optional: check if current_user is the owner
+    community = db.query(models.Community).filter(models.Community.id == community_id).first()
+    if not community:
+        raise HTTPException(404, "Community not found")
+    if community.owner_id != current_user.id:
+        raise HTTPException(403, "Only owner can remove members")
+
+    community_members_crud.remove_member_by_owner(db, community_id, user_id)
+    return {"message": "Member removed by owner successfully"}

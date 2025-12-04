@@ -22,12 +22,19 @@ from app.schemas.error_response_schemas import standard_responses
 
 from app.core.smtp_otp import send_otp_email
 from fastapi import BackgroundTasks
-from app.crud import user_crud, search_crud, artworks_crud, recmmendation_crud,review_crud, likes_crud, comment_crud, artistreview_crud, googleauth_crud, saved_crud
+from app.crud import user_crud, search_crud, artworks_crud, recmmendation_crud,review_crud, likes_crud, comment_crud, artistreview_crud, googleauth_crud, saved_crud, community_crud
 from passlib.context import CryptContext
 from app.util import util
 from app.core.redis_client import get_redis_client
 import json
 from app.util import util_cache
+
+from app.schemas.community_schemas import (
+    CommunityCreate,
+    CommunityResponse,
+    CommunityUpdate,
+    CommunitySearchResponse
+)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -363,6 +370,7 @@ def list_artworks_route(
                 createdAt=art.createdAt,
                 artistId=art.artistId,
                 forSale=art.forSale,
+                status=art.status,
                 artist=ArtworkArtist(
                     id=art.artist.id,
                     username=art.artist.username,
@@ -460,7 +468,8 @@ def get_artwork_route(artwork_id: UUID, db: Session = Depends(get_db), user=Depe
         isInCart=is_in_cart,
         isSaved=is_saved,
         isLike=is_like,
-        forSale=db_artwork.forSale
+        forSale=db_artwork.forSale,
+        status=db_artwork.status
     )
 
 
@@ -570,3 +579,27 @@ def get_saved_public(user_id: UUID, db: Session = Depends(get_db)):
 def get_pending_moderation(db: Session = Depends(get_db)):
     items = db.query(models.ModerationQueue).filter_by(checked=False).all()
     return items
+
+# -----------------------------
+# COMMUNITIES
+# -----------------------------
+#GET
+@router.get("/community", response_model=list[CommunitySearchResponse])
+def list_communities(
+    db: Session = Depends(get_db)
+):
+    return community_crud.get_communities(db) 
+
+# GET SINGLE COMMUNITY
+@router.get("/community/{community_id}", response_model=CommunityResponse)
+def get_single_community(
+    community_id: str,
+    db: Session = Depends(get_db)
+):
+    community = community_crud.get_community(db, community_id)
+
+    if not community:
+        raise HTTPException(status_code=404, detail="Community not found")
+
+    return community
+
