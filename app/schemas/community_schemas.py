@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, HttpUrl
 from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
+from app.models.models import CommunityType
 
 # -----------------------------
 # COMMUNITY MEMBER SCHEMAS
@@ -92,6 +93,7 @@ class CommunityBase(BaseModel):
     description: Optional[str]
     owner_id: Optional[str]
     bannerImage: Optional[str]
+    type: Optional[str] 
     created_at: datetime
     updatedAt: datetime
 
@@ -102,12 +104,13 @@ class CommunityCreate(BaseModel):
     name: str
     description: Optional[str] = None
     bannerImage: Optional[str] = None
-
+    type: Optional[str] = "public" 
 
 class CommunityUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     bannerImage: Optional[str] = None 
+    type: Optional[CommunityType] = None 
 
 class CommunitySearchResponse(CommunityBase):
     owner: Optional[UserBase]
@@ -116,3 +119,13 @@ class CommunityResponse(CommunityBase):
     owner: Optional[UserBase]
     members: Optional[List[CommunityMemberResponse]] = []
     artworks: Optional[List[CommunityArtworkResponse]] = []
+
+class CommunitySearch(BaseModel):
+    id: str
+    name: str
+    description: Optional[str]
+    bannerImage: Optional[str] 
+    type: Optional[str]
+
+    class Config:
+        from_attributes = True

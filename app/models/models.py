@@ -43,6 +43,14 @@ class StatusENUM(str, enum.Enum):
     pending_moderation = "pending_moderation"
     hidden = "hidden"
 
+# -------------------------
+# COMMUNITY ENUM
+# -------------------------
+
+class CommunityType(str, enum.Enum):
+    public = "public"
+    private = "private"
+    restricted = "restricted"
 
 # -------------------------
 # FOLLOWERS ASSOCIATION TABLE
@@ -388,7 +396,9 @@ class Community(Base):
     name = Column(String(150), nullable=False)
     description = Column(Text, nullable=True)
     owner_id = Column(String(36), ForeignKey("users.id"))
-    bannerImage = Column(String(255), nullable=True)
+    bannerImage = Column(String(500), nullable=True)
+    bannerImagePublicId = Column(String(255), nullable=True)
+    type = Column(String(20), default="public")  ##
     created_at = Column(DateTime, default=datetime.utcnow)
     updatedAt = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

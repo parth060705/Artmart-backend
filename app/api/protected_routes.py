@@ -7,7 +7,7 @@ from app.models import models
 
 from app.database import get_db
 from app.core.auth import get_current_user
-from app.models.models import User, ArtistReview
+from app.models.models import User, ArtistReview, CommunityType
 from app.schemas.user_schema import UserRead, UserUpdate, ProfileImageResponse, ChangePasswordSchema
 from app.schemas.artworks_schemas import ArtworkMe, ArtworkCreateResponse, ArtworkRead, ArtworkDelete, ArtworkCreate, ArtworkUpdate, ArtworkArtist, ArtworkMeResponse
 from app.schemas.likes_schemas import LikeCountResponse, HasLikedResponse
@@ -508,28 +508,42 @@ def create_new_community(
     return community
 
 # UPDATE
-# @user_router.patch("/{community_id}", response_model=CommunitySearchResponse)
-# def update_community_route(
-#     community_id: str,
-#     name: Optional[str] = Form(None),
-#     description: Optional[str] = Form(None),
-#     bannerImage: Optional[UploadFile] = File(None),
-#     db: Session = Depends(get_db),
-#     current_user=Depends(get_current_user)
-# ):
-#     data = CommunityUpdate(
-#         name=name,
-#         description=description
-#     )
+@user_router.patch("/{community_id}", response_model=CommunitySearchResponse)
+def update_community_route(
+    community_id: str,
+    name: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    bannerImage: Optional[UploadFile] = File(None),
+    type: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    # Check if community exists
+    community = community_crud.get_community(db, community_id)
+    if not community:
+        raise HTTPException(status_code=404, detail="Community not found")
 
-#     updated = community_crud.update_community(
-#         db=db,
-#         community_id=community_id,
-#         data=data,
-#         banner_file=bannerImage
-#     )
+    # ALLOW ONLY OWNER
+    if community.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Only the community owner can update this community"
+        )
 
-#     return updated
+    data = CommunityUpdate(
+        name=name,
+        description=description,
+        type=type,
+    )
+
+    updated = community_crud.update_community(
+        db=db,
+        community_id=community_id,
+        data=data,
+        banner_file=bannerImage
+    )
+
+    return updated
 
 # DELETE COMMUNITY
 @user_router.delete("/delete/community/{community_id}")
@@ -573,14 +587,18 @@ def remove_me_from_community(
     return {"message": "Member removed"}
 
 # GET COMMUNITY MEMBERS LIST
-@user_router.get("/{community_id}/members", response_model=list[CommunityMemberResponse])
-def get_community_members(
-    community_id: str,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user) 
-):
-    members = community_members_crud.list_members(db, community_id)
-    return members
+# @user_router.get("/{community_id}/members", response_model=list[CommunityMemberResponse])
+# def get_community_members(
+#     community_id: str,
+#     db: Session = Depends(get_db),
+#     current_user=Depends(get_current_user) 
+# ):
+#     community = community_crud.get_community(db, community_id)
+#     if not community:
+#         raise HTTPException(status_code=404, detail="Community not found")
+    
+#     members = community_members_crud.list_members(db, community_id)
+#     return members
 
 # REMOVE USER BY OWNER
 @user_router.delete("/{community_id}/members/{user_id}")

@@ -2,15 +2,15 @@ import uuid
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from datetime import datetime
-from app.models.models import Community, CommunityMember
+from app.models import models
 
 
 def get_member(db: Session, community_id: str, user_id: str):
     return (
-        db.query(CommunityMember)
+        db.query(models.CommunityMember)
         .filter(
-            CommunityMember.community_id == community_id,
-            CommunityMember.user_id == user_id
+            models.CommunityMember.community_id == community_id,
+            models.CommunityMember.user_id == user_id
         )
         .first()
     )
@@ -18,9 +18,17 @@ def get_member(db: Session, community_id: str, user_id: str):
 
 def add_member(db: Session, community_id: str, user_id: str):
     # Check community exists
-    community = db.query(Community).filter(Community.id == community_id).first()
+    community = db.query(models.Community).filter(models.Community.id == community_id).first()
     if not community:
         raise HTTPException(404, "Community not found")
+    
+    # Check privacy
+    if community.type == models.CommunityType.private:
+        raise HTTPException(403, "Cannot join a private community directly")
+
+    # Prevent adding owner as a member
+    if community.owner_id == user_id:
+        raise HTTPException(400, "Owner is already a member")
 
     # Prevent adding owner as a duplicate member
     if community.owner_id == user_id:
@@ -31,7 +39,7 @@ def add_member(db: Session, community_id: str, user_id: str):
     if existing:
         raise HTTPException(400, "User already a community member")
 
-    new_member = CommunityMember(
+    new_member = models.CommunityMember(
         id=str(uuid.uuid4()),
         community_id=community_id,
         user_id=user_id,
@@ -54,16 +62,16 @@ def remove_member(db: Session, community_id: str, user_id: str):
 
 def remove_member_by_owner(db: Session, community_id: str, user_id: str):
     # 1️⃣ Fetch member
-    member = db.query(CommunityMember).filter(
-        CommunityMember.community_id == community_id,
-        CommunityMember.user_id == user_id
+    member = db.query(models.CommunityMember).filter(
+        models.CommunityMember.community_id == community_id,
+        models.CommunityMember.user_id == user_id
     ).first()
 
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
 
     # 2️⃣ Optional: Prevent removing the owner
-    community = db.query(Community).filter(Community.id == community_id).first()
+    community = db.query(models.Community).filter(models.Community.id == community_id).first()
     if community.owner_id == user_id:
         raise HTTPException(status_code=400, detail="Cannot remove the owner of the community")
 
@@ -75,7 +83,7 @@ def remove_member_by_owner(db: Session, community_id: str, user_id: str):
 
 def list_members(db: Session, community_id: str):
     return (
-        db.query(CommunityMember)
-        .filter(CommunityMember.community_id == community_id)
+        db.query(models.CommunityMember)
+        .filter(models.CommunityMember.community_id == community_id)
         .all()
     )
