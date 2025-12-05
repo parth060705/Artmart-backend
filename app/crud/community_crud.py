@@ -3,13 +3,16 @@ from sqlalchemy.orm import Session
 from app.models.models import Community, CommunityMember
 from app.schemas.community_schemas import (
     CommunityCreate,
-    CommunityUpdate
+    CommunityUpdate,
+    CommunitySearch
 )
 import uuid
 from fastapi import HTTPException, UploadFile
 from sqlalchemy.exc import SQLAlchemyError
 import uuid
 import cloudinary.uploader
+from app.models import models
+from typing import List
 
 # -----------------------------
 # CREATE COMMUNITY
@@ -82,6 +85,7 @@ def create_community(
             description=data.description,
             bannerImage=banner_url,
             owner_id=owner_id,
+            type=data.type or "public",
         )
         db.add(new_community)
         db.flush()
@@ -133,41 +137,52 @@ def update_community(
     db: Session,
     community_id: str,
     data: CommunityUpdate,
-    banner_file: UploadFile = None
+    banner_file: UploadFile | None = None
 ):
     community = get_community(db, community_id)
     if not community:
-        raise HTTPException(status_code=404, detail="Community not found")
+        raise HTTPException(404, "Community not found")
 
-    banner_url = community.bannerImage
-    banner_public_id = getattr(community, "bannerImagePublicId", None)
+    # Keep old values
+    old_public_id = community.bannerImagePublicId
+    old_url = community.bannerImage
 
-    # -----------------------------------
-    # 1️⃣ Handle banner update (optional)
-    # -----------------------------------
+    # -------------------------
+    # 1️⃣ APPLY PATCH FIELDS
+    # -------------------------
+    update_fields = {
+        field: value
+        for field, value in data.dict(exclude_unset=True).items()
+        if value is not None
+    }
+
+    for field, value in update_fields.items():
+        setattr(community, field, value)
+
+    # -------------------------
+    # 2️⃣ HANDLE BANNER / CLOUDINARY
+    # -------------------------
     if banner_file:
         # Validate MIME
         if banner_file.content_type not in ALLOWED_MIME_TYPES:
             raise HTTPException(
-                status_code=400,
-                detail=f"Unsupported file type: {banner_file.content_type}"
+                400, f"Unsupported file type: {banner_file.content_type}"
             )
 
         # Validate size
         contents = banner_file.file.read()
         if len(contents) > MAX_FILE_SIZE_MB * 1024 * 1024:
             raise HTTPException(
-                status_code=400,
-                detail=f"File too large (max {MAX_FILE_SIZE_MB}MB)"
+                400, f"File too large (max {MAX_FILE_SIZE_MB}MB)"
             )
         banner_file.file.seek(0)
 
-        # Delete old banner from Cloudinary (if exists)
-        if banner_public_id:
+        # Delete old Cloudinary banner
+        if old_public_id:
             try:
-                cloudinary.uploader.destroy(banner_public_id)
+                cloudinary.uploader.destroy(old_public_id)
             except Exception:
-                pass  # don't block request on Cloudinary cleanup failure
+                pass   # Do not block request
 
         # Upload new banner
         try:
@@ -175,44 +190,30 @@ def update_community(
                 banner_file.file,
                 folder="community_banners"
             )
-            banner_url = upload_result.get("secure_url")
-            banner_public_id = upload_result.get("public_id")
-
-            if not banner_url or not banner_public_id:
-                raise HTTPException(status_code=500, detail="Cloudinary upload failed")
-
         except Exception as e:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Cloudinary upload error: {str(e)}"
-            )
+            raise HTTPException(500, f"Cloudinary upload failed: {str(e)}")
 
+        new_url = upload_result.get("secure_url")
+        new_public_id = upload_result.get("public_id")
+
+        if not new_url or not new_public_id:
+            raise HTTPException(500, "Cloudinary upload returned no URL")
+
+        # Save new image info
+        community.bannerImage = new_url
+        community.bannerImagePublicId = new_public_id
+
+    # -------------------------
+    # 3️⃣ SAVE CHANGES
+    # -------------------------
     try:
-        # -----------------------------------
-        # 2️⃣ Update fields from CommunityUpdate
-        # -----------------------------------
-        update_fields = data.dict(exclude_unset=True)
-        for field, value in update_fields.items():
-            setattr(community, field, value)
-
-        # -----------------------------------
-        # 3️⃣ Update banner fields (if changed)
-        # -----------------------------------
-        if banner_file:
-            community.bannerImage = banner_url
-
-            if hasattr(community, "bannerImagePublicId"):
-                community.bannerImagePublicId = banner_public_id
-
         db.commit()
         db.refresh(community)
-
-    except SQLAlchemyError as e:
+    except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        raise HTTPException(500, f"Database error: {str(e)}")
 
     return community
-
 
 
 # -----------------------------
@@ -226,3 +227,16 @@ def delete_community(db: Session, community_id: str):
     db.delete(community)
     db.commit()
     return True
+
+# -----------------------------
+# SEARCH COMMUNITY
+# -----------------------------
+
+def search_communities(db: Session, query: str) -> List[CommunitySearch]:
+    if not query:
+        return []
+
+    return db.query(models.Community).filter(
+        (models.Community.name.ilike(f"%{query}%")) |
+        (models.Community.description.ilike(f"%{query}%"))
+    ).order_by(models.Community.created_at.desc()).all()

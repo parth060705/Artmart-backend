@@ -33,7 +33,8 @@ from app.schemas.community_schemas import (
     CommunityCreate,
     CommunityResponse,
     CommunityUpdate,
-    CommunitySearchResponse
+    CommunitySearchResponse,
+    CommunitySearch
 )
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -583,23 +584,49 @@ def get_pending_moderation(db: Session = Depends(get_db)):
 # -----------------------------
 # COMMUNITIES
 # -----------------------------
-#GET
+# GET
 @router.get("/community", response_model=list[CommunitySearchResponse])
 def list_communities(
     db: Session = Depends(get_db)
 ):
     return community_crud.get_communities(db) 
 
-# GET SINGLE COMMUNITY
+# GET SPECIFIC COMMUNITY
 @router.get("/community/{community_id}", response_model=CommunityResponse)
-def get_single_community(
+def get_community_detail(
     community_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user_optional)  # Optional login
 ):
     community = community_crud.get_community(db, community_id)
-
     if not community:
-        raise HTTPException(status_code=404, detail="Community not found")
+        raise HTTPException(404, "Community not found")
+
+    # Enforce privacy
+    if community.type == models.CommunityType.private:
+        # If no user logged in
+        if not current_user:
+            raise HTTPException(403, "Private community. Login required.")
+
+        # Check if user is a member OR owner
+        member = db.query(models.CommunityMember).filter(
+            models.CommunityMember.community_id == community_id,
+            models.CommunityMember.user_id == current_user.id
+        ).first()
+
+        if not member and current_user.id != community.owner_id:
+            raise HTTPException(403, "Private community. Access denied.")
 
     return community
 
+# SEARCH COMMUNITY
+@router.get("/communities/search", response_model=List[CommunitySearch])
+def search_communities_route(
+    query: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    communities = community_crud.search_communities(
+        db=db,
+        query=query,
+    )
+    return communities
