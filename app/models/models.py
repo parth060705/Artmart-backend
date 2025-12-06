@@ -457,3 +457,19 @@ class CommunityLike(Base):
 
     artwork = relationship("CommunityArtwork", back_populates="likes")
     user = relationship("User")
+
+
+# -------------------------
+# COMMUNITY JOIN REQUEST MODEL
+# -------------------------
+class CommunityJoinRequest(Base):
+    __tablename__ = "community_join_requests"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    community_id = Column(String(36), ForeignKey("communities.id"), nullable=False)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    joinstatus = Column(String(20), default="pending")  # pending / approved / rejected
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    community = relationship("Community")
+    user = relationship("User")

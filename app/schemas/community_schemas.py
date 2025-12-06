@@ -129,3 +129,17 @@ class CommunitySearch(BaseModel):
 
     class Config:
         from_attributes = True
+
+# -----------------------------
+# COMMUNITY JOIN REQUEST
+# -----------------------------
+
+class JoinRequestBase(BaseModel):
+    id: str
+    community_id: str
+    user_id: str
+    joinstatus: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
