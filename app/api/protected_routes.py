@@ -617,3 +617,52 @@ def owner_remove_member(
 
     community_members_crud.remove_member_by_owner(db, community_id, user_id)
     return {"message": "Member removed by owner successfully"}
+
+# -----------------------------
+# COMMUNITY JOIN REQUEST
+# -----------------------------
+from app.crud import community_join_request_crud
+from app.schemas.community_schemas import JoinRequestBase
+
+@user_router.post("/community/{community_id}/join-request", response_model=JoinRequestBase)
+def send_join_request(
+    community_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    return community_join_request_crud.send_request(db, community_id, current_user.id)
+
+
+@user_router.get("/community/{community_id}/join-requests", response_model=List[JoinRequestBase])
+def get_pending_join_requests(
+    community_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    return community_join_request_crud.get_pending_requests(db, community_id, current_user.id)
+
+
+@user_router.post("/join-request/{request_id}/approve", response_model=JoinRequestBase)
+def approve_request(
+    request_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    return community_join_request_crud.approve(db, request_id, current_user.id)
+
+
+@user_router.post("/join-request/{request_id}/reject", response_model=JoinRequestBase)
+def reject_request(
+    request_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    return community_join_request_crud.reject(db, request_id, current_user.id)
+
+@user_router.get("/community/{community_id}/rejected-requests", response_model=List[JoinRequestBase])
+def get_rejected_join_requests(
+    community_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    return community_join_request_crud.get_rejected_requests(db, community_id, current_user.id)
