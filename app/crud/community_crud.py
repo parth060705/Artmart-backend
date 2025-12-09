@@ -122,7 +122,6 @@ def create_community(
 def get_community(db: Session, community_id: str):
     return db.query(Community).filter(Community.id == community_id).first()
 
-
 # -----------------------------
 # GET ALL COMMUNITIES
 # -----------------------------

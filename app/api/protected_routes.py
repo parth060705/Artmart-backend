@@ -34,6 +34,11 @@ from app.schemas.community_schemas import (
     CommunityMemberResponse,
     CommunitySearchResponse
 )
+from app.schemas.community_artwork_schemas import CommunityArtworkCreate, CommunityArtworkResponse
+from app.crud import community_artwork_crud
+from app.crud import community_join_request_crud
+from app.schemas.community_schemas import JoinRequestBase
+
 
 user_router = APIRouter(
     tags=["authorized"],
@@ -586,20 +591,6 @@ def remove_me_from_community(
     community_members_crud.remove_member(db, community_id, current_user.id)
     return {"message": "Member removed"}
 
-# GET COMMUNITY MEMBERS LIST
-# @user_router.get("/{community_id}/members", response_model=list[CommunityMemberResponse])
-# def get_community_members(
-#     community_id: str,
-#     db: Session = Depends(get_db),
-#     current_user=Depends(get_current_user) 
-# ):
-#     community = community_crud.get_community(db, community_id)
-#     if not community:
-#         raise HTTPException(status_code=404, detail="Community not found")
-    
-#     members = community_members_crud.list_members(db, community_id)
-#     return members
-
 # REMOVE USER BY OWNER
 @user_router.delete("/{community_id}/members/{user_id}")
 def owner_remove_member(
@@ -621,9 +612,6 @@ def owner_remove_member(
 # -----------------------------
 # COMMUNITY JOIN REQUEST
 # -----------------------------
-from app.crud import community_join_request_crud
-from app.schemas.community_schemas import JoinRequestBase
-
 @user_router.post("/community/{community_id}/join-request", response_model=JoinRequestBase)
 def send_join_request(
     community_id: str,
@@ -666,3 +654,28 @@ def get_rejected_join_requests(
     current_user=Depends(get_current_user)
 ):
     return community_join_request_crud.get_rejected_requests(db, community_id, current_user.id)
+
+# -----------------------------
+# COMMUNITY ARTWORK
+# -----------------------------
+# Add a post
+@user_router.post("/{community_id}/post/{artwork_id}", response_model=CommunityArtworkResponse)
+def post_artwork_to_community(
+    community_id: str,
+    artwork_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    community_artwork = community_artwork_crud.create_community_artwork(
+        db=db,
+        user_id=current_user.id,
+        community_id=community_id,
+        artwork_id=artwork_id
+    )
+    return community_artwork
+
+# Delete a post
+@user_router.delete("/community/artworks/{artwork_post_id}")
+def delete_community_artwork(artwork_post_id: str, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    community_artwork_crud.delete_community_artwork(db, artwork_post_id, current_user.id)
+    return {"detail": "Community artwork deleted"}

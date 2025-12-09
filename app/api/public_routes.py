@@ -36,6 +36,8 @@ from app.schemas.community_schemas import (
     CommunitySearchResponse,
     CommunitySearch
 )
+from app.schemas.community_artwork_schemas import CommunityArtworkCreate, CommunityArtworkResponse
+from app.crud import community_artwork_crud
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -630,3 +632,29 @@ def search_communities_route(
         query=query,
     )
     return communities
+
+# -----------------------------
+# COMMUNITY ARTWORK
+# -----------------------------
+
+# Get all posts in a community
+@router.get("/community/{community_id}/artworks",response_model=list[CommunityArtworkResponse])
+def list_community_artworks(
+    community_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user_optional)
+):
+    user_id = current_user.id if current_user else None
+
+    posts = community_artwork_crud.get_community_artworks(
+        db=db,
+        community_id=community_id,
+        user_id=user_id
+    )
+    return posts
+
+
+# Get single post
+# @router.get("/artworks/{artwork_post_id}", response_model=CommunityArtworkResponse)
+# def get_community_artwork(artwork_post_id: str, db: Session = Depends(get_db)):
+#     return community_artwork_crud.get_community_artwork(db, artwork_post_id)
