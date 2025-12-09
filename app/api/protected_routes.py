@@ -658,7 +658,7 @@ def get_rejected_join_requests(
 # -----------------------------
 # COMMUNITY ARTWORK
 # -----------------------------
-# Create post in community
+# Add a post
 @user_router.post("/{community_id}/post/{artwork_id}", response_model=CommunityArtworkResponse)
 def post_artwork_to_community(
     community_id: str,
