@@ -148,3 +148,13 @@ class ArtworkMe(BaseModel):
 class ArtworkMeResponse(BaseModel):
     total_count: int
     artworks: List[ArtworkMe]
+
+class ArtworkCommunityJoin(BaseModel):
+    title: str
+    description: Optional[str]
+    how_many_like: Optional[likeArt] = None
+    category: str
+    images: List[ArtworkImageRead] = Field(default_factory=list)
+
+    class Config:
+        from_attributes = True 

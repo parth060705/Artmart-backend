@@ -8,6 +8,8 @@ import uuid
 import enum
 from sqlalchemy import Enum as SqlEnum
 from app.database import Base
+from sqlalchemy.orm import foreign
+from sqlalchemy.orm import relationship
 
 # -------------------------
 # ENUM DEFINITIONS
@@ -160,6 +162,11 @@ class Artwork(Base):
     cart_items = relationship("Cart", back_populates="artwork")
     likes = relationship("ArtworkLike", back_populates="artwork", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="artwork", cascade="all, delete-orphan")
+    community_posts = relationship(
+        "CommunityArtwork",
+        back_populates="artwork",
+        cascade="all, delete-orphan"
+    )
     status = Column(String(20), default="pending_moderation")  ##
 
 
@@ -398,15 +405,41 @@ class Community(Base):
     owner_id = Column(String(36), ForeignKey("users.id"))
     bannerImage = Column(String(500), nullable=True)
     bannerImagePublicId = Column(String(255), nullable=True)
-    type = Column(String(20), default="public")  ##
+    type = Column(SqlEnum(CommunityType, native_enum=False), default=CommunityType.public)
     created_at = Column(DateTime, default=datetime.utcnow)
     updatedAt = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    owner = relationship("User")
+    owner = relationship("User", backref="owned_communities")
+    members = relationship("CommunityMember", back_populates="community", cascade="all, delete-orphan")
+    artworks = relationship("CommunityArtwork", back_populates="community", cascade="all, delete-orphan")
 
-    members = relationship("CommunityMember", back_populates="community")
-    artworks = relationship("CommunityArtwork", back_populates="community")
+# -------------------------
+# COMMUNITY ARTWORK / POST MODEL
+# -------------------------
+class CommunityArtwork(Base):
+    __tablename__ = "community_artworks"
 
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    community_id = Column(String(36), ForeignKey("communities.id"), nullable=False)
+    artwork_id = Column(String(36), ForeignKey("artworks.id"), nullable=False)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    community = relationship("Community", back_populates="artworks")
+    artwork = relationship("Artwork", back_populates="community_posts")
+    user = relationship("User", backref="community_posts")
+    likes = relationship("CommunityLike", back_populates="artwork", cascade="all, delete-orphan")
+
+    member = relationship(
+        "CommunityMember",
+        primaryjoin=(
+            "and_("
+            "CommunityArtwork.community_id == foreign(CommunityMember.community_id), "
+            "CommunityArtwork.user_id == foreign(CommunityMember.user_id)"
+            ")"
+        ),
+        viewonly=True
+    )
 
 # -------------------------
 # COMMUNITY MEMBER
@@ -416,32 +449,24 @@ class CommunityMember(Base):
     __tablename__ = "community_members"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    community_id = Column(String(36), ForeignKey("communities.id"))
-    user_id = Column(String(36), ForeignKey("users.id"))
+    community_id = Column(String(36), ForeignKey("communities.id"), nullable=False)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     joined_at = Column(DateTime, default=datetime.utcnow)
 
+    # Relationships
     community = relationship("Community", back_populates="members")
-    user = relationship("User")
+    user = relationship("User", backref="community_memberships")
 
-
-# -------------------------
-# COMMUNITY ARTWORK / POST MODEL
-# -------------------------
-
-class CommunityArtwork(Base):
-    __tablename__ = "community_artworks"
-
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    community_id = Column(String(36), ForeignKey("communities.id"))
-    user_id = Column(String(36), ForeignKey("users.id"))
-    content = Column(Text, nullable=False)
-    image = Column(String(255), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    community = relationship("Community", back_populates="artworks")
-    user = relationship("User")
-    likes = relationship("CommunityLike", back_populates="artwork")
-
+    artworks = relationship(
+        "CommunityArtwork",
+        primaryjoin=(
+            "and_("
+            "CommunityMember.community_id == foreign(CommunityArtwork.community_id), "
+            "CommunityMember.user_id == foreign(CommunityArtwork.user_id)"
+            ")"
+        ),
+        viewonly=True
+    )
 
 # -------------------------
 # COMMUNITY LIKE MODEL
@@ -456,8 +481,7 @@ class CommunityLike(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     artwork = relationship("CommunityArtwork", back_populates="likes")
-    user = relationship("User")
-
+    user = relationship("User", backref="community_likes")
 
 # -------------------------
 # COMMUNITY JOIN REQUEST MODEL
@@ -471,5 +495,5 @@ class CommunityJoinRequest(Base):
     joinstatus = Column(String(20), default="pending")  # pending / approved / rejected
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    community = relationship("Community")
-    user = relationship("User")
+    community = relationship("Community", backref="join_requests")
+    user = relationship("User", backref="community_join_requests")

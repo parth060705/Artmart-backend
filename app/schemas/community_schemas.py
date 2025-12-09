@@ -118,7 +118,7 @@ class CommunitySearchResponse(CommunityBase):
 class CommunityResponse(CommunityBase):
     owner: Optional[UserBase]
     members: Optional[List[CommunityMemberResponse]] = []
-    artworks: Optional[List[CommunityArtworkResponse]] = []
+    # artworks: Optional[List[CommunityArtworkResponse]] = []
 
 class CommunitySearch(BaseModel):
     id: str
