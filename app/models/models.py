@@ -497,3 +497,26 @@ class CommunityJoinRequest(Base):
 
     community = relationship("Community", backref="join_requests")
     user = relationship("User", backref="community_join_requests")
+
+# ====================================================================
+#                BLOG SYSYTEM
+# ====================================================================
+
+# -------------------------
+# BLOG COMMENT MODEL
+# -------------------------
+
+class BlogComment(Base):
+    __tablename__ = "blog_comments"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    slug = Column(String(500), nullable=False)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    content = Column(String(500), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updatedAt = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    status = Column(String(20), default="pending_moderation")  # visible/pending/hidden
+
+    user = relationship("User", backref="blog_comments")
+
+
