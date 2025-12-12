@@ -679,3 +679,44 @@ def post_artwork_to_community(
 def delete_community_artwork(artwork_post_id: str, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     community_artwork_crud.delete_community_artwork(db, artwork_post_id, current_user.id)
     return {"detail": "Community artwork deleted"}
+
+# -----------------------------
+# BLOG COMMENT
+# -----------------------------
+from app.crud import blog_comment_crud
+from app.schemas.blog_comment_schemas import BlogCommentBase, BlogCommentCreate, BlogCommentResponse, BlogCommentUpdate
+
+@user_router.post("/blog", response_model=BlogCommentResponse)
+def create_blog_comment_route(
+    slug: str = Form(...),
+    content: str = Form(...),
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user)
+):
+
+    blog_comment = BlogCommentCreate(
+        slug=slug,
+        content=content
+    )
+
+    return blog_comment_crud.create_comment(db, blog_comment, user_id=user.id)
+
+@user_router.patch("/update/comment/{comment_id}", response_model=BlogCommentResponse)
+def update_comment_route(
+    comment_id: str,
+    content: str = Form(...),
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user)
+):
+    payload = BlogCommentUpdate(content=content)
+    return blog_comment_crud.update_comment(db, comment_id, payload, user_id=user.id)
+
+
+@user_router.delete("/delete/comment/{comment_id}")
+def delete_comment_route(
+    comment_id: str,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user)
+):
+    return blog_comment_crud.delete_comment(db, comment_id, user_id=user.id)
+

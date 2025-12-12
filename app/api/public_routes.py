@@ -653,8 +653,20 @@ def list_community_artworks(
     )
     return posts
 
-
 # Get single post
 # @router.get("/artworks/{artwork_post_id}", response_model=CommunityArtworkResponse)
 # def get_community_artwork(artwork_post_id: str, db: Session = Depends(get_db)):
 #     return community_artwork_crud.get_community_artwork(db, artwork_post_id)
+
+# -----------------------------
+# BLOG
+# -----------------------------
+from app.crud import blog_comment_crud
+from app.schemas.blog_comment_schemas import BlogCommentResponse
+
+@router.get("/{slug}", response_model=List[BlogCommentResponse])
+def get_comments_route(
+    slug: str,
+    db: Session = Depends(get_db)
+):
+    return blog_comment_crud.get_comments_by_slug(db, slug)
