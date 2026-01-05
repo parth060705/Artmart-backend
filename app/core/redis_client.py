@@ -1,4 +1,3 @@
-# app/core/redis_client.py
 import os
 from redis import asyncio as aioredis
 from dotenv import load_dotenv
