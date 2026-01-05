@@ -388,6 +388,7 @@ def get_artworks_by_me(db: Session, user_id: str):
                 models.Artwork.isDeleted.is_(None)  # or NULL
             )
         )
+        .order_by(models.Artwork.createdAt.desc())
         .all()
     )
 

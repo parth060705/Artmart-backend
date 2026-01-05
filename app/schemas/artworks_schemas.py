@@ -2,6 +2,7 @@ from pydantic import BaseModel, EmailStr, HttpUrl, Field, field_validator, model
 from uuid import UUID
 from datetime import datetime
 from typing import Optional, Literal, List
+from app.models.models import StatusENUM
 
 # -------------------------------
 # ARTWORK SCHEMAS
@@ -66,6 +67,7 @@ class ArtworkRead(ArtworkBase):
     isSold: Optional[bool] = None
     createdAt: datetime
     artistId: UUID
+    status: Optional[StatusENUM] = None
 
     class Config:
         from_attributes = True
@@ -146,3 +148,13 @@ class ArtworkMe(BaseModel):
 class ArtworkMeResponse(BaseModel):
     total_count: int
     artworks: List[ArtworkMe]
+
+class ArtworkCommunityJoin(BaseModel):
+    title: str
+    description: Optional[str]
+    how_many_like: Optional[likeArt] = None
+    category: str
+    images: List[ArtworkImageRead] = Field(default_factory=list)
+
+    class Config:
+        from_attributes = True 

@@ -22,12 +22,22 @@ from app.schemas.error_response_schemas import standard_responses
 
 from app.core.smtp_otp import send_otp_email
 from fastapi import BackgroundTasks
-from app.crud import user_crud, search_crud, artworks_crud, recmmendation_crud,review_crud, likes_crud, comment_crud, artistreview_crud, googleauth_crud, saved_crud
+from app.crud import user_crud, search_crud, artworks_crud, recmmendation_crud,review_crud, likes_crud, comment_crud, artistreview_crud, googleauth_crud, saved_crud, community_crud
 from passlib.context import CryptContext
 from app.util import util
 from app.core.redis_client import get_redis_client
 import json
 from app.util import util_cache
+
+from app.schemas.community_schemas import (
+    CommunityCreate,
+    CommunityResponse,
+    CommunityUpdate,
+    CommunitySearchResponse,
+    CommunitySearch
+)
+from app.schemas.community_artwork_schemas import CommunityArtworkCreate, CommunityArtworkResponse
+from app.crud import community_artwork_crud
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -363,6 +373,7 @@ def list_artworks_route(
                 createdAt=art.createdAt,
                 artistId=art.artistId,
                 forSale=art.forSale,
+                status=art.status,
                 artist=ArtworkArtist(
                     id=art.artist.id,
                     username=art.artist.username,
@@ -460,7 +471,8 @@ def get_artwork_route(artwork_id: UUID, db: Session = Depends(get_db), user=Depe
         isInCart=is_in_cart,
         isSaved=is_saved,
         isLike=is_like,
-        forSale=db_artwork.forSale
+        forSale=db_artwork.forSale,
+        status=db_artwork.status
     )
 
 
@@ -570,3 +582,91 @@ def get_saved_public(user_id: UUID, db: Session = Depends(get_db)):
 def get_pending_moderation(db: Session = Depends(get_db)):
     items = db.query(models.ModerationQueue).filter_by(checked=False).all()
     return items
+
+# -----------------------------
+# COMMUNITIES
+# -----------------------------
+# GET
+@router.get("/community", response_model=list[CommunitySearchResponse])
+def list_communities(
+    db: Session = Depends(get_db)
+):
+    return community_crud.get_communities(db) 
+
+# GET SPECIFIC COMMUNITY
+@router.get("/community/{community_id}", response_model=CommunityResponse)
+def get_community_detail(
+    community_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user_optional)  # Optional login
+):
+    community = community_crud.get_community(db, community_id)
+    if not community:
+        raise HTTPException(404, "Community not found")
+
+    # Enforce privacy
+    if community.type == models.CommunityType.private:
+        # If no user logged in
+        if not current_user:
+            raise HTTPException(403, "Private community. Login required.")
+
+        # Check if user is a member OR owner
+        member = db.query(models.CommunityMember).filter(
+            models.CommunityMember.community_id == community_id,
+            models.CommunityMember.user_id == current_user.id
+        ).first()
+
+        if not member and current_user.id != community.owner_id:
+            raise HTTPException(403, "Private community. Access denied.")
+
+    return community
+
+# SEARCH COMMUNITY
+@router.get("/communities/search", response_model=List[CommunitySearch])
+def search_communities_route(
+    query: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    communities = community_crud.search_communities(
+        db=db,
+        query=query,
+    )
+    return communities
+
+# -----------------------------
+# COMMUNITY ARTWORK
+# -----------------------------
+
+# Get all posts in a community
+@router.get("/community/{community_id}/artworks",response_model=list[CommunityArtworkResponse])
+def list_community_artworks(
+    community_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user_optional)
+):
+    user_id = current_user.id if current_user else None
+
+    posts = community_artwork_crud.get_community_artworks(
+        db=db,
+        community_id=community_id,
+        user_id=user_id
+    )
+    return posts
+
+# Get single post
+# @router.get("/artworks/{artwork_post_id}", response_model=CommunityArtworkResponse)
+# def get_community_artwork(artwork_post_id: str, db: Session = Depends(get_db)):
+#     return community_artwork_crud.get_community_artwork(db, artwork_post_id)
+
+# -----------------------------
+# BLOG
+# -----------------------------
+from app.crud import blog_comment_crud
+from app.schemas.blog_comment_schemas import BlogCommentResponse
+
+@router.get("/{slug}", response_model=List[BlogCommentResponse])
+def get_comments_route(
+    slug: str,
+    db: Session = Depends(get_db)
+):
+    return blog_comment_crud.get_comments_by_slug(db, slug)
