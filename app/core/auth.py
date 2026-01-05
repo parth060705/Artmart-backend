@@ -28,7 +28,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ISSUER = os.getenv("JWT_ISSUER")
 print(os.getenv("JWT_ISSUER"))
 
-if not SECRET_KEY or not ISSUER:
+if not SECRET_KEY or not ISSUER: # added logic for microservice login
     raise RuntimeError("JWT config missing")
 
 
