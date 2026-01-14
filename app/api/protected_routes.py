@@ -39,6 +39,15 @@ from app.crud import community_artwork_crud
 from app.crud import community_join_request_crud
 from app.schemas.community_schemas import JoinRequestBase
 
+from app.schemas.feedback_schemas import (
+    FeedbackCreate,
+    FeedbackRead,
+    FeedbackUpdate,
+)
+from app.crud import feedback_crud
+from app.models.models import FeedbackStatusEnum
+
+
 
 user_router = APIRouter(
     tags=["authorized"],
@@ -720,3 +729,18 @@ def delete_comment_route(
 ):
     return blog_comment_crud.delete_comment(db, comment_id, user_id=user.id)
 
+# -----------------------------
+# FEEDBACK COMMENT
+# -----------------------------
+
+@user_router.post("/feedback", response_model=FeedbackRead, status_code=status.HTTP_201_CREATED)
+def submit_feedback(
+    payload: FeedbackCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return feedback_crud.create_feedback(
+        db=db,
+        payload=payload,
+        user_id=current_user.id
+    )

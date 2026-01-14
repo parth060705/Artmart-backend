@@ -55,6 +55,25 @@ class CommunityType(str, enum.Enum):
     restricted = "restricted"
 
 # -------------------------
+# FEEDBACK ENUM
+# -------------------------
+
+class FeedbackTypeEnum(str, enum.Enum):
+    bug = "bug"
+    suggestion = "suggestion"
+    feature_request = "feature_request"
+    general = "general"
+
+# -------------------------
+# FEEDBACK STATUS
+# -------------------------
+
+class FeedbackStatusEnum(str, enum.Enum):
+    new = "new"
+    reviewed = "reviewed"
+    resolved = "resolved"
+
+# -------------------------
 # FOLLOWERS ASSOCIATION TABLE
 # -------------------------
 
@@ -520,3 +539,23 @@ class BlogComment(Base):
     user = relationship("User", backref="blog_comments")
 
 
+# -------------------------
+# FEEDBACK MODEL
+# -------------------------
+
+class Feedback(Base):
+    __tablename__ = "feedback"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=True) # (nullable for anonymous)
+    type = Column(SqlEnum(FeedbackTypeEnum, native_enum=False), nullable=False)     # Feedback content
+    message = Column(Text, nullable=False)
+    # rating = Column(Integer, nullable=True)
+    page = Column(String(255), nullable=True)        # e.g. /watermark/upload
+    feature = Column(String(100), nullable=True)     # e.g. "watermark", "verify", "ai_protect"
+    status = Column(String(20), default="new")       # new / reviewed / resolved
+    admin_note = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    user = relationship("User", backref="feedbacks")

@@ -12,8 +12,14 @@ from app.schemas.artworks_schemas import ArtworkAdmin, ArtworkRead, ArtworkDelet
 from app.schemas.order_schemas import OrderRead, OrderDelete
 from app.schemas.follow_schemas import FollowFollowers
 from app.schemas.admin_schemas import AdminAuditLogResponse
-
 from app.crud import admin_crud, search_crud
+from app.schemas.feedback_schemas import (
+    FeedbackCreate,
+    FeedbackRead,
+    FeedbackUpdate,
+)
+from app.crud import feedback_crud
+from app.models.models import FeedbackStatusEnum
 
 admin_router = APIRouter(
     tags=["admin"],
@@ -167,3 +173,37 @@ def list_follow_followers(db: Session = Depends(get_db)):
 @admin_router.get("/auditlogs", response_model=List[AdminAuditLogResponse])
 def get_admin_audit_logs(db: Session = Depends(get_db)):
     return admin_crud.list_admin_logs(db)
+
+# -----------------------------
+# FEEDBACK 
+# -----------------------------
+
+@admin_router.get("/feedback", response_model=List[FeedbackRead])
+def admin_list_feedback(
+    skip: int = 0,
+    limit: int = 50,
+    status: Optional[FeedbackStatusEnum] = None,
+    feature: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+
+    return feedback_crud.list_all_feedback(
+        db,
+        skip=skip,
+        limit=limit,
+        status=status,
+        feature=feature,
+    )
+
+@admin_router.patch("/feedback/{feedback_id}", response_model=FeedbackRead)
+def admin_update_feedback(
+    feedback_id: UUID,
+    payload: FeedbackUpdate,
+    db: Session = Depends(get_db),
+):
+
+    feedback = feedback_crud.get_feedback_by_id(db, str(feedback_id))
+    if not feedback:
+        raise HTTPException(status_code=404, detail="Feedback not found")
+
+    return feedback_crud.update_feedback(db, feedback, payload)
