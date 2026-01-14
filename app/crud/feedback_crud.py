@@ -14,6 +14,7 @@ def create_feedback(
         user_id=user_id,
         type=payload.type,
         message=payload.message,
+        rating=payload.rating,
         page=payload.page,
         feature=payload.feature,
     )
