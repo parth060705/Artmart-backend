@@ -550,7 +550,7 @@ class Feedback(Base):
     user_id = Column(String(36), ForeignKey("users.id"), nullable=True) # (nullable for anonymous)
     type = Column(SqlEnum(FeedbackTypeEnum, native_enum=False), nullable=False)     # Feedback content
     message = Column(Text, nullable=False)
-    # rating = Column(Integer, nullable=True)
+    rating = Column(Integer, nullable=True)
     page = Column(String(255), nullable=True)        # e.g. /watermark/upload
     feature = Column(String(100), nullable=True)     # e.g. "watermark", "verify", "ai_protect"
     status = Column(String(20), default="new")       # new / reviewed / resolved
