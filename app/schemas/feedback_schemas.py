@@ -8,7 +8,7 @@ from app.models.models import FeedbackTypeEnum, FeedbackStatusEnum
 class FeedbackBase(BaseModel):
     type: FeedbackTypeEnum
     message: str = Field(..., min_length=1)
-    rating: Optional[int] = Field(None, ge=1, le=5)
+    rating: Optional[int] = Field(None, ge=0, le=5)
     page: Optional[str] = None
     feature: Optional[str] = None
 
