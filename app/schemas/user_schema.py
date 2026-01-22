@@ -157,7 +157,14 @@ class ResetPasswordWithOTPSchema(BaseModel): # for password reset
 
 class ChangePasswordSchema(BaseModel):
     old_password: str
-    new_password: str    
+    new_password: str   
+
+class UserPublic(BaseModel):
+    user_id: str
+    username: str
+
+    class Config:
+        orm_mode = True     
 
 # -------------------------------
 # TOKENS

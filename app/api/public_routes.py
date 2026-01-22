@@ -11,7 +11,7 @@ from app.core.auth import get_current_user_optional
 from app.models import models
 from app.models.models import User
 
-from app.schemas.user_schema import UserCreate, UserRead, UserSearch, Token, ResetPasswordWithOTPSchema, UserAuthResponse
+from app.schemas.user_schema import UserCreate, UserRead, UserSearch, Token, ResetPasswordWithOTPSchema, UserAuthResponse, UserPublic
 from app.schemas.artworks_schemas import ArtworkRead, ArtworkCategory, ArtworkArtist
 from app.schemas.review_schemas import ReviewRead
 from app.schemas.likes_schemas import LikeCountResponse
@@ -201,6 +201,23 @@ def register_user(
         pincode=pincode, isAgreedtoTC=isAgreedtoTC
     )
     return user_crud.create_user(db=db, user=user_data)
+
+@router.get("/{user_id}", response_model=UserPublic)
+def resolve_user_by_id(
+    user_id: str,
+    db: Session = Depends(get_db),
+):
+    user = db.query(models.User).filter(
+        models.User.id == user_id
+    ).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {
+        "user_id": user.id,
+        "username": user.username,
+    }
 
 @router.get("/user/{user_id}", response_model=UserSearch)
 def read_user(
