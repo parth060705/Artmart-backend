@@ -202,22 +202,22 @@ def register_user(
     )
     return user_crud.create_user(db=db, user=user_data)
 
-@router.get("/{user_id}", response_model=UserPublic)
-def resolve_user_by_id(
-    user_id: str,
-    db: Session = Depends(get_db),
-):
-    user = db.query(models.User).filter(
-        models.User.id == user_id
-    ).first()
+# @router.get("/{user_id}", response_model=UserPublic)
+# def resolve_user_by_id(
+#     user_id: str,
+#     db: Session = Depends(get_db),
+# ):
+#     user = db.query(models.User).filter(
+#         models.User.id == user_id
+#     ).first()
 
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+#     if not user:
+#         raise HTTPException(status_code=404, detail="User not found")
 
-    return {
-        "user_id": user.id,
-        "username": user.username,
-    }
+#     return {
+#         "user_id": user.id,
+#         "username": user.username,
+#     }
 
 @router.get("/user/{user_id}", response_model=UserSearch)
 def read_user(
@@ -687,3 +687,20 @@ def get_comments_route(
     db: Session = Depends(get_db)
 ):
     return blog_comment_crud.get_comments_by_slug(db, slug)
+
+@router.get("/{user_id}", response_model=UserPublic)
+def resolve_user_by_id(
+    user_id: str,
+    db: Session = Depends(get_db),
+):
+    user = db.query(models.User).filter(
+        models.User.id == user_id
+    ).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {
+        "user_id": user.id,
+        "username": user.username,
+    }
