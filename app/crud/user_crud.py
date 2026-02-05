@@ -180,7 +180,27 @@ def create_user(db: Session, user: user_schema.UserCreate):
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    return db_user
+    # return db_user
+    return {
+        "id": db_user.id,
+        "name": db_user.name,
+        "email": db_user.email,
+        "username": db_user.username,
+
+        "createdAt": db_user.createdAt,
+        "updatedAt": db_user.updatedAt,
+
+        "profile_completion": db_user.profile_completion,
+        "avgRating": None,
+        "weightedRating": None,
+        "reviewCount": None,
+        "rank": None,
+        "role": None,
+
+        "followers": None,    # ✅ IMPORTANT
+        "following": None     # ✅ IMPORTANT
+}
+
 
 # Update User (progressive registration)
 def update_user_details(db: Session, user_id: int, user_update: user_schema.UserUpdate):
