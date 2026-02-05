@@ -65,30 +65,71 @@ def reviews_for_artist(db: Session, artist_id: UUID):
         .all()
     )
 
-def list_artists_by_rating(db: Session):
-    """
-    List all artists with their average rating, review count, and rank
-    using the get_user_rating_info() helper.
-    """
+# def list_artists_by_rating(db: Session):
+#     """
+#     List all artists with their average rating, review count, and rank
+#     using the get_user_rating_info() helper.
+#     """
 
-    artists = db.query(models.User).all()
+#     artists = db.query(models.User).all()
+#     results = []
+
+#     for artist in artists:
+#         rating_info = util_artistrank.get_user_rating_info(db, artist.id)
+
+#         results.append({
+#             "artistId": artist.id,
+#             "name": artist.name,
+#             "username": artist.username,
+#             "profileImage": artist.profileImage,
+#             "avgRating": rating_info["avgRating"],
+#             "reviewCount": rating_info["reviewCount"],
+#             "weightedRating": rating_info["weightedRating"],  # ✅ fixed
+#             "rank": rating_info["rank"]
+#         })
+
+#     # Sort by weightedRating instead of avgRating (more fair)
+#     results.sort(key=lambda x: x["weightedRating"], reverse=True)
+
+#     return results
+
+from sqlalchemy.sql import func
+
+def list_artists_by_rating(db: Session):
+
+    query = (
+        db.query(
+            models.User.id,
+            models.User.name,
+            models.User.username,
+            models.User.profileImage,
+
+            func.avg(models.Review.rating).label("avgRating"),
+            func.count(models.Review.id).label("reviewCount"),
+        )
+        .join(models.Review, models.User.id == models.Review.artistId)  # ✅ INNER JOIN
+        .group_by(models.User.id)
+        .having(func.count(models.Review.id) > 0)  # ✅ must have reviews
+    )
+
     results = []
 
-    for artist in artists:
-        rating_info = util_artistrank.get_user_rating_info(db, artist.id)
+    for row in query.all():
+
+        weighted = float(row.avgRating) * row.reviewCount
 
         results.append({
-            "artistId": artist.id,
-            "name": artist.name,
-            "username": artist.username,
-            "profileImage": artist.profileImage,
-            "avgRating": rating_info["avgRating"],
-            "reviewCount": rating_info["reviewCount"],
-            "weightedRating": rating_info["weightedRating"],  # ✅ fixed
-            "rank": rating_info["rank"]
+            "artistId": row.id,
+            "name": row.name,
+            "username": row.username,
+            "profileImage": row.profileImage,
+            "avgRating": float(row.avgRating),
+            "reviewCount": row.reviewCount,
+            "weightedRating": weighted,
+            "rank": None
         })
 
-    # Sort by weightedRating instead of avgRating (more fair)
     results.sort(key=lambda x: x["weightedRating"], reverse=True)
 
     return results
+
